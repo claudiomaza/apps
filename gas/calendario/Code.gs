@@ -1,11 +1,16 @@
 /**
  * Backend Calendario para Apps Script vinculado al Sheet.
- * Reemplazar CLAVE_ACCESO antes de desplegar; no subir la clave real al repo.
- * El frontend debe llamar primero {action:"auth", password:"..."} y enviar
+ * Reemplazar las cuentas placeholder de USUARIOS antes de desplegar.
+ * El frontend manda usuario+clave a auth y envía
  * el sessionToken retornado en los POST siguientes.
  */
-// Reemplazar por una clave larga, aleatoria y exclusiva antes de desplegar.
-const CLAVE_ACCESO = 'REEMPLAZAR_POR_CLAVE_LARGA_ALEATORIA';
+// Agregá una entrada por usuario. Reemplazá cada clave placeholder antes de desplegar.
+// Quienes puedan editar/ver este .gs pueden leer las claves: no compartir el proyecto con terceros.
+const USUARIOS = [
+  { usuario: 'admin', clave: 'REEMPLAZAR_CLAVE_ADMIN' },
+  { usuario: 'usuario1', clave: 'REEMPLAZAR_CLAVE_USUARIO1' },
+  { usuario: 'usuario2', clave: 'REEMPLAZAR_CLAVE_USUARIO2' }
+];
 const CONFIG = Object.freeze({
   SPREADSHEET_ID: '1OypDck9kNKtTPHOdNWPLCqU9Sjr591a9bL6S3YhjFH0',
   DATA_SHEET: 'Eventos',
@@ -23,7 +28,7 @@ function doGet() {
 function doPost(e) {
   try {
     const body = JSON.parse(e && e.postData && e.postData.contents || '{}');
-    if (body.action === 'auth') return json_(authenticate_(String(body.password || '')));
+    if (body.action === 'auth') return json_(authenticate_(String(body.username || ''),String(body.password || '')));
     requireSession_(body.sessionToken);
     if (body.action === 'list') return json_(listEvents_(body));
     if (body.action === 'createBatch') return json_(createEventsBatch_(body));
@@ -34,14 +39,13 @@ function doPost(e) {
   }
 }
 
-function authenticate_(password) {
-  if (!CLAVE_ACCESO || CLAVE_ACCESO.indexOf('REEMPLAZAR_') === 0) throw new Error('PASSWORD_NOT_CONFIGURED');
-  if (!constantTimeEqual_(password, CLAVE_ACCESO)) throw new Error('INVALID_PASSWORD');
-  const now = Date.now();
-  const payload = {iat:now,exp:now + CONFIG.SESSION_SECONDS * 1000,nonce:Utilities.getUuid()};
-  const encoded = base64Url_(Utilities.newBlob(JSON.stringify(payload)).getBytes());
-  const token = encoded + '.' + sign_(encoded);
-  return {ok:true,sessionToken:token,expiresAt:new Date(payload.exp).toISOString()};
+function authenticate_(username,password) {
+  const user=USUARIOS.find(x=>constantTimeEqual_(String(x.usuario||''),String(username||'')));
+  if(!user||!user.clave||user.clave.indexOf('REEMPLAZAR_')===0||!constantTimeEqual_(password,user.clave))throw new Error('INVALID_CREDENTIALS');
+  const now=Date.now();
+  const payload={iat:now,exp:now+CONFIG.SESSION_SECONDS*1000,nonce:Utilities.getUuid(),sub:user.usuario,credentialTag:credentialTag_(user)};
+  const encoded=base64Url_(Utilities.newBlob(JSON.stringify(payload)).getBytes());
+  return {ok:true,sessionToken:encoded+'.'+sign_(encoded),expiresAt:new Date(payload.exp).toISOString(),username:user.usuario};
 }
 function requireSession_(token) {
   if (!token || typeof token !== 'string') throw new Error('UNAUTHORIZED');
@@ -50,8 +54,10 @@ function requireSession_(token) {
   let payload;
   try { payload = JSON.parse(Utilities.newBlob(Utilities.base64DecodeWebSafe(parts[0])).getDataAsString()); }
   catch (_) { throw new Error('UNAUTHORIZED'); }
-  if (!payload.exp || Date.now() > payload.exp || !payload.nonce) throw new Error('SESSION_EXPIRED');
+  const activeUser=USUARIOS.find(x=>x.usuario===payload.sub&&x.clave&&!x.clave.startsWith('REEMPLAZAR_'));
+  if(!payload.exp||Date.now()>payload.exp||!payload.nonce||!activeUser||payload.credentialTag!==credentialTag_(activeUser))throw new Error('SESSION_EXPIRED');
 }
+function credentialTag_(user){return sign_('credential:'+String(user.usuario)+':'+String(user.clave));}
 function sign_(value) {
   const props = PropertiesService.getScriptProperties();
   let secret = props.getProperty('APP_SESSION_SIGNING_KEY');
@@ -202,6 +208,6 @@ function ensureHeaders_(sheet) {
 function rowObject_(r) { const o={}; CONFIG.HEADERS.forEach((h,i)=>o[h]=r[i] instanceof Date?r[i].toISOString():r[i]); return o; }
 function json_(value) { return ContentService.createTextOutput(JSON.stringify(value)).setMimeType(ContentService.MimeType.JSON); }
 function publicError_(err) {
-  const allowed=['INVALID_ACTION','INVALID_FROM','INVALID_EVENT_ID','INVALID_EVENT','INVALID_BATCH','BUSY_RETRY','NOT_FOUND','CONFLICT','SHEET_NOT_FOUND','PASSWORD_NOT_CONFIGURED','INVALID_PASSWORD','UNAUTHORIZED','SESSION_EXPIRED'];
+  const allowed=['INVALID_ACTION','INVALID_FROM','INVALID_EVENT_ID','INVALID_EVENT','INVALID_BATCH','BUSY_RETRY','NOT_FOUND','CONFLICT','SHEET_NOT_FOUND','PASSWORD_NOT_CONFIGURED','INVALID_PASSWORD','INVALID_CREDENTIALS','UNAUTHORIZED','SESSION_EXPIRED'];
   return allowed.includes(err.message)?err.message:'INTERNAL_ERROR';
 }

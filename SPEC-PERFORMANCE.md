@@ -35,7 +35,15 @@ Aplicar estas pautas a cada proyecto nuevo o al optimizar uno existente. Mantene
 
 - Los endpoints de lote aceptan como máximo 100 filas y escriben con `setValues()`.
 - CRUD usa rangos y una escritura por fila, lock breve, control optimista de versión y caché solo de lecturas.
-- La clave de acceso está declarada como `CLAVE_ACCESO` en `.gs` por el requerimiento actual. El valor versionado es un marcador; hay que reemplazarlo antes de desplegar. No poner una clave real en el repo compartido ni en el Markdown de Drive.
+- La clave de acceso está declarada como `CLAVE_ACCESO` en `.gs` por el requerimiento actual. Las credenciales versionadas son marcadores; hay que reemplazarlas antes de desplegar. Para multiusuario, cada usuario tiene nombre de usuario y contraseña propios en el arreglo `USUARIOS`; agregar una cuenta consiste en agregar una entrada, y desactivarla en eliminarla o volverla placeholder. Las claves reales en `.gs` son visibles para todo editor del proyecto: no commitearlas ni subirlas al Markdown de Drive. Este esquema es simple y no ofrece gestión/recuperación ni permisos por rol.
+
+## Cuentas multiusuario en proyectos que las requieran
+
+- Cuando un proyecto use login propio con varios usuarios, representar cada cuenta en una lista central del `.gs` con identificador único y credencial propia; no repetir bloques de login por usuario.
+- Validar usuario y contraseña en el servidor, devolver un error genérico ante credenciales inválidas y no incluir credenciales en logs, URLs o mensajes al cliente.
+- El token de sesión debe incluir un identificador de usuario y caducidad, validarse en cada endpoint y quedar invalidado si se elimina el usuario o cambia su contraseña. El cliente mantiene el token en `sessionStorage`, nunca contraseña persistente.
+- La lista de usuarios en código facilita un prototipo pequeño, no es adecuada para administración frecuente: toda modificación requiere editar/implementar de nuevo y todo editor ve las claves. Preferir un proveedor de identidad institucional o credenciales secretas con hashes y flujo de recuperación cuando el producto escale.
+- Un login compartido o una lista de cuentas no constituye autorización por rol/curso. Definir permisos independientes antes de exponer datos sensibles.
 
 ## Criterios de prueba para futuras optimizaciones
 

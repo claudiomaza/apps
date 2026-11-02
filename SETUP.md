@@ -18,7 +18,7 @@ Cada hoja debe tener su propio proyecto vinculado. Los manuales completos y auto
 - [Calendario - Código Apps Script.md](https://drive.google.com/file/d/15Gy7lV9RJw4AT3kPoOcBK7rwMLjccF5o/view)
 - [Registro de notas - Código Apps Script.md](https://drive.google.com/file/d/1KPpT-NgigILhG5K5GNfyYgg86wcn85KQ/view)
 
-El backend usa una constante `CLAVE_ACCESO` dentro de cada `.gs`, con un marcador que hay que reemplazar por una clave propia antes de implementar. Los Markdown de Drive incluyen ese mismo código. El repo contiene solo el marcador, nunca la clave real. Ambos frontends usan sesiones temporales firmadas; Calendario además sincroniza CRUD con Calendar predeterminado.
+El backend usa un arreglo `USUARIOS` dentro de cada `.gs`, con usuarios de ejemplo y claves placeholder. Agregar o quitar cuentas se hace editando ese arreglo. Reemplazá las credenciales directamente en el editor de Apps Script; nunca subas contraseñas reales al repo ni al Markdown de Drive porque son visibles para quien pueda leerlo. Ambos frontends piden usuario y clave y usan sesiones temporales firmadas ligadas a las credenciales; Calendario además sincroniza CRUD con Calendar predeterminado.
 
 Las optimizaciones transversales acordadas están documentadas en [SPEC-PERFORMANCE.md](./SPEC-PERFORMANCE.md) y en la carpeta Drive como [SPEC - Optimizaciones comunes Apps.md](https://drive.google.com/file/d/12aVV2PZQNBvxp9YWgy3iQZs5mPAi9oFw/view). Notas ya pagina con lectura por bloques desde el final; Calendario mantiene escaneo del mes para no perder eventos si la hoja no está ordenada por fecha. Apps Script API no está disponible en esta sesión: los manuales están listos para copiar, pero los proyectos aún no quedaron creados/vinculados automáticamente.
 
