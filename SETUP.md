@@ -13,9 +13,12 @@ Las pestañas y encabezados iniciales están creados. Hojas `Inbox` y `Config` s
 
 ## Apps Script vinculado
 
-Cada hoja debe tener su propio proyecto vinculado (abrir Sheet → Extensiones → Apps Script). Copiar `gas/calendario/Code.gs` y `appsscript.json` al proyecto Calendario; para Notas, copiar los archivos homónimos de `gas/notas/`. Los proyectos deben ejecutarse en V8 y apuntar a los IDs de spreadsheet declarados en el código. Autorizar el acceso a Sheets y revisar logs/testear con datos ficticios.
+Cada hoja debe tener su propio proyecto vinculado. Los manuales completos y autocontenidos (código `Code.gs`, manifiesto, pasos de instalación y espacio para la URL `/exec`) están en la carpeta Drive:
 
-Apps Script API no está habilitada en el conector disponible en esta sesión; por eso el código queda versionado y también se copiaron manuales `.md` autocontenidos dentro de la carpeta Drive para que puedas crear los proyectos vinculados. Los proyectos todavía NO quedaron creados ni vinculados automáticamente.
+- [Calendario - Código Apps Script.md](https://drive.google.com/file/d/15Gy7lV9RJw4AT3kPoOcBK7rwMLjccF5o/view)
+- [Registro de notas - Código Apps Script.md](https://drive.google.com/file/d/1KPpT-NgigILhG5K5GNfyYgg86wcn85KQ/view)
+
+El backend exige `APP_ACCESS_PASSWORD` guardada en Script Properties y genera tokens temporales firmados; no hay contraseña fija en el repo. Calendario además sincroniza CRUD con Calendar predeterminado. Apps Script API no está disponible en esta sesión: los manuales están listos para copiar, pero los proyectos aún no quedaron creados/vinculados automáticamente.
 
 ## Frontend y publicación
 
