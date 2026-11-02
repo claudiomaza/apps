@@ -1,15 +1,8 @@
 /**
  * Backend de Registro de notas para Apps Script vinculado al Sheet.
- * Reemplazá las cuentas placeholder de USUARIOS antes de desplegar.
- * El frontend autentica usuario+clave y envía un sessionToken firmado.
+ * Agregá un archivo HTML al proyecto llamado usuarios.json (se mostrará como
+ * usuarios.json.html), con JSON puro. Completar cuentas solo dentro de Apps Script.
  */
-// Agregá una entrada por usuario. Reemplazá cada clave placeholder antes de desplegar.
-// Quienes puedan editar/ver este .gs pueden leer las claves; no compartirlo con terceros.
-const USUARIOS = [
-  { usuario: 'admin', clave: 'REEMPLAZAR_CLAVE_ADMIN' },
-  { usuario: 'usuario1', clave: 'REEMPLAZAR_CLAVE_USUARIO1' },
-  { usuario: 'usuario2', clave: 'REEMPLAZAR_CLAVE_USUARIO2' }
-];
 const CONFIG = Object.freeze({
   SPREADSHEET_ID: '1eH_SMJcaPoA6tEkKakETRKS1TsvGXxHSXHlFB5m02yE',
   DATA_SHEET: 'Notas',
@@ -32,8 +25,9 @@ function doPost(e) {
   } catch(e) { return json_({ok:false,error:publicError_(e)}); }
 }
 function authenticate_(username,password) {
-  const user=USUARIOS.find(x=>constantTimeEqual_(String(x.usuario||''),String(username||'')));
-  if(!user||!user.clave||user.clave.indexOf('REEMPLAZAR_')===0||!constantTimeEqual_(password,user.clave))throw Error('INVALID_CREDENTIALS');
+  const wanted=String(username||'').trim().toLowerCase();
+  const user=loadUsers_().find(x=>x.activo&&String(x.usuario).trim().toLowerCase()===wanted);
+  if(!user||!constantTimeEqual_(password,user.clave))throw Error('INVALID_CREDENTIALS');
   const now=Date.now(),payload={iat:now,exp:now+CONFIG.SESSION_SECONDS*1000,nonce:Utilities.getUuid(),sub:user.usuario,credentialTag:credentialTag_(user)};
   const encoded=base64Url_(Utilities.newBlob(JSON.stringify(payload)).getBytes());
   return {ok:true,sessionToken:encoded+'.'+sign_(encoded),expiresAt:new Date(payload.exp).toISOString(),username:user.usuario};
@@ -45,10 +39,28 @@ function requireSession_(token) {
   let payload;
   try { payload=JSON.parse(Utilities.newBlob(Utilities.base64DecodeWebSafe(parts[0])).getDataAsString()); }
   catch(_) { throw Error('UNAUTHORIZED'); }
-  const activeUser=USUARIOS.find(x=>x.usuario===payload.sub&&x.clave&&!x.clave.startsWith('REEMPLAZAR_'));
+  const activeUser=loadUsers_().find(x=>x.usuario===payload.sub&&x.activo);
   if(!payload.exp||Date.now()>payload.exp||!payload.nonce||!activeUser||payload.credentialTag!==credentialTag_(activeUser))throw Error('SESSION_EXPIRED');
 }
-function credentialTag_(user){return sign_('credential:'+String(user.usuario)+':'+String(user.clave));}
+function credentialTag_(user){return sign_('credential:'+String(user.usuario)+':'+String(user.clave)+':'+String(user.activo));}
+function loadUsers_(){
+  const cache=CacheService.getScriptCache(),key='auth:users:v1',hit=cache.get(key);
+  if(hit)return JSON.parse(hit);
+  let users;
+  try{users=JSON.parse(HtmlService.createHtmlOutputFromFile('usuarios.json').getContent()).users;}
+  catch(_){throw Error('USERS_JSON_INVALID');}
+  if(!Array.isArray(users)||users.length>200)throw Error('USERS_JSON_INVALID');
+  const seen=new Set();
+  users.forEach(u=>{
+    if(!u||typeof u.usuario!=='string'||!u.usuario.trim()||u.usuario.length>100||typeof u.clave!=='string'||u.clave.length>200||(u.activo!==true&&u.activo!==false))throw Error('USERS_JSON_INVALID');
+    const userKey=u.usuario.trim().toLowerCase();
+    if(seen.has(userKey)||(u.activo&&u.clave.length<12))throw Error('USERS_JSON_INVALID');
+    seen.add(userKey);
+  });
+  cache.put(key,JSON.stringify(users),15);
+  return users;
+}
+function limpiarCacheUsuarios(){CacheService.getScriptCache().remove('auth:users:v1');}
 function sign_(value) {
   const p=PropertiesService.getScriptProperties();let secret=p.getProperty('APP_SESSION_SIGNING_KEY');
   if(!secret){secret=Utilities.getUuid()+Utilities.getUuid()+Utilities.getUuid();p.setProperty('APP_SESSION_SIGNING_KEY',secret);}
@@ -112,4 +124,4 @@ function dataSheet_(){const s=SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID).get
 function ensureHeaders_(s){if(s.getLastRow()===0){s.getRange(1,1,1,CONFIG.HEADERS.length).setValues([CONFIG.HEADERS]);return;}const actual=s.getRange(1,1,1,CONFIG.HEADERS.length).getDisplayValues()[0];if(CONFIG.HEADERS.some((h,i)=>actual[i]!==h))throw Error('HEADER_MISMATCH');}
 function rowObject_(r){const o={};CONFIG.HEADERS.forEach((h,i)=>o[h]=r[i] instanceof Date?r[i].toISOString():r[i]);return o;}
 function json_(v){return ContentService.createTextOutput(JSON.stringify(v)).setMimeType(ContentService.MimeType.JSON);}
-function publicError_(e){const ok=['INVALID_ACTION','INVALID_GRADE_ID','INVALID_GRADE','INVALID_BATCH','BUSY_RETRY','NOT_FOUND','CONFLICT','SHEET_NOT_FOUND','HEADER_MISMATCH','PASSWORD_NOT_CONFIGURED','INVALID_PASSWORD','INVALID_CREDENTIALS','UNAUTHORIZED','SESSION_EXPIRED'];return ok.includes(e.message)?e.message:'INTERNAL_ERROR';}
+function publicError_(e){const ok=['INVALID_ACTION','INVALID_GRADE_ID','INVALID_GRADE','INVALID_BATCH','BUSY_RETRY','NOT_FOUND','CONFLICT','SHEET_NOT_FOUND','HEADER_MISMATCH','INVALID_CREDENTIALS','USERS_JSON_INVALID','UNAUTHORIZED','SESSION_EXPIRED'];return ok.includes(e.message)?e.message:'INTERNAL_ERROR';}

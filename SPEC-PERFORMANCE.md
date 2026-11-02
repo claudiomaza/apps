@@ -35,15 +35,25 @@ Aplicar estas pautas a cada proyecto nuevo o al optimizar uno existente. Mantene
 
 - Los endpoints de lote aceptan como máximo 100 filas y escriben con `setValues()`.
 - CRUD usa rangos y una escritura por fila, lock breve, control optimista de versión y caché solo de lecturas.
-- La clave de acceso está declarada como `CLAVE_ACCESO` en `.gs` por el requerimiento actual. Las credenciales versionadas son marcadores; hay que reemplazarlas antes de desplegar. Para multiusuario, cada usuario tiene nombre de usuario y contraseña propios en el arreglo `USUARIOS`; agregar una cuenta consiste en agregar una entrada, y desactivarla en eliminarla o volverla placeholder. Las claves reales en `.gs` son visibles para todo editor del proyecto: no commitearlas ni subirlas al Markdown de Drive. Este esquema es simple y no ofrece gestión/recuperación ni permisos por rol.
+- Las apps con login multiusuario leen credenciales desde `usuarios.json.html` dentro del proyecto Apps Script; no guardan claves en el `.gs`. El repo incluye plantillas vacías sin usuarios activos ni credenciales reales.
+
+## Usuarios y contraseñas gestionados fuera del código
+
+- Para login local, mantener usuarios en un archivo HTML del proyecto Apps Script creado con **Agregar archivo → HTML**, nombre `usuarios.json`; el editor lo mostrará como `usuarios.json.html`. Contenido JSON puro, sin tags HTML/JS. El `.gs` lo lee con `HtmlService.createHtmlOutputFromFile('usuarios.json').getContent()`.
+- Esquema: `{ "users": [{ "usuario": "...", "clave": "...", "activo": true }] }`. Nombres únicos sin distinguir mayúsculas; `activo:false` revoca. Claves activas mínimas de 12 caracteres; máximo 200 usuarios.
+- No guardar credenciales reales en GitHub, Markdown, frontend o chat. Los ejemplos versionados solo contienen `users: []`. Completar credenciales en el editor Apps Script; cualquier editor del proyecto puede leerlas.
+- El `.gs` valida el JSON en servidor y cachea 15 s. Tras editar, ejecutar `limpiarCacheUsuarios()` para vaciar la caché, guardar y actualizar el deployment versionado si corresponde. CacheService no es durable.
+- El token firmado incluye usuario, vencimiento y huella de credenciales activas; validarlo en cada endpoint. Quitar/desactivar usuario o cambiar su clave invalida la sesión tras actualizar fuente/cache.
+- Esto separa claves del `.gs` principal pero no las oculta a editores ni provee roles. Para datos sensibles: login institucional y permisos por curso/rol.
+
+- Un login no reemplaza autorización: definir qué puede leer/escribir cada usuario antes de exponer datos de estudiantes.
 
 ## Cuentas multiusuario en proyectos que las requieran
 
-- Cuando un proyecto use login propio con varios usuarios, representar cada cuenta en una lista central del `.gs` con identificador único y credencial propia; no repetir bloques de login por usuario.
-- Validar usuario y contraseña en el servidor, devolver un error genérico ante credenciales inválidas y no incluir credenciales en logs, URLs o mensajes al cliente.
-- El token de sesión debe incluir un identificador de usuario y caducidad, validarse en cada endpoint y quedar invalidado si se elimina el usuario o cambia su contraseña. El cliente mantiene el token en `sessionStorage`, nunca contraseña persistente.
-- La lista de usuarios en código facilita un prototipo pequeño, no es adecuada para administración frecuente: toda modificación requiere editar/implementar de nuevo y todo editor ve las claves. Preferir un proveedor de identidad institucional o credenciales secretas con hashes y flujo de recuperación cuando el producto escale.
-- Un login compartido o una lista de cuentas no constituye autorización por rol/curso. Definir permisos independientes antes de exponer datos sensibles.
+- No repetir bloques de login. Agregar/revocar cuentas editando `usuarios.json`, validando identidad y clave en servidor.
+- El cliente conserva solo el token temporal en `sessionStorage`, no la contraseña.
+- Cambiar clave, desactivar o retirar cuenta invalida sesiones después del TTL de caché o de borrarla.
+- No afirmar aislamiento por curso/rol hasta implementarlo y probarlo.
 
 ## Criterios de prueba para futuras optimizaciones
 

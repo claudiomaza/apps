@@ -1,16 +1,8 @@
 /**
  * Backend Calendario para Apps Script vinculado al Sheet.
- * Reemplazar las cuentas placeholder de USUARIOS antes de desplegar.
- * El frontend manda usuario+clave a auth y envía
- * el sessionToken retornado en los POST siguientes.
+ * Agregá un archivo HTML al proyecto llamado usuarios.json (se mostrará como
+ * usuarios.json.html), con JSON puro. Completar cuentas solo dentro de Apps Script.
  */
-// Agregá una entrada por usuario. Reemplazá cada clave placeholder antes de desplegar.
-// Quienes puedan editar/ver este .gs pueden leer las claves: no compartir el proyecto con terceros.
-const USUARIOS = [
-  { usuario: 'admin', clave: 'REEMPLAZAR_CLAVE_ADMIN' },
-  { usuario: 'usuario1', clave: 'REEMPLAZAR_CLAVE_USUARIO1' },
-  { usuario: 'usuario2', clave: 'REEMPLAZAR_CLAVE_USUARIO2' }
-];
 const CONFIG = Object.freeze({
   SPREADSHEET_ID: '1OypDck9kNKtTPHOdNWPLCqU9Sjr591a9bL6S3YhjFH0',
   DATA_SHEET: 'Eventos',
@@ -40,8 +32,9 @@ function doPost(e) {
 }
 
 function authenticate_(username,password) {
-  const user=USUARIOS.find(x=>constantTimeEqual_(String(x.usuario||''),String(username||'')));
-  if(!user||!user.clave||user.clave.indexOf('REEMPLAZAR_')===0||!constantTimeEqual_(password,user.clave))throw new Error('INVALID_CREDENTIALS');
+  const wanted=String(username||'').trim().toLowerCase();
+  const user=loadUsers_().find(x=>x.activo&&String(x.usuario).trim().toLowerCase()===wanted);
+  if(!user||!constantTimeEqual_(password,user.clave))throw new Error('INVALID_CREDENTIALS');
   const now=Date.now();
   const payload={iat:now,exp:now+CONFIG.SESSION_SECONDS*1000,nonce:Utilities.getUuid(),sub:user.usuario,credentialTag:credentialTag_(user)};
   const encoded=base64Url_(Utilities.newBlob(JSON.stringify(payload)).getBytes());
@@ -54,10 +47,28 @@ function requireSession_(token) {
   let payload;
   try { payload = JSON.parse(Utilities.newBlob(Utilities.base64DecodeWebSafe(parts[0])).getDataAsString()); }
   catch (_) { throw new Error('UNAUTHORIZED'); }
-  const activeUser=USUARIOS.find(x=>x.usuario===payload.sub&&x.clave&&!x.clave.startsWith('REEMPLAZAR_'));
+  const activeUser=loadUsers_().find(x=>x.usuario===payload.sub&&x.activo);
   if(!payload.exp||Date.now()>payload.exp||!payload.nonce||!activeUser||payload.credentialTag!==credentialTag_(activeUser))throw new Error('SESSION_EXPIRED');
 }
-function credentialTag_(user){return sign_('credential:'+String(user.usuario)+':'+String(user.clave));}
+function credentialTag_(user){return sign_('credential:'+String(user.usuario)+':'+String(user.clave)+':'+String(user.activo));}
+function loadUsers_(){
+  const cache=CacheService.getScriptCache(),cacheKey='auth:users:v1',hit=cache.get(cacheKey);
+  if(hit)return JSON.parse(hit);
+  let users;
+  try{users=JSON.parse(HtmlService.createHtmlOutputFromFile('usuarios.json').getContent()).users;}
+  catch(_){throw new Error('USERS_JSON_INVALID');}
+  if(!Array.isArray(users)||users.length>200)throw new Error('USERS_JSON_INVALID');
+  const seen=new Set();
+  users.forEach(u=>{
+    if(!u||typeof u.usuario!=='string'||!u.usuario.trim()||u.usuario.length>100||typeof u.clave!=='string'||u.clave.length>200||(u.activo!==true&&u.activo!==false))throw new Error('USERS_JSON_INVALID');
+    const userKey=u.usuario.trim().toLowerCase();
+    if(seen.has(userKey)||(u.activo&&u.clave.length<12))throw new Error('USERS_JSON_INVALID');
+    seen.add(userKey);
+  });
+  cache.put(cacheKey,JSON.stringify(users),15);
+  return users;
+}
+function limpiarCacheUsuarios(){CacheService.getScriptCache().remove('auth:users:v1');}
 function sign_(value) {
   const props = PropertiesService.getScriptProperties();
   let secret = props.getProperty('APP_SESSION_SIGNING_KEY');
@@ -208,6 +219,6 @@ function ensureHeaders_(sheet) {
 function rowObject_(r) { const o={}; CONFIG.HEADERS.forEach((h,i)=>o[h]=r[i] instanceof Date?r[i].toISOString():r[i]); return o; }
 function json_(value) { return ContentService.createTextOutput(JSON.stringify(value)).setMimeType(ContentService.MimeType.JSON); }
 function publicError_(err) {
-  const allowed=['INVALID_ACTION','INVALID_FROM','INVALID_EVENT_ID','INVALID_EVENT','INVALID_BATCH','BUSY_RETRY','NOT_FOUND','CONFLICT','SHEET_NOT_FOUND','PASSWORD_NOT_CONFIGURED','INVALID_PASSWORD','INVALID_CREDENTIALS','UNAUTHORIZED','SESSION_EXPIRED'];
+  const allowed=['INVALID_ACTION','INVALID_FROM','INVALID_EVENT_ID','INVALID_EVENT','INVALID_BATCH','BUSY_RETRY','NOT_FOUND','CONFLICT','SHEET_NOT_FOUND','INVALID_CREDENTIALS','USERS_JSON_INVALID','UNAUTHORIZED','SESSION_EXPIRED'];
   return allowed.includes(err.message)?err.message:'INTERNAL_ERROR';
 }
