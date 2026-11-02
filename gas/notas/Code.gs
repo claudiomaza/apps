@@ -1,11 +1,12 @@
 /**
  * Backend de Registro de notas para Apps Script vinculado al Sheet.
- * Agregá un archivo HTML al proyecto llamado usuarios.json (se mostrará como
- * usuarios.json.html), con JSON puro. Completar cuentas solo dentro de Apps Script.
+ * Las cuentas activas se administran en la pestaña `Usuarios` del Sheet,
+ * columnas `mail` y `pass`. Las claves se guardan en texto plano.
  */
 const CONFIG = Object.freeze({
   SPREADSHEET_ID: '1eH_SMJcaPoA6tEkKakETRKS1TsvGXxHSXHlFB5m02yE',
   DATA_SHEET: 'Notas',
+  USERS_SHEET: 'Usuarios',
   CACHE_SECONDS: 45,
   SESSION_SECONDS: 8 * 60 * 60,
   MAX_PAGE_SIZE: 300,
@@ -16,7 +17,7 @@ function doGet() { return json_({ok:true,service:'apps-gradebook',schemaVersion:
 function doPost(e) {
   try {
     const b=JSON.parse(e&&e.postData&&e.postData.contents||'{}');
-    if(b.action==='auth')return json_(authenticate_(String(b.username||''),String(b.password||'')));
+    if(b.action==='auth')return json_(authenticate_(String(b.mail||''),String(b.pass||'')));
     requireSession_(b.sessionToken);
     if(b.action==='list')return json_(listGrades_(b));
     if(b.action==='createBatch')return json_(createGradesBatch_(b));
@@ -24,13 +25,14 @@ function doPost(e) {
     return json_(mutateGrade_(b.action,b));
   } catch(e) { return json_({ok:false,error:publicError_(e)}); }
 }
-function authenticate_(username,password) {
-  const wanted=String(username||'').trim().toLowerCase();
-  const user=loadUsers_().find(x=>x.activo&&String(x.usuario).trim().toLowerCase()===wanted);
-  if(!user||!constantTimeEqual_(password,user.clave))throw Error('INVALID_CREDENTIALS');
-  const now=Date.now(),payload={iat:now,exp:now+CONFIG.SESSION_SECONDS*1000,nonce:Utilities.getUuid(),sub:user.usuario,credentialTag:credentialTag_(user)};
+function authenticate_(mail,password) {
+  if(String(mail||'').length>254||String(password||'').length>200)throw Error('INVALID_CREDENTIALS');
+  const wanted=String(mail||'').trim().toLowerCase();
+  const user=loadUsers_().find(x=>x.mail.toLowerCase()===wanted);
+  if(!user||!constantTimeEqual_(password,user.pass))throw Error('INVALID_CREDENTIALS');
+  const now=Date.now(),payload={iat:now,exp:now+CONFIG.SESSION_SECONDS*1000,nonce:Utilities.getUuid(),sub:user.mail,credentialTag:credentialTag_(user)};
   const encoded=base64Url_(Utilities.newBlob(JSON.stringify(payload)).getBytes());
-  return {ok:true,sessionToken:encoded+'.'+sign_(encoded),expiresAt:new Date(payload.exp).toISOString(),username:user.usuario};
+  return {ok:true,sessionToken:encoded+'.'+sign_(encoded),expiresAt:new Date(payload.exp).toISOString(),mail:user.mail};
 }
 function requireSession_(token) {
   if(!token||typeof token!=='string')throw Error('UNAUTHORIZED');
@@ -39,24 +41,29 @@ function requireSession_(token) {
   let payload;
   try { payload=JSON.parse(Utilities.newBlob(Utilities.base64DecodeWebSafe(parts[0])).getDataAsString()); }
   catch(_) { throw Error('UNAUTHORIZED'); }
-  const activeUser=loadUsers_().find(x=>x.usuario===payload.sub&&x.activo);
+  const activeUser=loadUsers_().find(x=>x.mail.toLowerCase()===String(payload.sub||'').toLowerCase());
   if(!payload.exp||Date.now()>payload.exp||!payload.nonce||!activeUser||payload.credentialTag!==credentialTag_(activeUser))throw Error('SESSION_EXPIRED');
 }
-function credentialTag_(user){return sign_('credential:'+String(user.usuario)+':'+String(user.clave)+':'+String(user.activo));}
+function credentialTag_(user){return sign_('credential:'+user.mail+':'+user.pass);}
 function loadUsers_(){
   const cache=CacheService.getScriptCache(),key='auth:users:v1',hit=cache.get(key);
   if(hit)return JSON.parse(hit);
-  let users;
-  try{users=JSON.parse(HtmlService.createHtmlOutputFromFile('usuarios.json').getContent()).users;}
-  catch(_){throw Error('USERS_JSON_INVALID');}
-  if(!Array.isArray(users)||users.length>200)throw Error('USERS_JSON_INVALID');
-  const seen=new Set();
-  users.forEach(u=>{
-    if(!u||typeof u.usuario!=='string'||!u.usuario.trim()||u.usuario.length>100||typeof u.clave!=='string'||u.clave.length>200||(u.activo!==true&&u.activo!==false))throw Error('USERS_JSON_INVALID');
-    const userKey=u.usuario.trim().toLowerCase();
-    if(seen.has(userKey)||(u.activo&&u.clave.length<12))throw Error('USERS_JSON_INVALID');
-    seen.add(userKey);
+  const sheet=SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID).getSheetByName(CONFIG.USERS_SHEET);
+  if(!sheet)throw Error('USERS_SHEET_NOT_FOUND');
+  const last=sheet.getLastRow();
+  const values=last?sheet.getRange(1,1,last,2).getDisplayValues():[];
+  if(!values.length||values[0][0]!=='mail'||values[0][1]!=='pass')throw Error('USERS_SHEET_INVALID');
+  const users=[],seen=new Set();
+  values.slice(1).forEach(row=>{
+    const mail=String(row[0]||'').trim(),pass=String(row[1]||'');
+    if(!mail&&!pass)return;
+    if(!/^\S+@\S+\.\S+$/.test(mail)||mail.length>254||pass.length<12||pass.length>200)throw Error('USERS_SHEET_INVALID');
+    if(users.length>=200)throw Error('USERS_SHEET_INVALID');
+    const normalized=mail.toLowerCase();
+    if(seen.has(normalized))throw Error('USERS_SHEET_INVALID');
+    seen.add(normalized);users.push({mail,pass});
   });
+  if(users.length>200)throw Error('USERS_SHEET_INVALID');
   cache.put(key,JSON.stringify(users),15);
   return users;
 }
@@ -124,4 +131,4 @@ function dataSheet_(){const s=SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID).get
 function ensureHeaders_(s){if(s.getLastRow()===0){s.getRange(1,1,1,CONFIG.HEADERS.length).setValues([CONFIG.HEADERS]);return;}const actual=s.getRange(1,1,1,CONFIG.HEADERS.length).getDisplayValues()[0];if(CONFIG.HEADERS.some((h,i)=>actual[i]!==h))throw Error('HEADER_MISMATCH');}
 function rowObject_(r){const o={};CONFIG.HEADERS.forEach((h,i)=>o[h]=r[i] instanceof Date?r[i].toISOString():r[i]);return o;}
 function json_(v){return ContentService.createTextOutput(JSON.stringify(v)).setMimeType(ContentService.MimeType.JSON);}
-function publicError_(e){const ok=['INVALID_ACTION','INVALID_GRADE_ID','INVALID_GRADE','INVALID_BATCH','BUSY_RETRY','NOT_FOUND','CONFLICT','SHEET_NOT_FOUND','HEADER_MISMATCH','INVALID_CREDENTIALS','USERS_JSON_INVALID','UNAUTHORIZED','SESSION_EXPIRED'];return ok.includes(e.message)?e.message:'INTERNAL_ERROR';}
+function publicError_(e){const ok=['INVALID_ACTION','INVALID_GRADE_ID','INVALID_GRADE','INVALID_BATCH','BUSY_RETRY','NOT_FOUND','CONFLICT','SHEET_NOT_FOUND','HEADER_MISMATCH','USERS_SHEET_NOT_FOUND','USERS_SHEET_INVALID','INVALID_CREDENTIALS','UNAUTHORIZED','SESSION_EXPIRED'];return ok.includes(e.message)?e.message:'INTERNAL_ERROR';}

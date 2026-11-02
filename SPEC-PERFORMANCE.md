@@ -35,25 +35,17 @@ Aplicar estas pautas a cada proyecto nuevo o al optimizar uno existente. Mantene
 
 - Los endpoints de lote aceptan como máximo 100 filas y escriben con `setValues()`.
 - CRUD usa rangos y una escritura por fila, lock breve, control optimista de versión y caché solo de lecturas.
-- Las apps con login multiusuario leen credenciales desde `usuarios.json.html` dentro del proyecto Apps Script; no guardan claves en el `.gs`. El repo incluye plantillas vacías sin usuarios activos ni credenciales reales.
+- Cada Sheet mantiene una pestaña `Usuarios` con encabezados `mail` y `pass`; el backend autentica contra esas filas.
 
-## Usuarios y contraseñas gestionados fuera del código
+## Gestión de usuarios
 
-- Para login local, mantener usuarios en un archivo HTML del proyecto Apps Script creado con **Agregar archivo → HTML**, nombre `usuarios.json`; el editor lo mostrará como `usuarios.json.html`. Contenido JSON puro, sin tags HTML/JS. El `.gs` lo lee con `HtmlService.createHtmlOutputFromFile('usuarios.json').getContent()`.
-- Esquema: `{ "users": [{ "usuario": "...", "clave": "...", "activo": true }] }`. Nombres únicos sin distinguir mayúsculas; `activo:false` revoca. Claves activas mínimas de 12 caracteres; máximo 200 usuarios.
-- No guardar credenciales reales en GitHub, Markdown, frontend o chat. Los ejemplos versionados solo contienen `users: []`. Completar credenciales en el editor Apps Script; cualquier editor del proyecto puede leerlas.
-- El `.gs` valida el JSON en servidor y cachea 15 s. Tras editar, ejecutar `limpiarCacheUsuarios()` para vaciar la caché, guardar y actualizar el deployment versionado si corresponde. CacheService no es durable.
-- El token firmado incluye usuario, vencimiento y huella de credenciales activas; validarlo en cada endpoint. Quitar/desactivar usuario o cambiar su clave invalida la sesión tras actualizar fuente/cache.
-- Esto separa claves del `.gs` principal pero no las oculta a editores ni provee roles. Para datos sensibles: login institucional y permisos por curso/rol.
-
-- Un login no reemplaza autorización: definir qué puede leer/escribir cada usuario antes de exponer datos de estudiantes.
-
-## Cuentas multiusuario en proyectos que las requieran
-
-- No repetir bloques de login. Agregar/revocar cuentas editando `usuarios.json`, validando identidad y clave en servidor.
-- El cliente conserva solo el token temporal en `sessionStorage`, no la contraseña.
-- Cambiar clave, desactivar o retirar cuenta invalida sesiones después del TTL de caché o de borrarla.
-- No afirmar aislamiento por curso/rol hasta implementarlo y probarlo.
+- Agregar, actualizar o quitar una fila de `Usuarios` cambia las credenciales de acceso sin modificar ni volver a desplegar el código. El backend usa una caché de 15 segundos; los cambios se reflejan en ese plazo.
+- `mail` debe ser único (sin distinguir mayúsculas) y válido; `pass` debe tener al menos 12 caracteres. Máximo 200 cuentas. No dejar filas con un solo campo completado.
+- `pass` queda en texto plano en la planilla. Toda persona con acceso de lectura al Sheet puede verlo; restringir el acceso del documento a administradores confiables. No compartir el Sheet de Registro de notas con docentes/alumnos como método de acceso a la app sin separar la administración de cuentas; las hojas no son un almacén de secretos.
+- El token firmado incluye el correo, expiración y una huella de credencial; se valida en cada solicitud. Eliminar la fila o cambiar la contraseña invalida la sesión tras refrescarse la caché.
+- La pestaña no agrega roles ni autorización por curso. Un login no reemplaza autorización: definir qué puede leer/escribir cada persona antes de exponer datos educativos.
+- El cliente conserva solo el token temporal en `sessionStorage`, no la contraseña. Nunca devolver ni registrar `pass` desde el backend.
+- Para datos sensibles o acceso multirol, preferir autenticación institucional y almacenamiento adecuado de credenciales; no habilitar datos reales de estudiantes con este prototipo hasta implementar permisos institucionales.
 
 ## Criterios de prueba para futuras optimizaciones
 
