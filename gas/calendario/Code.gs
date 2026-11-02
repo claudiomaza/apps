@@ -1,10 +1,11 @@
 /**
  * Backend Calendario para Apps Script vinculado al Sheet.
- * Configurar en Project Settings > Script Properties:
- *   APP_ACCESS_PASSWORD = una clave larga y aleatoria (no subirla al repo)
+ * Reemplazar CLAVE_ACCESO antes de desplegar; no subir la clave real al repo.
  * El frontend debe llamar primero {action:"auth", password:"..."} y enviar
  * el sessionToken retornado en los POST siguientes.
  */
+// Reemplazar por una clave larga, aleatoria y exclusiva antes de desplegar.
+const CLAVE_ACCESO = 'REEMPLAZAR_POR_CLAVE_LARGA_ALEATORIA';
 const CONFIG = Object.freeze({
   SPREADSHEET_ID: '1OypDck9kNKtTPHOdNWPLCqU9Sjr591a9bL6S3YhjFH0',
   DATA_SHEET: 'Eventos',
@@ -34,10 +35,8 @@ function doPost(e) {
 }
 
 function authenticate_(password) {
-  const props = PropertiesService.getScriptProperties();
-  const expected = props.getProperty('APP_ACCESS_PASSWORD');
-  if (!expected) throw new Error('PASSWORD_NOT_CONFIGURED');
-  if (!constantTimeEqual_(password, expected)) throw new Error('INVALID_PASSWORD');
+  if (!CLAVE_ACCESO || CLAVE_ACCESO.indexOf('REEMPLAZAR_') === 0) throw new Error('PASSWORD_NOT_CONFIGURED');
+  if (!constantTimeEqual_(password, CLAVE_ACCESO)) throw new Error('INVALID_PASSWORD');
   const now = Date.now();
   const payload = {iat:now,exp:now + CONFIG.SESSION_SECONDS * 1000,nonce:Utilities.getUuid()};
   const encoded = base64Url_(Utilities.newBlob(JSON.stringify(payload)).getBytes());

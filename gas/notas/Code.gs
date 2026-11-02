@@ -1,9 +1,10 @@
 /**
  * Backend de Registro de notas para Apps Script vinculado al Sheet.
- * Configurar en Project Settings > Script Properties:
- *   APP_ACCESS_PASSWORD = clave larga y aleatoria (no subirla al repo)
+ * Reemplazar CLAVE_ACCESO antes de desplegar; no subir la clave real al repo.
  * Antes de cada operación, el frontend obtiene y envía un sessionToken firmado.
  */
+// Reemplazar por una clave larga, aleatoria y exclusiva antes de desplegar.
+const CLAVE_ACCESO = 'REEMPLAZAR_POR_CLAVE_LARGA_ALEATORIA';
 const CONFIG = Object.freeze({
   SPREADSHEET_ID: '1eH_SMJcaPoA6tEkKakETRKS1TsvGXxHSXHlFB5m02yE',
   DATA_SHEET: 'Notas',
@@ -26,9 +27,8 @@ function doPost(e) {
   } catch(e) { return json_({ok:false,error:publicError_(e)}); }
 }
 function authenticate_(password) {
-  const p=PropertiesService.getScriptProperties(), expected=p.getProperty('APP_ACCESS_PASSWORD');
-  if(!expected)throw Error('PASSWORD_NOT_CONFIGURED');
-  if(!constantTimeEqual_(password,expected))throw Error('INVALID_PASSWORD');
+  if(!CLAVE_ACCESO||CLAVE_ACCESO.indexOf('REEMPLAZAR_')===0)throw Error('PASSWORD_NOT_CONFIGURED');
+  if(!constantTimeEqual_(password,CLAVE_ACCESO))throw Error('INVALID_PASSWORD');
   const now=Date.now(),payload={iat:now,exp:now+CONFIG.SESSION_SECONDS*1000,nonce:Utilities.getUuid()};
   const encoded=base64Url_(Utilities.newBlob(JSON.stringify(payload)).getBytes());
   return {ok:true,sessionToken:encoded+'.'+sign_(encoded),expiresAt:new Date(payload.exp).toISOString()};
@@ -54,8 +54,13 @@ function listGrades_(q) {
   const limit=Math.min(Math.max(Number(q.limit)||100,1),CONFIG.MAX_PAGE_SIZE),p=PropertiesService.getScriptProperties();
   const version=p.getProperty('DATA_VERSION')||'0',key=`grades:v1:${version}:${limit}`,cache=CacheService.getScriptCache(),hit=cache.get(key);
   if(hit)return JSON.parse(hit);
-  const sh=dataSheet_(),vals=sh.getDataRange().getValues();
-  const records=vals.slice(1).filter(r=>r[0]&&r[11]!=='DELETED').slice(-limit).reverse().map(rowObject_);
+  const sh=dataSheet_(),last=sh.getLastRow(),records=[];
+  // Lee bloques desde el final y frena al completar la página; evita cargar toda la hoja.
+  for(let end=last;end>=2&&records.length<limit;){
+    const start=Math.max(2,end-499),rows=sh.getRange(start,1,end-start+1,CONFIG.HEADERS.length).getValues();
+    for(let i=rows.length-1;i>=0&&records.length<limit;i--){const r=rows[i];if(r[0]&&r[11]!=='DELETED')records.push(rowObject_(r));}
+    end=start-1;
+  }
   const result={ok:true,records};cache.put(key,JSON.stringify(result),CONFIG.CACHE_SECONDS);return result;
 }
 function mutateGrade_(action,b) {
