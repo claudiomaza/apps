@@ -4,6 +4,7 @@
  * columnas `usuario` (o el encabezado heredado `mail`) y `pass`.
  * El usuario puede tener cualquier formato; las claves se guardan en texto plano.
  * La pestaña Config (key/value) controla los límites operativos sin redeploy.
+ * auth puede incluir includeInitialList para devolver la primera página junto al token.
  */
 const CONFIG = Object.freeze({
   SPREADSHEET_ID: '1eH_SMJcaPoA6tEkKakETRKS1TsvGXxHSXHlFB5m02yE',
@@ -46,7 +47,11 @@ function doPost(e) {
   try {
     const b=JSON.parse(e&&e.postData&&e.postData.contents||'{}');
     configValues_();
-    if(b.action==='auth')return json_(authenticate_(String(b.user!==undefined?b.user:(b.mail||'')),String(b.pass||'')));
+    if(b.action==='auth'){
+      const result=authenticate_(String(b.user!==undefined?b.user:(b.mail||'')),String(b.pass||''));
+      if(b.includeInitialList===true){try{result.records=listGrades_({limit:b.limit}).records;}catch(err){result.initialListError=publicError_(err);}}
+      return json_(result);
+    }
     requireSession_(b.sessionToken);
     if(b.action==='list')return json_(listGrades_(b));
     if(b.action==='createBatch')return json_(createGradesBatch_(b));

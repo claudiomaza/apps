@@ -53,18 +53,24 @@ Aplicar estas pautas a cada proyecto nuevo o al optimizar uno existente. Mantene
 ### Registro de notas
 
 - La pestaña `Config` (`key`/`value`) es obligatoria. El backend lee `maxPageSize` (default 300, permitido 1–300) y `maxBatchSize` (default 100, permitido 1–100); vacíos/ausentes usan defaults. Cambiar esos valores no requiere redeploy; la caché dura hasta 30 s y `limpiarCacheConfig()` la invalida inmediatamente.
+- La operación de autenticación admite `includeInitialList:true`; valida credenciales y devuelve la primera página dentro de la misma respuesta autenticada. El cliente aplica esos registros directamente sin una segunda llamada `list`; si la lectura inicial falla, conserva el login y cae al listado normal. La respuesta de `auth` sin esa opción conserva su contrato previo.
 - El listado lee bloques de hasta 500 filas desde el final y se detiene cuando obtiene el límite de registros activos, en vez de leer y materializar toda la hoja antes de `slice(-limit)`.
 - `list` continúa devolviendo las notas más recientes primero. El contrato no expone cursor todavía; si el producto necesita recorrer más de `MAX_PAGE_SIZE`, agregar cursor estable y prueba de no duplicación/omisión.
 - Con muchas filas eliminadas, el recorrido puede leer múltiples bloques. Medir llamadas/latencia con datos de carga antes de ajustar `500`.
 
 ### Calendario
 
+- La operación `auth` admite `includeInitialList:true` junto con `from` y `limit`; retorna la primera lista mensual en la misma respuesta, ahorrando un viaje de red. Un fallo solo en esa lista no revierte el login: el cliente hace fallback al endpoint `list` habitual.
 - Lecturas mensuales repetidas se sirven desde CacheService con clave versionada; crear, actualizar o eliminar incrementa `DATA_VERSION`.
-- La primera lectura de un mes todavía escanea los datos almacenados para filtrar eventos, porque los eventos pueden cargarse fuera de orden cronológico. No detener el escaneo suponiendo que la fecha de una fila es anterior a la del evento buscado.
-- Como siguiente optimización, si las mediciones lo justifican, incorporar un índice mensual mantenido dentro de Sheets, o una estrategia de particionado por mes; validar consistencia tras ediciones/eliminaciones y reconstrucción.
+- En cache miss, la lectura escanea bloques de hasta 500 filas desde el principio y se detiene al reunir el límite de eventos activos del mes; no usa `getDataRange()` ni materializa toda la hoja. Conserva el orden original de filas, igual que la implementación anterior.
+- No interrumpir el recorrido por una fecha aparentemente antigua: las filas pueden cargarse fuera de orden cronológico. Con meses antiguos, pocos eventos recientes o muchos eliminados puede leer varios bloques; medir con hojas representativas antes de cambiar tamaño o semántica.
+- La grilla agrupa los eventos una vez por día en un `Map`, evitando filtrar la lista completa 42 veces por cada render. Mantener equivalencia visual y pruebas para eventos sin fecha válida, eliminados y días con más de tres eventos.
+- Si mediciones futuras justifican más mejora, incorporar un índice mensual en Sheets o particionado, con pruebas de consistencia tras ediciones/eliminaciones y reconstrucción.
 
 ### Ambos proyectos
 
+- Las apps pueden solicitar `includeInitialList:true` al autenticar, con los parámetros del primer listado. El backend solo agrega registros a la respuesta después de validar las credenciales; el cliente pinta esa lista y evita una segunda llamada. Mantener el fallback a `list` si la lista opcional falla, sin invalidar un login válido. Las operaciones auth antiguas sin la bandera conservan el contrato original.
+- El cliente conserva caché local en memoria durante 30 s para navegación/listas; botones de actualizar y reconexión fuerzan lectura fresca. CRUD actualiza memoria/cache con la respuesta confirmada del servidor, sin hacer un refetch adicional. No persistir datos educativos sensibles en localStorage/cache duradera.
 - Los endpoints de lote aceptan como máximo 100 filas y escriben con `setValues()`.
 - CRUD usa rangos y una escritura por fila, lock breve, control optimista de versión y caché solo de lecturas.
 - Cada Sheet mantiene una pestaña `Usuarios` con dos columnas: identificador de usuario y `pass`. El primer encabezado puede ser `usuario` (recomendado) o `mail` por compatibilidad con hojas existentes; su valor no tiene que ser un correo. El backend autentica contra esas filas.

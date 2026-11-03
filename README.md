@@ -16,6 +16,10 @@ Toda app nueva debe reutilizar el esquema de acceso descrito en [SPEC-PERFORMANC
 
 En Calendario, la pestaña `Config` usa `key` / `value`; `calendarId` está en `Config!A5:B5`. Vacía `value`, usa el calendario principal. Para pasos detallados, ver [`calendario/README.md`](./calendario/README.md) y [SETUP.md](./SETUP.md). El backend guarda el ID por evento y no requiere redeploy para cambios posteriores de la celda, una vez que el código actualizado está instalado y desplegado.
 
+## Rendimiento
+
+Las apps combinan autenticación y primera lista en una llamada cuando el backend soporta `includeInitialList`, conservan caché de lecturas efímera y actualizan la UI desde la respuesta del CRUD. El detalle de recorridos por bloques, caché versionada, límites y fallbacks está en [SPEC-PERFORMANCE.md](./SPEC-PERFORMANCE.md). Backend modificado requiere desplegar una nueva versión de Apps Script.
+
 ## Recursos frontend
 
 HTML, CSS, JavaScript, manifest, fuentes e imágenes deben servirse desde GitHub Pages, sin CDNs externos. Preferir APIs nativas del navegador y fuentes del sistema; si una dependencia externa es imprescindible, versionarla dentro del repo y documentar versión, origen, licencia y motivo. La única URL externa de runtime prevista es la API de Apps Script.

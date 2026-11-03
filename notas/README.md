@@ -18,6 +18,10 @@ La aplicación usa su propio Sheet y su pestaña `Usuarios`; no copiar la config
 
 Para activar cambios en el backend, copiar `Code.gs` y `appsscript.json` desde [`../gas/notas/`](../gas/notas/) al proyecto vinculado, revisar/autorizar permisos y desplegar una nueva versión. Manual completo: [Drive](https://drive.google.com/file/d/1KPpT-NgigILhG5K5GNfyYgg86wcn85KQ/view).
 
+## Rendimiento
+
+El login solicita la primera lista con `includeInitialList:true`, reduciendo dos viajes HTTP a uno cuando se instala y despliega el backend actualizado. El servidor mantiene CacheService efímero para listas/config; la UI reutiliza resultados en memoria durante 30 s, fuerza lectura en Actualizar/reconexión y aplica la respuesta de CRUD localmente sin refetch.
+
 ## QA antes de publicar
 
 - Revisar con Moli usando `--layout` en viewport `390x844` y escritorio; comprobar overflow horizontal, tabla/formularios, foco y estados de carga/guardado/error.

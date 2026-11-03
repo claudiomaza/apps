@@ -22,7 +22,11 @@ function doGet() {
 function doPost(e) {
   try {
     const body = JSON.parse(e && e.postData && e.postData.contents || '{}');
-    if (body.action === 'auth') return json_(authenticate_(String(body.user !== undefined ? body.user : (body.mail || '')),String(body.pass || '')));
+    if (body.action === 'auth') {
+      const result=authenticate_(String(body.user !== undefined ? body.user : (body.mail || '')),String(body.pass || ''));
+      if(body.includeInitialList===true){try{result.records=listEvents_({from:body.from,limit:body.limit}).records;}catch(err){result.initialListError=publicError_(err);}}
+      return json_(result);
+    }
     requireSession_(body.sessionToken);
     if (body.action === 'list') return json_(listEvents_(body));
     if (body.action === 'createBatch') return json_(createEventsBatch_(body));
@@ -98,17 +102,18 @@ function constantTimeEqual_(a,b) {
 function listEvents_(q) {
   const from = String(q.from || '');
   if (!/^\d{4}-\d{2}-\d{2}$/.test(from)) throw new Error('INVALID_FROM');
-  const limit = Math.min(Math.max(Number(q.limit)||100,1),CONFIG.MAX_PAGE_SIZE);
+  const limit = Math.min(Math.max(Number(q.limit)||100,1),CONFIG.MAX_PAGE_SIZE),month=from.slice(0,7);
   const version = PropertiesService.getScriptProperties().getProperty('DATA_VERSION') || '0';
-  const key = 'events:v1:'+version+':'+from.slice(0,7)+':'+limit;
+  const key = 'events:v1:'+version+':'+month+':'+limit;
   const cache = CacheService.getScriptCache();
   const hit = cache.get(key);
   if (hit) return JSON.parse(hit);
-  const sheet = dataSheet_();
-  const values = sheet.getDataRange().getValues();
-  const records = values.slice(1)
-    .filter(r => r[0] && r[8] !== 'DELETED' && String(r[2]).slice(0,7) === from.slice(0,7))
-    .slice(0,limit).map(rowObject_);
+  const sheet = dataSheet_(),records=[],last=sheet.getLastRow();
+  for(let start=2;start<=last&&records.length<limit;){
+    const count=Math.min(500,last-start+1),rows=sheet.getRange(start,1,count,CONFIG.HEADERS.length).getValues();
+    for(const r of rows){if(r[0]&&r[8]!=='DELETED'&&String(r[2]).slice(0,7)===month){records.push(rowObject_(r));if(records.length>=limit)break;}}
+    start+=count;
+  }
   const result = {ok:true,records};
   cache.put(key,JSON.stringify(result),CONFIG.CACHE_SECONDS);
   return result;

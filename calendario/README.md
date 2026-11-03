@@ -25,6 +25,10 @@ El valor vacío usa el calendario principal. El backend actualizado vuelve a lee
 
 **Activación pendiente:** instalar en el proyecto Apps Script el `Code.gs` y `appsscript.json` actualizados desde [`../gas/calendario/`](../gas/calendario/), revisar/autorizar los scopes pedidos y desplegar una nueva versión. Hasta ese redeploy, el endpoint publicado todavía usa el comportamiento anterior. Manual completo e instrucciones: [Drive](https://drive.google.com/file/d/15Gy7lV9RJw4AT3kPoOcBK7rwMLjccF5o/view).
 
+## Rendimiento
+
+El login puede incluir la lista inicial del mes en la misma respuesta (`includeInitialList`) para evitar una segunda llamada; el backend de Apps Script debe estar actualizado y redeplegado para que se aplique. En lecturas mensuales sin caché, el backend recorre la hoja por bloques de hasta 500 filas y para al alcanzar el límite; cambios CRUD invalidan la caché versionada. La grilla agrupa eventos por fecha para minimizar trabajo al renderizar.
+
 ## QA antes de publicar
 
 - Revisar con Moli usando `--layout` en `390x844` y escritorio; comprobar overflow, accesibilidad básica, estados del formulario y captura de pantalla.
