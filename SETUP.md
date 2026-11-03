@@ -22,7 +22,7 @@ Carpeta de proyectos: https://drive.google.com/drive/folders/14KsA8scXgN2wDL-HDt
 - Código Apps Script Calendario (Markdown autocontenido): [Drive](https://drive.google.com/file/d/15Gy7lV9RJw4AT3kPoOcBK7rwMLjccF5o/view)
 - Código Apps Script Registro de notas (Markdown autocontenido): [Drive](https://drive.google.com/file/d/1KPpT-NgigILhG5K5GNfyYgg86wcn85KQ/view)
 - Endpoint Web App Notas: `https://script.google.com/macros/s/AKfycbwU11LlONKIliay7ogGZDVrXQLWSV589BhTzhe2Kq2UML3zVBlOi13FryEAnYCynKYv3g/exec`
-- Endpoint Web App Calendario: `https://script.google.com/macros/s/AKfycbzxT-VeFBlD-MJ9n2acttT2VYtmbB3cS5YsUkCQstlarMuqGYZi0pi5JppSll0lmM47/exec`
+- Endpoint Web App Calendario: `https://script.google.com/macros/s/AKfycbzYPWb7ud4mTepnlUUdmpxg0x9bQF3AwaCe-D6WMnRSwwKoQm58m5gbiUmTUpNJIhS8/exec`
 
 Las pestañas y encabezados iniciales están creados. **Regla para todas las apps:** crear desde el inicio una pestaña `Config` con encabezados `key` / `value` para valores operativos cambiables sin redeploy; el backend los lee por clave usando la capa genérica descrita en [SPEC-PERFORMANCE.md](./SPEC-PERFORMANCE.md), con defaults, validación y caché breve. `Config` no debe contener secretos. En Calendario, `calendarId` está en `Config!A5:B5` y apunta al calendario dedicado “Agenda de la app”. Para elegir otro: Google Calendar web → ⚙️ Configuración → seleccioná el calendario en la columna izquierda → Integrar el calendario → copiá “ID del calendario” y pegalo en `Config!B5`. No pegues el ID en GitHub. Vaciar B5 vuelve al calendario principal. El backend lee la clave por nombre, así que podés mover la fila. Los cambios se aplican en hasta 30 segundos o inmediatamente al ejecutar `limpiarCacheConfig()` en Apps Script.
 
