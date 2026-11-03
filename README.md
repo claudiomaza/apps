@@ -12,6 +12,10 @@ Monorepo público para frontends de herramientas internas con Google Apps Script
 
 Toda app nueva debe reutilizar el esquema de acceso descrito en [SPEC-PERFORMANCE.md](./SPEC-PERFORMANCE.md): pestaña `Usuarios`, encabezados `usuario` y `pass`, campo de usuario de texto (no email), contraseña de 1–200 caracteres y autenticación consistente en frontend/backend. No crear formularios ni validaciones de login distintos por producto.
 
+## Configuración de Google Calendar
+
+En Calendario, la pestaña `Config` de la planilla usa `key` / `value`. La clave opcional `calendarId` apunta al calendario destino; vacía mantiene el calendario principal. Ver [SETUP.md](./SETUP.md) para los pasos y permisos requeridos.
+
 ## Arquitectura inicial
 
 - Frontend estático publicado en GitHub Pages: portada en `/apps/`, Calendario en `/apps/calendario/` y Registro de notas en `/apps/notas/`.

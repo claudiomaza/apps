@@ -17,6 +17,11 @@ Aplicar estas pautas a cada proyecto nuevo o al optimizar uno existente. Mantene
 9. **Menos trabajo por llamada.** Enviar solo los campos solicitados; limitar respuesta y payload; normalizar una vez. No recalcular informes/meses completos si el cliente solo pide una página o rango.
 10. **Seguridad no se sacrifica.** Validar parámetros y allowlists; nunca exponer hojas arbitrarias; no devolver datos sin la validación de acceso acordada. La clave o token no se incluye en respuestas, logs, URLs ni cache. Una clave compartida en `.gs` puede servir como prototipo de acceso simple, pero se considera secreto expuesto a quienes puedan leer el código; usar secreto de usuario/configuración segura en producción, rotación, autorización individual y mitigación de intentos de fuerza bruta.
 
+## Recursos frontend y configuración de calendario
+
+- Las apps estáticas publicadas en GitHub Pages sirven sus propios HTML, CSS, JavaScript, manifest, imágenes y librerías. No cargar bibliotecas, fuentes o scripts desde CDNs de terceros; preferir APIs nativas y mantener dependencias mínimas. Las URLs del backend/API externo son una excepción de servicio, no dependencias frontend.
+- Calendario permite elegir destino con la clave `calendarId` en la pestaña `Config` (`key` / `value`) de su Sheet. Valor vacío usa el calendario principal. Guardar el ID del calendario junto a cada evento y usarlo al editar/eliminar, incluso si luego cambia la configuración.
+
 ## Aplicación actual
 
 ### Registro de notas

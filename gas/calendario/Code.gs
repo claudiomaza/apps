@@ -12,7 +12,7 @@ const CONFIG = Object.freeze({
   SESSION_SECONDS: 8 * 60 * 60,
   MAX_PAGE_SIZE: 300,
   MAX_BATCH_SIZE: 100,
-  HEADERS: ['eventId','title','startAt','endAt','allDay','location','description','ownerEmail','status','version','createdAt','updatedAt','deletedAt','calendarEventId']
+  HEADERS: ['eventId','title','startAt','endAt','allDay','location','description','ownerEmail','status','version','createdAt','updatedAt','deletedAt','calendarEventId','calendarId']
 });
 
 function doGet() {
@@ -127,26 +127,27 @@ function mutateEvent_(action, body) {
     const now = new Date().toISOString();
     let row;
     if (action === 'create') {
-      if (index >= 0) return {ok:true,record:rowObject_(sheet.getRange(index+2,1,1,CONFIG.HEADERS.length).getValues()[0]),duplicate:true};
+      if (index >= 0) return {ok:true,record:rowObject_(sheet.getRange(index+2,1,1,CONFIG.HEADERS.length).getValues()[0].slice(0,CONFIG.HEADERS.length)),duplicate:true};
       const d = validateEvent_(body.changes || {});
-      const calEvent = createCalendarEvent_(d);
-      row = [eventId,d.title,d.startAt,d.endAt,d.allDay,d.location,d.description,'','ACTIVE',1,now,now,'',calEvent.getId()];
+      const created = createCalendarEvent_(d);
+      row = [eventId,d.title,d.startAt,d.endAt,d.allDay,d.location,d.description,'','ACTIVE',1,now,now,'',created.event.getId(),created.calendarId];
       sheet.getRange(last+1,1,1,row.length).setValues([row]);
     } else {
       if (index < 0) throw new Error('NOT_FOUND');
       const rowNumber = index+2;
       const existing = sheet.getRange(rowNumber,1,1,CONFIG.HEADERS.length).getValues()[0];
+      if(existing.length<CONFIG.HEADERS.length)existing.push('');
       if (Number(body.expectedVersion) !== Number(existing[9])) throw new Error('CONFLICT');
       if (existing[8] === 'DELETED') throw new Error('NOT_FOUND');
       if (action === 'delete') {
-        deleteCalendarEvent_(String(existing[13] || ''));
+        deleteCalendarEvent_(String(existing[13] || ''),String(existing[14] || '')); 
         existing[8]='DELETED'; existing[9]=Number(existing[9])+1; existing[11]=now; existing[12]=now;
       } else {
         const d=validateEvent_(Object.assign(rowObject_(existing),body.changes||{}));
-        const calEvent = updateCalendarEvent_(String(existing[13] || ''),d);
+        const calEvent = updateCalendarEvent_(String(existing[13] || ''),d,String(existing[14] || ''));
         existing[1]=d.title; existing[2]=d.startAt; existing[3]=d.endAt; existing[4]=d.allDay;
         existing[5]=d.location; existing[6]=d.description; existing[9]=Number(existing[9])+1;
-        existing[11]=now; existing[13]=calEvent.getId();
+        existing[11]=now; existing[13]=calEvent.event.getId(); existing[14]=calEvent.calendarId;
       }
       row=existing; sheet.getRange(rowNumber,1,1,row.length).setValues([row]);
     }
@@ -175,8 +176,8 @@ function createEventsBatch_(body) {
     if(!fresh.length)return {ok:true,accepted:[],duplicates:prepared.map(x=>x.id)};
     const now=new Date().toISOString();
     const rows=fresh.map(({id,d})=>{
-      const calEvent=createCalendarEvent_(d); created.push(calEvent);
-      return [id,d.title,d.startAt,d.endAt,d.allDay,d.location,d.description,'','ACTIVE',1,now,now,'',calEvent.getId()];
+      const calEvent=createCalendarEvent_(d); created.push(calEvent.event);
+      return [id,d.title,d.startAt,d.endAt,d.allDay,d.location,d.description,'','ACTIVE',1,now,now,'',calEvent.event.getId(),calEvent.calendarId];
     });
     sheet.getRange(last+1,1,rows.length,CONFIG.HEADERS.length).setValues(rows);
     SpreadsheetApp.flush(); incrementDataVersion_();
@@ -187,20 +188,43 @@ function createEventsBatch_(body) {
   } finally { lock.releaseLock(); }
 }
 
-function createCalendarEvent_(d) {
-  const cal=CalendarApp.getDefaultCalendar();
-  return cal.createEvent(d.title,new Date(d.startAt),new Date(d.endAt),{location:d.location,description:d.description});
+function getAppCalendar_() {
+  const id=configValue_('calendarId');
+  const calendar=id?CalendarApp.getCalendarById(id):CalendarApp.getDefaultCalendar();
+  if(!calendar)throw new Error('CALENDAR_NOT_FOUND');
+  return calendar;
 }
-function updateCalendarEvent_(id,d) {
-  const event=id?CalendarApp.getEventById(id):null;
+function createCalendarEvent_(d) {
+  const calendar=getAppCalendar_();
+  const event=calendar.createEvent(d.title,new Date(d.startAt),new Date(d.endAt),{location:d.location,description:d.description});
+  return {event,calendarId:calendar.getId()};
+}
+function updateCalendarEvent_(id,d,calendarId) {
+  const calendar=calendarId?CalendarApp.getCalendarById(calendarId):CalendarApp.getDefaultCalendar();
+  if(!calendar)throw new Error('CALENDAR_NOT_FOUND');
+  const event=id?calendar.getEventById(id):null;
   if(!event)return createCalendarEvent_(d);
   event.setTitle(d.title); event.setTime(new Date(d.startAt),new Date(d.endAt));
   event.setLocation(d.location); event.setDescription(d.description);
-  return event;
+  return {event,calendarId:calendar.getId()};
 }
-function deleteCalendarEvent_(id) {
+function configValue_(key) {
+  const cache=CacheService.getScriptCache(),cacheKey='calendar:config:v1',hit=cache.get(cacheKey),values=hit?JSON.parse(hit):null;
+  let config=values;
+  if(!config){
+    const sheet=SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID).getSheetByName('Config');
+    if(!sheet)throw new Error('CONFIG_SHEET_NOT_FOUND');
+    config={};sheet.getDataRange().getDisplayValues().slice(1).forEach(row=>{if(row[0])config[String(row[0]).trim()]=String(row[1]||'').trim();});
+    cache.put(cacheKey,JSON.stringify(config),30);
+  }
+  return config[key]||'';
+}
+function limpiarCacheConfig(){CacheService.getScriptCache().remove('calendar:config:v1');}
+function deleteCalendarEvent_(id,calendarId) {
   if(!id)return;
-  const event=CalendarApp.getEventById(id);
+  const calendar=calendarId?CalendarApp.getCalendarById(calendarId):CalendarApp.getDefaultCalendar();
+  if(!calendar)throw new Error('CALENDAR_NOT_FOUND');
+  const event=calendar.getEventById(id);
   if(event)event.deleteEvent();
 }
 function incrementDataVersion_() {
@@ -221,12 +245,15 @@ function dataSheet_() {
 }
 function ensureHeaders_(sheet) {
   if(sheet.getLastRow()===0){sheet.getRange(1,1,1,CONFIG.HEADERS.length).setValues([CONFIG.HEADERS]);return;}
-  const actual=sheet.getRange(1,1,1,CONFIG.HEADERS.length).getDisplayValues()[0];
-  if(CONFIG.HEADERS.some((h,i)=>actual[i]!==h))throw new Error('HEADER_MISMATCH');
+  const previous=CONFIG.HEADERS.slice(0,-1),actual=sheet.getRange(1,1,1,previous.length).getDisplayValues()[0];
+  if(previous.some((h,i)=>actual[i]!==h))throw new Error('HEADER_MISMATCH');
+  const calendarHeader=sheet.getRange(1,CONFIG.HEADERS.length).getDisplayValue();
+  if(calendarHeader&&calendarHeader!==CONFIG.HEADERS[CONFIG.HEADERS.length-1])throw new Error('HEADER_MISMATCH');
+  if(!calendarHeader)sheet.getRange(1,CONFIG.HEADERS.length).setValue(CONFIG.HEADERS[CONFIG.HEADERS.length-1]);
 }
 function rowObject_(r) { const o={}; CONFIG.HEADERS.forEach((h,i)=>o[h]=r[i] instanceof Date?r[i].toISOString():r[i]); return o; }
 function json_(value) { return ContentService.createTextOutput(JSON.stringify(value)).setMimeType(ContentService.MimeType.JSON); }
 function publicError_(err) {
-  const allowed=['INVALID_ACTION','INVALID_FROM','INVALID_EVENT_ID','INVALID_EVENT','INVALID_BATCH','BUSY_RETRY','NOT_FOUND','CONFLICT','SHEET_NOT_FOUND','USERS_SHEET_NOT_FOUND','USERS_SHEET_INVALID','INVALID_CREDENTIALS','UNAUTHORIZED','SESSION_EXPIRED'];
+  const allowed=['INVALID_ACTION','INVALID_FROM','INVALID_EVENT_ID','INVALID_EVENT','INVALID_BATCH','BUSY_RETRY','NOT_FOUND','CONFLICT','SHEET_NOT_FOUND','CONFIG_SHEET_NOT_FOUND','CALENDAR_NOT_FOUND','USERS_SHEET_NOT_FOUND','USERS_SHEET_INVALID','INVALID_CREDENTIALS','UNAUTHORIZED','SESSION_EXPIRED'];
   return allowed.includes(err.message)?err.message:'INTERNAL_ERROR';
 }

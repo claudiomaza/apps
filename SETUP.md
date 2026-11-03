@@ -24,7 +24,7 @@ Carpeta de proyectos: https://drive.google.com/drive/folders/14KsA8scXgN2wDL-HDt
 - Endpoint Web App Notas: `https://script.google.com/macros/s/AKfycbwU11LlONKIliay7ogGZDVrXQLWSV589BhTzhe2Kq2UML3zVBlOi13FryEAnYCynKYv3g/exec`
 - Endpoint Web App Calendario: `https://script.google.com/macros/s/AKfycbzxT-VeFBlD-MJ9n2acttT2VYtmbB3cS5YsUkCQstlarMuqGYZi0pi5JppSll0lmM47/exec`
 
-Las pestañas y encabezados iniciales están creados. Hojas `Inbox` y `Config` se reservan para iteraciones posteriores; este primer backend CRUD escribe directamente en la hoja principal, mientras que las importaciones usan `setValues()`.
+Las pestañas y encabezados iniciales están creados. La pestaña `Config` usa claves en columna A y valores en B. Para el calendario, `calendarId` es opcional: vacío significa el calendario principal; pegá en `Config!B5` el ID de calendario para seleccionar otro. El backend lee la clave por nombre, así que la fila puede moverse sin cambiar el código. Cambios en Config se detectan en hasta 30 segundos; también se puede ejecutar `limpiarCacheConfig()` en Apps Script para aplicar de inmediato.
 
 ## Apps Script vinculado
 
@@ -37,20 +37,20 @@ Cada planilla tiene una pestaña `Usuarios` con dos columnas y encabezados canó
 
 **Permisos verificados:** los dos Sheets y la carpeta `apps` muestran actualmente solo tu cuenta como propietaria; no aparece el permiso de lector para todo `mendoza.edu.ar`. Si cambiás la ubicación o los permisos de la carpeta, volvé a revisar los permisos efectivos de cada planilla antes de guardar contraseñas. Las claves están en texto plano y deben quedar visibles solo para administradores confiables. En Registro de notas, además, no hay autorización por curso/rol: no usar datos reales de estudiantes todavía.
 
-Para aplicar el cambio falta copiar el `Code.gs` actualizado del manual a cada proyecto Apps Script y desplegar una nueva versión una vez. Después de eso, administrar filas en `Usuarios` no requiere redeploy.
+El `Code.gs` del repo ya lee `Config!calendarId`; la fila `Config!A5:B5` está creada y B5 apunta al calendario dedicado “Agenda de la app”. Para activar esta función hay que copiar el `Code.gs` actualizado al proyecto Apps Script de Calendario, revisar/autorizarlos permisos solicitados y desplegar una nueva versión. Si se cambia el ID en B5, el backend lo toma en hasta 30 segundos o al ejecutar `limpiarCacheConfig()`. El ID vive en el Sheet, no en GitHub.
 
 Las optimizaciones transversales acordadas están documentadas en [SPEC-PERFORMANCE.md](./SPEC-PERFORMANCE.md) y en la carpeta Drive como [SPEC - Optimizaciones comunes Apps.md](https://drive.google.com/file/d/12aVV2PZQNBvxp9YWgy3iQZs5mPAi9oFw/view). Notas ya pagina con lectura por bloques desde el final; Calendario mantiene escaneo del mes para no perder eventos si la hoja no está ordenada por fecha. Los proyectos Apps Script deben mantenerse sincronizados con los manuales: copiar `Code.gs` y desplegar una nueva versión cuando cambie el backend.
 
 ## Frontend y publicación
 
-Los archivos `config.js` guardan las URLs públicas de las Web Apps; son configuración pública, no secretos. Para cambiar un endpoint, se edita su `API_URL`; una variable `.env` no llega al navegador en este frontend estático sin agregar un paso de build. El repo y GitHub Pages son públicos. El login protege las operaciones del backend; no convierte en privados el código, las URLs de los endpoints ni los recursos estáticos.
+Los archivos `config.js` guardan las URLs públicas de las Web Apps; son configuración pública, no secretos. HTML, CSS, JavaScript y manifest de ambas apps se sirven desde el propio GitHub Pages; no deben cargar librerías, fuentes ni scripts de CDNs de terceros. Solo el backend/API de Apps Script usa un dominio externo. Para cambiar un endpoint, se edita su `API_URL`; una variable `.env` no llega al navegador en este frontend estático sin agregar un paso de build. El repo y GitHub Pages son públicos. El login protege las operaciones del backend; no convierte en privados el código, las URLs de los endpoints ni los recursos estáticos.
 
 No desplegar `Acceso: cualquiera` ejecutando como propietario para la app de notas: su contenido es información educativa. El backend de este prototipo no incluye autenticación/autorización por docente, curso u organización, por lo que no debe desplegarse con datos reales.
 
 ## Funcionalidad pendiente de esta primera entrega
 
 - El frontend muestra CRUD básico de eventos/notas. Para que el login nuevo funcione, copiá el código actualizado a cada proyecto Apps Script y desplegá una nueva versión.
-- No incluye sincronización con Google Calendar, importación CSV/XLSX, gestión de roles ni auditoría escolar completa.
+- Calendario sincroniza eventos en Google Calendar. El destino se configura en la pestaña `Config` con la clave `calendarId`; vacío conserva el calendario principal.
 - No incluye cola durable ni buffer PropertiesService; CacheService se usa solo para lecturas. Las escrituras interactivas van a Sheets; hay un endpoint de creación por lote con `setValues()`.
 - El frontend offline sirve recursos estáticos; no guarda ni sincroniza escrituras offline en esta versión.
 - Las respuestas de Apps Script usan JSON vía ContentService; probar CORS/redirecciones desde GitHub Pages antes de habilitar usuarios.
