@@ -17,10 +17,25 @@ Aplicar estas pautas a cada proyecto nuevo o al optimizar uno existente. Mantene
 9. **Menos trabajo por llamada.** Enviar solo los campos solicitados; limitar respuesta y payload; normalizar una vez. No recalcular informes/meses completos si el cliente solo pide una página o rango.
 10. **Seguridad no se sacrifica.** Validar parámetros y allowlists; nunca exponer hojas arbitrarias; no devolver datos sin la validación de acceso acordada. La clave o token no se incluye en respuestas, logs, URLs ni cache. Una clave compartida en `.gs` puede servir como prototipo de acceso simple, pero se considera secreto expuesto a quienes puedan leer el código; usar secreto de usuario/configuración segura en producción, rotación, autorización individual y mitigación de intentos de fuerza bruta.
 
-## Recursos frontend y configuración de calendario
+## QA visual, minimalismo y recursos frontend locales
 
-- Las apps estáticas publicadas en GitHub Pages sirven sus propios HTML, CSS, JavaScript, manifest, imágenes y librerías. No cargar bibliotecas, fuentes o scripts desde CDNs de terceros; preferir APIs nativas y mantener dependencias mínimas. Las URLs del backend/API externo son una excepción de servicio, no dependencias frontend.
-- Calendario permite elegir destino con la clave `calendarId` en la pestaña `Config` (`key` / `value`) de su Sheet. Valor vacío usa el calendario principal. Guardar el ID del calendario junto a cada evento y usarlo al editar/eliminar, incluso si luego cambia la configuración.
+- Antes de publicar cambios visuales, probar con Moli en layout real: viewport móvil `390x844` y escritorio; capturar screenshots, verificar overflow horizontal, controles legibles/alcanzables, foco y estados de carga/error. Revisar el DOM accesible y requests de red. En Moli, usar `--layout`, y descargar screenshot a archivo. Probar páginas públicas ya desplegadas o el servidor local autorizado; no declarar QA visual PASS por inspección estática/HTTP.
+- Si Moli u otro navegador visual no inicia por cuota o limitación del entorno, reportar la evidencia como BLOCKED, indicar el error exacto y completar únicamente checks HTTP/estáticos que sí sean posibles; no inventar screenshots ni Core Web Vitals.
+- Mantener UI minimalista y mobile-first: reutilizar HTML/CSS y APIs de plataforma; sumar componentes/dependencias solo si resuelven una necesidad comprobada. Estados de espera, éxito, error y guardado deben ser visibles.
+- Las apps estáticas publicadas en GitHub Pages sirven desde su propio directorio HTML, CSS, JavaScript, manifest, imágenes y librerías. No cargar bibliotecas, fuentes, scripts ni estilos desde CDNs de terceros; preferir APIs nativas del navegador, fuentes del sistema y pocas dependencias.
+- La URL del backend/API externo es la única excepción de origen externo necesaria. No confundir esa API con una dependencia visual/frontend.
+- Al agregar una dependencia inevitable, versionarla en el repo y servirla desde Pages; registrar origen, licencia, versión y por qué no alcanza una API nativa.
+- Validar en QA la pestaña Network o el inventario de recursos: cero solicitudes a CDNs; solo Pages y el endpoint backend autorizado.
+
+## Configuración de destino Google Calendar
+
+- Cada app debe tener una pestaña `Config` con encabezados `key` y `value`. En Calendario, agregar la fila `calendarId` / valor en `Config!B5`. La búsqueda backend se hace por clave y no debe depender del número de fila; B5 es la ubicación inicial documentada. Un valor vacío conserva el calendario principal.
+- Para encontrar el ID: Google Calendar en la web → ⚙️ Configuración → elegir el calendario en la columna izquierda → **Integrar el calendario** → copiar **ID del calendario**. Pegar el valor completo en `Config!B5`, no en GitHub, HTML, JavaScript, URLs ni logs. El ID no es una contraseña, pero mantenerlo en Sheets evita fijarlo a una implementación y permite cambiar destino sin publicar código.
+- La cuenta efectiva que ejecuta Apps Script debe poder acceder al calendario con permiso **Realizar cambios en los eventos**. Si la web app se ejecuta como propietario, ese es el propietario; si se cambia el modo de ejecución, revisar permisos y reautorizar los scopes necesarios.
+- El backend debe llamar `CalendarApp.getCalendarById(id)` cuando `calendarId` no está vacío; si no encuentra el calendario o no tiene acceso, fallar claramente (`CALENDAR_NOT_FOUND`) y no desviar silenciosamente escrituras al calendario principal. Si está vacío, usar el calendario principal.
+- Guardar el `calendarId` junto a cada evento en Sheets y usar ese ID guardado para editar/eliminar. Así, cambiar la configuración solo afecta eventos nuevos y no rompe operaciones sobre eventos anteriores. Compatibilidad de filas viejas sin ID debe conservar su destino previo (calendario principal).
+- Cachear la lectura de Config solo de forma efímera (30 s máximo); cambios se aplican dentro de ese plazo. Ofrecer una función administrativa para invalidar cache de inmediato (en Calendario, `limpiarCacheConfig()`). Nunca cachear Config como almacenamiento durable.
+- Al integrar o ampliar Google Calendar, mantener los scopes de calendario mínimos requeridos en `appsscript.json`; guardar, autorizar/revisar los permisos y desplegar una nueva versión del Apps Script. Cambiar el valor de `Config!B5` no requiere redeploy una vez publicado ese backend.
 
 ## Aplicación actual
 

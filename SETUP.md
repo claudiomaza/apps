@@ -43,7 +43,19 @@ Las optimizaciones transversales acordadas están documentadas en [SPEC-PERFORMA
 
 ## Frontend y publicación
 
-Los archivos `config.js` guardan las URLs públicas de las Web Apps; son configuración pública, no secretos. HTML, CSS, JavaScript y manifest de ambas apps se sirven desde el propio GitHub Pages; no deben cargar librerías, fuentes ni scripts de CDNs de terceros. Solo el backend/API de Apps Script usa un dominio externo. Para cambiar un endpoint, se edita su `API_URL`; una variable `.env` no llega al navegador en este frontend estático sin agregar un paso de build. El repo y GitHub Pages son públicos. El login protege las operaciones del backend; no convierte en privados el código, las URLs de los endpoints ni los recursos estáticos.
+Los archivos `config.js` guardan las URLs públicas de las Web Apps; son configuración pública, no secretos. HTML, CSS, JavaScript, manifest, librerías, fuentes e imágenes deben servirse desde GitHub Pages; no cargar dependencias de CDNs externos. Preferir APIs nativas y fuentes del sistema. Si una librería fuera imprescindible, versionarla en el repo y documentar versión, origen, licencia y necesidad. La única solicitud cross-origin prevista es el endpoint de Apps Script. En QA, revisar Network y confirmar que no haya requests a CDNs. Para cambiar `API_URL`, editar `config.js`; `.env` no llega al navegador sin build. El repo y Pages son públicos, así que no poner allí datos personales, credenciales ni IDs de configuración que el usuario quiera mantener fuera del código.
+
+## Elegir el calendario de destino
+
+1. Abrí la hoja [Calendario](https://docs.google.com/spreadsheets/d/1OypDck9kNKtTPHOdNWPLCqU9Sjr591a9bL6S3YhjFH0/edit), pestaña `Config`.
+2. Buscá la fila `calendarId` en la columna A; el valor se escribe en B (actualmente `Config!B5`).
+3. En Google Calendar web, abrí ⚙️ **Configuración**, elegí el calendario en la columna izquierda, entrá a **Integrar el calendario** y copiá **ID del calendario**. Pegá el ID completo en `Config!B5`. Actualmente está seleccionado “Agenda de la app”.
+4. Si Apps Script corre como otra cuenta, compartí el calendario con esa cuenta con permiso **Realizar cambios en los eventos**. No alcanza con pegar el ID si el script no puede acceder.
+5. No publiques el ID en GitHub ni lo pegues en `config.js`. El backend busca el valor de Config y lo cachea hasta 30 segundos; `limpiarCacheConfig()` lo invalida inmediatamente. Dejar B5 vacío vuelve al calendario principal.
+6. El backend actualizado debe estar copiado, autorizado y desplegado al menos una vez. Cambiar B5 después no requiere redeploy. Cambiar `Code.gs` o scopes sí requiere nueva versión de Apps Script y puede pedir autorización.
+7. Cada evento nuevo guarda su `calendarId` en la hoja `Eventos`; editar/eliminar utiliza ese destino almacenado. Cambiar la configuración no mueve eventos ya existentes.
+
+La configuración de Google Calendar es específica de Calendario; Registro de notas no integra Calendar.
 
 No desplegar `Acceso: cualquiera` ejecutando como propietario para la app de notas: su contenido es información educativa. El backend de este prototipo no incluye autenticación/autorización por docente, curso u organización, por lo que no debe desplegarse con datos reales.
 

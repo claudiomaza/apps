@@ -4,8 +4,8 @@ Monorepo público para frontends de herramientas internas con Google Apps Script
 
 ## Apps
 
-- `calendario/`: gestión de eventos.
-- `notas/`: registro de calificaciones.
+- `calendario/`: gestión de eventos; ver [`calendario/README.md`](./calendario/README.md) para configurar el ID de Google Calendar.
+- `notas/`: registro de calificaciones; ver [`notas/README.md`](./notas/README.md) para setup, límites y seguridad.
 - `gas/`: backend Apps Script de referencia (un proyecto vinculado por hoja; el ID se configura en Script Properties o `appsscript.json` al crear el proyecto).
 
 ## Contrato común para apps nuevas
@@ -14,7 +14,11 @@ Toda app nueva debe reutilizar el esquema de acceso descrito en [SPEC-PERFORMANC
 
 ## Configuración de Google Calendar
 
-En Calendario, la pestaña `Config` de la planilla usa `key` / `value`. La clave opcional `calendarId` apunta al calendario destino; vacía mantiene el calendario principal. Ver [SETUP.md](./SETUP.md) para los pasos y permisos requeridos.
+En Calendario, la pestaña `Config` usa `key` / `value`; `calendarId` está en `Config!A5:B5`. Vacía `value`, usa el calendario principal. Para pasos detallados, ver [`calendario/README.md`](./calendario/README.md) y [SETUP.md](./SETUP.md). El backend guarda el ID por evento y no requiere redeploy para cambios posteriores de la celda, una vez que el código actualizado está instalado y desplegado.
+
+## Recursos frontend
+
+HTML, CSS, JavaScript, manifest, fuentes e imágenes deben servirse desde GitHub Pages, sin CDNs externos. Preferir APIs nativas del navegador y fuentes del sistema; si una dependencia externa es imprescindible, versionarla dentro del repo y documentar versión, origen, licencia y motivo. La única URL externa de runtime prevista es la API de Apps Script.
 
 ## Arquitectura inicial
 
