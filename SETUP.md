@@ -39,7 +39,7 @@ Cada planilla tiene una pestaña `Usuarios` con dos columnas y encabezados canó
 
 El `Code.gs` del repo ya lee `Config!calendarId`; la fila `Config!A5:B5` está creada y B5 apunta al calendario dedicado “Agenda de la app”. Para activar esta función hay que copiar el `Code.gs` actualizado al proyecto Apps Script de Calendario, revisar/autorizarlos permisos solicitados y desplegar una nueva versión. Si se cambia el ID en B5, el backend lo toma en hasta 30 segundos o al ejecutar `limpiarCacheConfig()`. El ID vive en el Sheet, no en GitHub.
 
-Las optimizaciones transversales acordadas están documentadas en [SPEC-PERFORMANCE.md](./SPEC-PERFORMANCE.md) y en la carpeta Drive como [SPEC - Optimizaciones comunes Apps.md](https://drive.google.com/file/d/12aVV2PZQNBvxp9YWgy3iQZs5mPAi9oFw/view). Notas ya pagina con lectura por bloques desde el final; Calendario mantiene escaneo del mes para no perder eventos si la hoja no está ordenada por fecha. Los proyectos Apps Script deben mantenerse sincronizados con los manuales: copiar `Code.gs` y desplegar una nueva versión cuando cambie el backend.
+Las optimizaciones transversales acordadas están documentadas en [SPEC-PERFORMANCE.md](./SPEC-PERFORMANCE.md) y en la carpeta Drive como [SPEC - Optimizaciones comunes Apps.md](https://drive.google.com/file/d/12aVV2PZQNBvxp9YWgy3iQZs5mPAi9oFw/view). Notas pagina con lectura por bloques desde el final y obtiene `maxPageSize`/`maxBatchSize` de `Config`; Calendario mantiene escaneo del mes para no perder eventos si la hoja no está ordenada por fecha y obtiene `calendarId` de `Config`. Los proyectos Apps Script deben mantenerse sincronizados con los manuales: copiar `Code.gs` y desplegar una nueva versión cuando cambie el backend.
 
 ## Frontend y publicación
 

@@ -2,7 +2,7 @@
 
 Frontend estático publicado en [GitHub Pages](https://claudiomaza.github.io/apps/notas/) con Apps Script + Google Sheets como backend y fuente de verdad.
 
-Esta app también debe mantener una pestaña `Config` (`key`/`value`) aunque hoy no requiera ajustes operativos adicionales. Los nuevos valores configurables deben leerse genéricamente desde esa hoja para evitar redeploys por cambios de configuración. Ver [spec común](../SPEC-PERFORMANCE.md).
+La pestaña `Config` (`key`/`value`) es obligatoria. El backend la lee genéricamente y cachea hasta 30 s; hoy admite `maxPageSize` (default 300, rango 1–300) y `maxBatchSize` (default 100, rango 1–100). Los valores vacíos usan el default. Se pueden ajustar desde Sheets sin redeploy; `limpiarCacheConfig()` invalida la caché inmediatamente. Las reglas generales están en el [spec común](../SPEC-PERFORMANCE.md).
 
 ## Recursos y estilo
 

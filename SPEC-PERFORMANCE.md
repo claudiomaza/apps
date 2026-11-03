@@ -52,6 +52,7 @@ Aplicar estas pautas a cada proyecto nuevo o al optimizar uno existente. Mantene
 
 ### Registro de notas
 
+- La pestaña `Config` (`key`/`value`) es obligatoria. El backend lee `maxPageSize` (default 300, permitido 1–300) y `maxBatchSize` (default 100, permitido 1–100); vacíos/ausentes usan defaults. Cambiar esos valores no requiere redeploy; la caché dura hasta 30 s y `limpiarCacheConfig()` la invalida inmediatamente.
 - El listado lee bloques de hasta 500 filas desde el final y se detiene cuando obtiene el límite de registros activos, en vez de leer y materializar toda la hoja antes de `slice(-limit)`.
 - `list` continúa devolviendo las notas más recientes primero. El contrato no expone cursor todavía; si el producto necesita recorrer más de `MAX_PAGE_SIZE`, agregar cursor estable y prueba de no duplicación/omisión.
 - Con muchas filas eliminadas, el recorrido puede leer múltiples bloques. Medir llamadas/latencia con datos de carga antes de ajustar `500`.

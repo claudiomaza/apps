@@ -3,6 +3,7 @@
  * Las cuentas activas se administran en la pestaña `Usuarios` del Sheet,
  * columnas `usuario` (o el encabezado heredado `mail`) y `pass`.
  * El usuario puede tener cualquier formato; las claves se guardan en texto plano.
+ * La pestaña Config (key/value) controla los límites operativos sin redeploy.
  */
 const CONFIG = Object.freeze({
   SPREADSHEET_ID: '1eH_SMJcaPoA6tEkKakETRKS1TsvGXxHSXHlFB5m02yE',
@@ -14,10 +15,37 @@ const CONFIG = Object.freeze({
   MAX_BATCH_SIZE: 100,
   HEADERS: ['gradeId','studentId','studentName','courseId','courseName','assessmentId','assessmentName','score','maxScore','gradeDate','observation','status','version','createdAt','updatedAt']
 });
+function configValues_() {
+  const cache=CacheService.getScriptCache(),key='app:config:v1',hit=cache.get(key);
+  if(hit)return JSON.parse(hit);
+  const sheet=SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID).getSheetByName('Config');
+  if(!sheet)throw Error('CONFIG_SHEET_NOT_FOUND');
+  const last=sheet.getLastRow(),rows=last?sheet.getRange(1,1,last,2).getDisplayValues():[];
+  if(!rows.length||rows[0][0]!=='key'||rows[0][1]!=='value')throw Error('CONFIG_SHEET_INVALID');
+  const values={};
+  rows.slice(1).forEach(([rawKey,rawValue])=>{
+    const key=String(rawKey||'').trim(),value=String(rawValue||'');
+    if(!key&&!value)return;
+    if(!/^[A-Za-z][A-Za-z0-9_.-]{0,63}$/.test(key)||/[\u0000-\u001F\u007F]/.test(value)||value.length>500||Object.prototype.hasOwnProperty.call(values,key))throw Error('CONFIG_SHEET_INVALID');
+    values[key]=value;
+  });
+  cache.put(key,JSON.stringify(values),30);
+  return values;
+}
+function configInteger_(key,defaultValue,min,max) {
+  const raw=configValues_()[key];
+  if(raw===undefined||raw.trim()==='')return defaultValue;
+  if(!/^\d+$/.test(raw.trim()))throw Error('CONFIG_VALUE_INVALID');
+  const value=Number(raw);
+  if(!isFinite(value)||Math.floor(value)!==value||value<min||value>max)throw Error('CONFIG_VALUE_INVALID');
+  return value;
+}
+function limpiarCacheConfig(){CacheService.getScriptCache().remove('app:config:v1');}
 function doGet() { return json_({ok:true,service:'apps-gradebook',schemaVersion:1}); }
 function doPost(e) {
   try {
     const b=JSON.parse(e&&e.postData&&e.postData.contents||'{}');
+    configValues_();
     if(b.action==='auth')return json_(authenticate_(String(b.user!==undefined?b.user:(b.mail||'')),String(b.pass||'')));
     requireSession_(b.sessionToken);
     if(b.action==='list')return json_(listGrades_(b));
@@ -78,7 +106,7 @@ function base64Url_(bytes){return Utilities.base64EncodeWebSafe(bytes).replace(/
 function constantTimeEqual_(a,b){a=String(a);b=String(b);let diff=a.length^b.length,n=Math.max(a.length,b.length);for(let i=0;i<n;i++)diff|=(a.charCodeAt(i%Math.max(a.length,1))||0)^(b.charCodeAt(i%Math.max(b.length,1))||0);return diff===0;}
 
 function listGrades_(q) {
-  const limit=Math.min(Math.max(Number(q.limit)||100,1),CONFIG.MAX_PAGE_SIZE),p=PropertiesService.getScriptProperties();
+  const pageSize=configInteger_('maxPageSize',CONFIG.MAX_PAGE_SIZE,1,CONFIG.MAX_PAGE_SIZE),limit=Math.min(Math.max(Number(q.limit)||100,1),pageSize),p=PropertiesService.getScriptProperties();
   const version=p.getProperty('DATA_VERSION')||'0',key=`grades:v1:${version}:${limit}`,cache=CacheService.getScriptCache(),hit=cache.get(key);
   if(hit)return JSON.parse(hit);
   const sh=dataSheet_(),last=sh.getLastRow(),records=[];
@@ -113,7 +141,7 @@ function mutateGrade_(action,b) {
   } finally {lock.releaseLock();}
 }
 function createGradesBatch_(b) {
-  const items=b.records;if(!Array.isArray(items)||items.length<1||items.length>CONFIG.MAX_BATCH_SIZE)throw Error('INVALID_BATCH');
+  const maxBatch=configInteger_('maxBatchSize',CONFIG.MAX_BATCH_SIZE,1,CONFIG.MAX_BATCH_SIZE),items=b.records;if(!Array.isArray(items)||items.length<1||items.length>maxBatch)throw Error('INVALID_BATCH');
   const seen=new Set(),prepared=items.map(x=>{const id=String(x.gradeId||'');if(!/^[\w-]{8,80}$/.test(id)||seen.has(id))throw Error('INVALID_BATCH');seen.add(id);return {id,d:validateGrade_(x.changes||{})};});
   const lock=LockService.getScriptLock();if(!lock.tryLock(5000))throw Error('BUSY_RETRY');
   try {
@@ -132,4 +160,4 @@ function dataSheet_(){const s=SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID).get
 function ensureHeaders_(s){if(s.getLastRow()===0){s.getRange(1,1,1,CONFIG.HEADERS.length).setValues([CONFIG.HEADERS]);return;}const actual=s.getRange(1,1,1,CONFIG.HEADERS.length).getDisplayValues()[0];if(CONFIG.HEADERS.some((h,i)=>actual[i]!==h))throw Error('HEADER_MISMATCH');}
 function rowObject_(r){const o={};CONFIG.HEADERS.forEach((h,i)=>o[h]=r[i] instanceof Date?r[i].toISOString():r[i]);return o;}
 function json_(v){return ContentService.createTextOutput(JSON.stringify(v)).setMimeType(ContentService.MimeType.JSON);}
-function publicError_(e){const ok=['INVALID_ACTION','INVALID_GRADE_ID','INVALID_GRADE','INVALID_BATCH','BUSY_RETRY','NOT_FOUND','CONFLICT','SHEET_NOT_FOUND','HEADER_MISMATCH','USERS_SHEET_NOT_FOUND','USERS_SHEET_INVALID','INVALID_CREDENTIALS','UNAUTHORIZED','SESSION_EXPIRED'];return ok.includes(e.message)?e.message:'INTERNAL_ERROR';}
+function publicError_(e){const ok=['CONFIG_SHEET_NOT_FOUND','CONFIG_SHEET_INVALID','CONFIG_VALUE_INVALID','INVALID_ACTION','INVALID_GRADE_ID','INVALID_GRADE','INVALID_BATCH','BUSY_RETRY','NOT_FOUND','CONFLICT','SHEET_NOT_FOUND','HEADER_MISMATCH','USERS_SHEET_NOT_FOUND','USERS_SHEET_INVALID','INVALID_CREDENTIALS','UNAUTHORIZED','SESSION_EXPIRED'];return ok.includes(e.message)?e.message:'INTERNAL_ERROR';}
