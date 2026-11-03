@@ -8,6 +8,10 @@ Monorepo público para frontends de herramientas internas con Google Apps Script
 - `notas/`: registro de calificaciones.
 - `gas/`: backend Apps Script de referencia (un proyecto vinculado por hoja; el ID se configura en Script Properties o `appsscript.json` al crear el proyecto).
 
+## Contrato común para apps nuevas
+
+Toda app nueva debe reutilizar el esquema de acceso descrito en [SPEC-PERFORMANCE.md](./SPEC-PERFORMANCE.md): pestaña `Usuarios`, encabezados `usuario` y `pass`, campo de usuario de texto (no email), contraseña de 1–200 caracteres y autenticación consistente en frontend/backend. No crear formularios ni validaciones de login distintos por producto.
+
 ## Arquitectura inicial
 
 - Frontend estático publicado en GitHub Pages: portada en `/apps/`, Calendario en `/apps/calendario/` y Registro de notas en `/apps/notas/`.

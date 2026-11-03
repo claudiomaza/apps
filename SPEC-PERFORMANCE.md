@@ -37,10 +37,20 @@ Aplicar estas pautas a cada proyecto nuevo o al optimizar uno existente. Mantene
 - CRUD usa rangos y una escritura por fila, lock breve, control optimista de versión y caché solo de lecturas.
 - Cada Sheet mantiene una pestaña `Usuarios` con dos columnas: identificador de usuario y `pass`. El primer encabezado puede ser `usuario` (recomendado) o `mail` por compatibilidad con hojas existentes; su valor no tiene que ser un correo. El backend autentica contra esas filas.
 
+## Contrato común de acceso para todas las apps
+
+Este contrato es obligatorio para Calendario, Registro de notas y cualquier app interna nueva del repositorio, aunque cambie su propósito o sus datos. No volver a introducir validación de correo ni un mínimo de longitud de contraseña en una app individual.
+
+- Cada app usa el mismo esquema de usuarios: pestaña `Usuarios`, encabezados canónicos exactos `usuario` y `pass`, una cuenta por fila. Los encabezados no dependen del producto. Solo por migración, el backend de las apps existentes puede aceptar temporalmente `mail` como alias de la primera columna; toda app nueva debe crear `usuario`.
+- El campo visible se llama **Usuario** y es texto, no tipo email. Se acepta cualquier carácter imprimible; no puede quedar vacío, contener caracteres de control ni superar 254 caracteres. Se recortan espacios al principio/final y la comparación/unicidad no distingue mayúsculas. Los nombres de usuario deben ser únicos dentro de la app.
+- La contraseña admite cualquier carácter y tiene entre 1 y 200 caracteres. Se verifica exactamente como se escribió: no recortar espacios ni cambiar mayúsculas, minúsculas o símbolos. El formulario debe permitir un solo carácter.
+- Máximo 200 cuentas por app. Las filas completamente vacías se ignoran; no dejar filas parcialmente completadas. Una fila inválida debe rechazarse como configuración (`USERS_SHEET_INVALID`), sin permitir el acceso.
+- El mensaje de autenticación del frontend y el contrato de API deben ser iguales entre apps (`user` y `pass`). La sesión firmada se valida en cada operación protegida; nunca devolver ni registrar contraseñas.
+
 ## Gestión de usuarios
 
 - Agregar, actualizar o quitar una fila de `Usuarios` cambia las credenciales de acceso sin modificar ni volver a desplegar el código. El backend usa una caché de 15 segundos; los cambios se reflejan en ese plazo.
-- El identificador (bajo el encabezado `usuario` o el heredado `mail`) puede ser cualquier texto no vacío de hasta 254 caracteres, sin caracteres de control; se compara sin distinguir mayúsculas y debe ser único. `pass` puede contener cualquier carácter y debe tener entre 1 y 200 caracteres; se compara exactamente (mayúsculas, símbolos y espacios cuentan). Máximo 200 cuentas. No dejar filas con un solo campo completado. La interfaz solicita “Usuario”, no “Correo electrónico”. Una fila incompleta o que infrinja los límites hace que el backend rechace la configuración con `USERS_SHEET_INVALID`.
+- Mantener consistentes interfaz, validación del backend, hojas y documentación con el contrato común anterior. Una divergencia vuelve a producir errores de configuración o experiencias distintas entre apps.
 - `pass` queda en texto plano en la planilla. Toda persona con acceso de lectura al Sheet puede verlo; restringir el acceso del documento a administradores confiables. No compartir el Sheet de Registro de notas con docentes/alumnos como método de acceso a la app sin separar la administración de cuentas; las hojas no son un almacén de secretos.
 - El token firmado incluye el usuario, expiración y una huella de credencial; se valida en cada solicitud. Eliminar la fila o cambiar la contraseña invalida la sesión tras refrescarse la caché.
 - La pestaña no agrega roles ni autorización por curso. Un login no reemplaza autorización: definir qué puede leer/escribir cada persona antes de exponer datos educativos.
