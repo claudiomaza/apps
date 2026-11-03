@@ -12,7 +12,7 @@ const CONFIG = Object.freeze({
   SESSION_SECONDS: 8 * 60 * 60,
   MAX_PAGE_SIZE: 300,
   MAX_BATCH_SIZE: 100,
-  HEADERS: ['eventId','title','startAt','endAt','allDay','location','description','ownerEmail','status','version','createdAt','updatedAt','deletedAt','calendarEventId','calendarId']
+  HEADERS: ['eventId','title','startAt','endAt','allDay','location','description','ownerEmail','status','version','createdAt','updatedAt','deletedAt','calendarEventId','calendarId','recurrence','reminderMinutes']
 });
 
 function doGet() {
@@ -24,11 +24,13 @@ function doPost(e) {
     const body = JSON.parse(e && e.postData && e.postData.contents || '{}');
     if (body.action === 'auth') {
       const result=authenticate_(String(body.user !== undefined ? body.user : (body.mail || '')),String(body.pass || ''));
+      result.calendarName=calendarDisplayName_();
       if(body.includeInitialList===true){try{result.records=listEvents_({from:body.from,limit:body.limit}).records;}catch(err){result.initialListError=publicError_(err);}}
       return json_(result);
     }
     requireSession_(body.sessionToken);
-    if (body.action === 'list') return json_(listEvents_(body));
+    if (body.action === 'list') {const result=listEvents_(body);result.calendarName=calendarDisplayName_();return json_(result);}
+    if (body.action === 'exportEvents') {const result=exportEventsPage_(body);result.calendarName=calendarDisplayName_();return json_(result);}
     if (body.action === 'createBatch') return json_(createEventsBatch_(body));
     if (!['create','update','delete'].includes(body.action)) throw new Error('INVALID_ACTION');
     return json_(mutateEvent_(body.action, body));
@@ -109,14 +111,37 @@ function listEvents_(q) {
   const hit = cache.get(key);
   if (hit) return JSON.parse(hit);
   const sheet = dataSheet_(),records=[],last=sheet.getLastRow();
+  const rangeStart=new Date(month+'-01T00:00:00-03:00'),rangeEnd=new Date(rangeStart.getFullYear(),rangeStart.getMonth()+1,1),windowStart=new Date(rangeStart.getTime()-86400000),windowEnd=new Date(rangeEnd.getTime()+86400000);
   for(let start=2;start<=last&&records.length<limit;){
     const count=Math.min(500,last-start+1),rows=sheet.getRange(start,1,count,CONFIG.HEADERS.length).getValues();
-    for(const r of rows){if(r[0]&&r[8]!=='DELETED'&&String(r[2]).slice(0,7)===month){records.push(rowObject_(r));if(records.length>=limit)break;}}
+    for(const r of rows){if(!r[0]||r[8]==='DELETED')continue;const record=rowObject_(r);if(record.recurrence&&record.recurrence.frequency&&record.recurrence.frequency!=='none'){const cal=CalendarApp.getCalendarById(String(record.calendarId||''));if(!cal)continue;const series=cal.getEventSeriesById(String(record.calendarEventId||''));if(!series)continue;cal.getEvents(windowStart,windowEnd).forEach(instance=>{if(records.length<limit&&instance.getStartTime()>=rangeStart&&instance.getStartTime()<rangeEnd&&instance.isRecurringEvent()&&instance.getEventSeries().getId()===record.calendarEventId){const occurrence=Object.assign({},record,{seriesStartAt:record.startAt,seriesEndAt:record.endAt,startAt:instance.getStartTime().toISOString(),endAt:instance.getEndTime().toISOString()});records.push(occurrence);}});if(records.length>=limit)break;continue;}const begins=new Date(record.startAt);if(begins>=rangeStart&&begins<rangeEnd){records.push(record);if(records.length>=limit)break;}}
     start+=count;
   }
   const result = {ok:true,records};
   cache.put(key,JSON.stringify(result),CONFIG.CACHE_SECONDS);
   return result;
+}
+function exportEventsPage_(q){
+  const cursor=q.cursor===undefined?0:Number(q.cursor),limit=Math.min(Math.max(Number(q.limit)||100,1),CONFIG.MAX_PAGE_SIZE);
+  if(!Number.isInteger(cursor)||cursor<0)throw new Error('INVALID_CURSOR');
+  const lock=LockService.getScriptLock();if(!lock.tryLock(5000))throw new Error('BUSY_RETRY');
+  try{
+    const version=PropertiesService.getScriptProperties().getProperty('DATA_VERSION')||'0';
+    if(q.version!==undefined&&String(q.version)!==version)throw new Error('EXPORT_CHANGED');
+    const sheet=dataSheet_(),last=sheet.getLastRow(),records=[];let row=Math.max(2,cursor+1),nextCursor=0;
+    while(row<=last&&records.length<limit){
+      const count=Math.min(500,last-row+1),values=sheet.getRange(row,1,count,CONFIG.HEADERS.length).getValues();
+      for(let i=0;i<values.length;i++){
+        const current=row+i,data=values[i];
+        if(data[0]&&data[8]!=='DELETED')records.push(rowObject_(data));
+        if(records.length>=limit){nextCursor=current;break;}
+      }
+      if(records.length>=limit)break;
+      row+=count;nextCursor=row-1;
+    }
+    if(String(PropertiesService.getScriptProperties().getProperty('DATA_VERSION')||'0')!==version)throw new Error('EXPORT_CHANGED');
+    return {ok:true,records,nextCursor,done:nextCursor===0||nextCursor>=last,version};
+  } finally {lock.releaseLock();}
 }
 
 function mutateEvent_(action, body) {
@@ -135,24 +160,25 @@ function mutateEvent_(action, body) {
       if (index >= 0) return {ok:true,record:rowObject_(sheet.getRange(index+2,1,1,CONFIG.HEADERS.length).getValues()[0].slice(0,CONFIG.HEADERS.length)),duplicate:true};
       const d = validateEvent_(body.changes || {});
       const created = createCalendarEvent_(d);
-      row = [eventId,d.title,d.startAt,d.endAt,d.allDay,d.location,d.description,'','ACTIVE',1,now,now,'',created.event.getId(),created.calendarId];
+      row = [eventId,d.title,d.startAt,d.endAt,d.allDay,d.location,d.description,'','ACTIVE',1,now,now,'',created.event.getId(),created.calendarId,JSON.stringify(d.recurrence),d.reminderMinutes];
       sheet.getRange(last+1,1,1,row.length).setValues([row]);
     } else {
       if (index < 0) throw new Error('NOT_FOUND');
       const rowNumber = index+2;
       const existing = sheet.getRange(rowNumber,1,1,CONFIG.HEADERS.length).getValues()[0];
-      if(existing.length<CONFIG.HEADERS.length)existing.push('');
+      while(existing.length<CONFIG.HEADERS.length)existing.push('');
       if (Number(body.expectedVersion) !== Number(existing[9])) throw new Error('CONFLICT');
       if (existing[8] === 'DELETED') throw new Error('NOT_FOUND');
       if (action === 'delete') {
-        deleteCalendarEvent_(String(existing[13] || ''),String(existing[14] || '')); 
+        deleteCalendarEvent_(String(existing[13] || ''),String(existing[14] || ''),parseRecurrence_(existing[15]));
         existing[8]='DELETED'; existing[9]=Number(existing[9])+1; existing[11]=now; existing[12]=now;
       } else {
-        const d=validateEvent_(Object.assign(rowObject_(existing),body.changes||{}));
-        const calEvent = updateCalendarEvent_(String(existing[13] || ''),d,String(existing[14] || ''));
+        const merged=Object.assign(rowObject_(existing),body.changes||{});if(!(body.changes&&Object.prototype.hasOwnProperty.call(body.changes,'recurrence')))merged.recurrence=parseRecurrence_(existing[15]);
+        const d=validateEvent_(merged);
+        const calEvent = updateCalendarEvent_(String(existing[13] || ''),d,String(existing[14] || ''),parseRecurrence_(existing[15]));
         existing[1]=d.title; existing[2]=d.startAt; existing[3]=d.endAt; existing[4]=d.allDay;
         existing[5]=d.location; existing[6]=d.description; existing[9]=Number(existing[9])+1;
-        existing[11]=now; existing[13]=calEvent.event.getId(); existing[14]=calEvent.calendarId;
+        existing[11]=now; existing[13]=calEvent.event.getId(); existing[14]=calEvent.calendarId; existing[15]=JSON.stringify(d.recurrence); existing[16]=d.reminderMinutes;
       }
       row=existing; sheet.getRange(rowNumber,1,1,row.length).setValues([row]);
     }
@@ -181,14 +207,14 @@ function createEventsBatch_(body) {
     if(!fresh.length)return {ok:true,accepted:[],duplicates:prepared.map(x=>x.id)};
     const now=new Date().toISOString();
     const rows=fresh.map(({id,d})=>{
-      const calEvent=createCalendarEvent_(d); created.push(calEvent.event);
-      return [id,d.title,d.startAt,d.endAt,d.allDay,d.location,d.description,'','ACTIVE',1,now,now,'',calEvent.event.getId(),calEvent.calendarId];
+      const calEvent=createCalendarEvent_(d),recurring=d.recurrence&&d.recurrence.frequency!=='none';created.push({event:calEvent.event,calendarId:calEvent.calendarId,recurring});
+      return [id,d.title,d.startAt,d.endAt,d.allDay,d.location,d.description,'','ACTIVE',1,now,now,'',calEvent.event.getId(),calEvent.calendarId,JSON.stringify(d.recurrence),d.reminderMinutes];
     });
     sheet.getRange(last+1,1,rows.length,CONFIG.HEADERS.length).setValues(rows);
     SpreadsheetApp.flush(); incrementDataVersion_();
     return {ok:true,accepted:fresh.map(x=>x.id),duplicates:prepared.filter(x=>existing.has(x.id)).map(x=>x.id)};
   } catch(err) {
-    created.forEach(event=>{try{event.deleteEvent();}catch(_){}});
+    created.forEach(item=>{try{if(item.recurring)item.event.deleteEventSeries();else item.event.deleteEvent();}catch(_){}});
     throw err;
   } finally { lock.releaseLock(); }
 }
@@ -199,18 +225,68 @@ function getAppCalendar_() {
   if(!calendar)throw new Error('CALENDAR_NOT_FOUND');
   return calendar;
 }
+function recurrenceRule_(r,startAt){
+  if(!r||r.frequency==='none')return null;
+  if(!['custom','daily','weekly','monthly','yearly'].includes(r.frequency))throw new Error('INVALID_RECURRENCE');
+  const interval=Number(r.interval||1);
+  if(!Number.isInteger(interval)||interval<1||interval>99)throw new Error('INVALID_RECURRENCE');
+  const unit=r.frequency==='custom'?({day:'daily',week:'weekly',month:'monthly',year:'yearly'}[r.unit]||''):r.frequency;
+  if(r.end!=='never'&&r.end!=='date'&&r.end!=='count')throw new Error('INVALID_RECURRENCE');
+  if(r.weekdays&&(!Array.isArray(r.weekdays)||r.weekdays.some(d=>!Number.isInteger(Number(d))||Number(d)<0||Number(d)>6)||new Set(r.weekdays.map(Number)).size!==r.weekdays.length))throw new Error('INVALID_RECURRENCE');
+  const recurrence=CalendarApp.newRecurrence();let rule;
+  if(unit==='daily')rule=recurrence.addDailyRule();
+  else if(unit==='weekly')rule=recurrence.addWeeklyRule();
+  else if(unit==='monthly')rule=recurrence.addMonthlyRule();
+  else if(unit==='yearly')rule=recurrence.addYearlyRule();
+  else throw new Error('INVALID_RECURRENCE');
+  rule.interval(interval);
+  if(unit==='weekly'){
+    const weekdays={0:CalendarApp.Weekday.SUNDAY,1:CalendarApp.Weekday.MONDAY,2:CalendarApp.Weekday.TUESDAY,3:CalendarApp.Weekday.WEDNESDAY,4:CalendarApp.Weekday.THURSDAY,5:CalendarApp.Weekday.FRIDAY,6:CalendarApp.Weekday.SATURDAY};
+    const selected=r.weekdays&&r.weekdays.length?r.weekdays.map(Number):[new Date(startAt).getDay()];if(selected.some(d=>weekdays[d]===undefined)||new Set(selected).size!==selected.length)throw new Error('INVALID_RECURRENCE');
+    rule.onlyOnWeekdays(selected.map(d=>weekdays[d]));
+  }
+  if(r.end==='count'){
+    const count=Number(r.count);if(!Number.isInteger(count)||count<2||count>1000)throw new Error('INVALID_RECURRENCE');rule.times(count);
+  } else if(r.end==='date'){
+    const match=String(r.until||'').match(/^(\d{4})-(\d{2})-(\d{2})$/),until=match?new Date(Number(match[1]),Number(match[2])-1,Number(match[3])):null;
+    if(!until||until.getFullYear()!==Number(match[1])||until.getMonth()!==Number(match[2])-1||until.getDate()!==Number(match[3])||r.until<startAt.slice(0,10))throw new Error('INVALID_RECURRENCE');until.setHours(23,59,59,999);rule.until(until);
+  } else if(r.end!=='never')throw new Error('INVALID_RECURRENCE');
+  return recurrence;
+}
 function createCalendarEvent_(d) {
-  const calendar=getAppCalendar_();
-  const event=calendar.createEvent(d.title,new Date(d.startAt),new Date(d.endAt),{location:d.location,description:d.description});
+  const calendar=getAppCalendar_(),start=new Date(d.startAt),end=new Date(d.endAt),options={location:d.location,description:d.description};
+  const recurring=d.recurrence&&d.recurrence.frequency&&d.recurrence.frequency!=='none';
+  const event=recurring?calendar.createEventSeries(d.title,start,end,recurrenceRule_(d.recurrence,start.toISOString()),options):calendar.createEvent(d.title,start,end,options);
+  applyReminder_(event,d.reminderMinutes);
   return {event,calendarId:calendar.getId()};
 }
-function updateCalendarEvent_(id,d,calendarId) {
+function applyReminder_(event,minutes){
+  if(minutes===null||minutes===undefined){event.resetReminders();return;}
+  event.removeAllReminders();event.addPopupReminder(Number(minutes));
+}
+function updateCalendarEvent_(id,d,calendarId,oldRecurrence) {
   const calendar=calendarId?CalendarApp.getCalendarById(calendarId):CalendarApp.getDefaultCalendar();
-  if(!calendar)throw new Error('CALENDAR_NOT_FOUND');
+  if(!calendar)throw new Error('CALENDAR_NOT_FOUND');const desired=configValue_('calendarName');if(desired&&calendar.getName()!==desired)calendar.setName(desired);
+  const oldSeries=oldRecurrence&&oldRecurrence.frequency&&oldRecurrence.frequency!=='none',newSeries=d.recurrence&&d.recurrence.frequency&&d.recurrence.frequency!=='none';
+  if(oldSeries&&newSeries){
+    let series=calendar.getEventSeriesById(id);if(!series){const instance=calendar.getEvents(new Date(d.startAt),new Date(new Date(d.startAt).getTime()+86400000)).find(event=>event.isRecurringEvent()&&event.getEventSeries().getId()===id);series=instance&&instance.getEventSeries();}if(!series)throw new Error('NOT_FOUND');
+    series.setTitle(d.title);series.setDescription(d.description);series.setLocation(d.location);
+    series.setRecurrence(recurrenceRule_(d.recurrence,new Date(d.startAt).toISOString()),new Date(d.startAt),new Date(d.endAt));
+    applyReminder_(series,d.reminderMinutes);
+    return {event:series,calendarId:calendar.getId()};
+  }
+  if(oldSeries||newSeries){
+    const replacement=createCalendarEvent_(d);
+    try{
+      if(oldSeries){let series=calendar.getEventSeriesById(id);if(!series){const instance=calendar.getEvents(new Date(d.startAt),new Date(new Date(d.startAt).getTime()+86400000)).find(event=>event.isRecurringEvent()&&event.getEventSeries().getId()===id);series=instance&&instance.getEventSeries();}if(!series)throw new Error('NOT_FOUND');series.deleteEventSeries();}
+      else {const event=calendar.getEventById(id);if(event)event.deleteEvent();else throw new Error('NOT_FOUND');}
+    }catch(err){try{if(newSeries)replacement.event.deleteEventSeries();else replacement.event.deleteEvent();}catch(_){}throw err;}
+    return replacement;
+  }
   const event=id?calendar.getEventById(id):null;
   if(!event)return createCalendarEvent_(d);
-  event.setTitle(d.title); event.setTime(new Date(d.startAt),new Date(d.endAt));
-  event.setLocation(d.location); event.setDescription(d.description);
+  event.setTitle(d.title);event.setTime(new Date(d.startAt),new Date(d.endAt));
+  event.setLocation(d.location);event.setDescription(d.description);applyReminder_(event,d.reminderMinutes);
   return {event,calendarId:calendar.getId()};
 }
 function configValue_(key) {
@@ -224,13 +300,19 @@ function configValue_(key) {
   }
   return config[key]||'';
 }
+function calendarDisplayName_(){const id=configValue_('calendarId'),calendar=id?CalendarApp.getCalendarById(id):CalendarApp.getDefaultCalendar();if(!calendar)throw new Error('CALENDAR_NOT_FOUND');const desired=configValue_('calendarName');if(desired&&calendar.getName()!==desired)calendar.setName(desired);return calendar.getName();}
 function limpiarCacheConfig(){CacheService.getScriptCache().remove('calendar:config:v1');}
-function deleteCalendarEvent_(id,calendarId) {
+function deleteCalendarEvent_(id,calendarId,recurrence) {
   if(!id)return;
   const calendar=calendarId?CalendarApp.getCalendarById(calendarId):CalendarApp.getDefaultCalendar();
-  if(!calendar)throw new Error('CALENDAR_NOT_FOUND');
-  const event=calendar.getEventById(id);
-  if(event)event.deleteEvent();
+  if(!calendar)throw new Error('CALENDAR_NOT_FOUND');const desired=configValue_('calendarName');if(desired&&calendar.getName()!==desired)calendar.setName(desired);
+  if(recurrence&&recurrence.frequency&&recurrence.frequency!=='none'){
+    const series=calendar.getEventSeriesById(id);
+    if(series){series.deleteEventSeries();return;}
+    const occurrence=calendar.getEvents(new Date(Date.now()-365*86400000),new Date(Date.now()+365*86400000)).find(event=>event.isRecurringEvent()&&event.getEventSeries().getId()===id);if(occurrence){occurrence.getEventSeries().deleteEventSeries();return;}
+    throw new Error('NOT_FOUND');
+  }
+  const event=calendar.getEventById(id);if(event)event.deleteEvent();
 }
 function incrementDataVersion_() {
   const p=PropertiesService.getScriptProperties();
@@ -238,8 +320,14 @@ function incrementDataVersion_() {
 }
 function validateEvent_(d) {
   const title=String(d.title||'').trim(), startAt=String(d.startAt||''), endAt=String(d.endAt||'');
+  let raw=d.recurrence||{frequency:'none'};if(typeof raw==='string'){try{raw=JSON.parse(raw);}catch(_){raw={frequency:'none'};}}
   if(!title||title.length>160||isNaN(Date.parse(startAt))||isNaN(Date.parse(endAt))||Date.parse(endAt)<=Date.parse(startAt))throw new Error('INVALID_EVENT');
-  return {title,startAt,endAt,allDay:Boolean(d.allDay),location:String(d.location||'').slice(0,160),description:String(d.description||'').slice(0,1000)};
+  const frequency=String(raw.frequency||'none');if(!['none','daily','weekly','monthly','yearly','custom'].includes(frequency))throw new Error('INVALID_RECURRENCE');
+  const recurrence=frequency==='custom'?{frequency:'custom',unit:String(raw.unit||''),interval:Number(raw.interval||1),weekdays:Array.isArray(raw.weekdays)?raw.weekdays.map(Number):[],end:String(raw.end||'never'),until:String(raw.until||''),count:Number(raw.count||0)}:{frequency,unit:'',interval:Number(raw.interval||1),weekdays:Array.isArray(raw.weekdays)?raw.weekdays.map(Number):[],end:String(raw.end||'never'),until:String(raw.until||''),count:Number(raw.count||0)};
+  if(recurrence.frequency!=='none')recurrenceRule_(recurrence,startAt);
+  const reminderMinutes=d.reminderMinutes===''||d.reminderMinutes===null||d.reminderMinutes===undefined?null:Number(d.reminderMinutes);
+  if(reminderMinutes!==null&&(!Number.isInteger(reminderMinutes)||reminderMinutes<5||reminderMinutes>40320))throw new Error('INVALID_REMINDER');
+  return {title,startAt,endAt,allDay:false,location:String(d.location||'').slice(0,160),description:String(d.description||'').slice(0,1000),recurrence,reminderMinutes};
 }
 function dataSheet_() {
   const ss=SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
@@ -250,15 +338,15 @@ function dataSheet_() {
 }
 function ensureHeaders_(sheet) {
   if(sheet.getLastRow()===0){sheet.getRange(1,1,1,CONFIG.HEADERS.length).setValues([CONFIG.HEADERS]);return;}
-  const previous=CONFIG.HEADERS.slice(0,-1),actual=sheet.getRange(1,1,1,previous.length).getDisplayValues()[0];
-  if(previous.some((h,i)=>actual[i]!==h))throw new Error('HEADER_MISMATCH');
-  const calendarHeader=sheet.getRange(1,CONFIG.HEADERS.length).getDisplayValue();
-  if(calendarHeader&&calendarHeader!==CONFIG.HEADERS[CONFIG.HEADERS.length-1])throw new Error('HEADER_MISMATCH');
-  if(!calendarHeader)sheet.getRange(1,CONFIG.HEADERS.length).setValue(CONFIG.HEADERS[CONFIG.HEADERS.length-1]);
+  const width=Math.min(CONFIG.HEADERS.length,Math.max(sheet.getLastColumn(),15));
+  const actual=sheet.getRange(1,1,1,width).getDisplayValues()[0];
+  for(let i=0;i<width;i++)if(actual[i]&&actual[i]!==CONFIG.HEADERS[i])throw new Error('HEADER_MISMATCH');
+  for(let i=0;i<CONFIG.HEADERS.length;i++)if(!actual[i])sheet.getRange(1,i+1).setValue(CONFIG.HEADERS[i]);
 }
-function rowObject_(r) { const o={}; CONFIG.HEADERS.forEach((h,i)=>o[h]=r[i] instanceof Date?r[i].toISOString():r[i]); return o; }
+function parseRecurrence_(value){if(!value)return {frequency:'none'};if(typeof value==='object')return value;try{return JSON.parse(value);}catch(_){return {frequency:'none'};}}
+function rowObject_(r) { const o={}; CONFIG.HEADERS.forEach((h,i)=>o[h]=r[i] instanceof Date?r[i].toISOString():r[i]);if(CONFIG.HEADERS.includes('recurrence'))o.recurrence=parseRecurrence_(o.recurrence);return o; }
 function json_(value) { return ContentService.createTextOutput(JSON.stringify(value)).setMimeType(ContentService.MimeType.JSON); }
 function publicError_(err) {
-  const allowed=['INVALID_ACTION','INVALID_FROM','INVALID_EVENT_ID','INVALID_EVENT','INVALID_BATCH','BUSY_RETRY','NOT_FOUND','CONFLICT','SHEET_NOT_FOUND','CONFIG_SHEET_NOT_FOUND','CALENDAR_NOT_FOUND','USERS_SHEET_NOT_FOUND','USERS_SHEET_INVALID','INVALID_CREDENTIALS','UNAUTHORIZED','SESSION_EXPIRED'];
+  const allowed=['INVALID_ACTION','INVALID_FROM','INVALID_CURSOR','EXPORT_CHANGED','BUSY_RETRY','INVALID_RECURRENCE','INVALID_REMINDER','INVALID_EVENT_ID','INVALID_EVENT','INVALID_BATCH','NOT_FOUND','CONFLICT','SHEET_NOT_FOUND','CONFIG_SHEET_NOT_FOUND','CALENDAR_NOT_FOUND','USERS_SHEET_NOT_FOUND','USERS_SHEET_INVALID','INVALID_CREDENTIALS','UNAUTHORIZED','SESSION_EXPIRED'];
   return allowed.includes(err.message)?err.message:'INTERNAL_ERROR';
 }
