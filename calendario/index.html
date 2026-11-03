@@ -24,7 +24,7 @@
   <dialog id="event-dialog"><form id="event-form" method="dialog"><div class="dialog-head"><div><p class="eyebrow">NUEVO EVENTO</p><h2>¿Qué tenemos?</h2></div><button type="button" class="icon-button" id="close-dialog" aria-label="Cerrar">×</button></div><label>Título<input name="title" required maxlength="160" placeholder="Reunión de equipo"></label><div class="two-col"><label>Fecha<input name="date" type="date" required></label><label>Hora<input name="time" type="time" value="09:00" required></label></div><label>Lugar <span class="optional">opcional</span><input name="location" maxlength="160" placeholder="Sala o enlace"></label><label>Descripción <span class="optional">opcional</span><textarea name="description" rows="3" maxlength="1000"></textarea></label><div class="form-actions"><button type="button" class="quiet-button" id="cancel">Cancelar</button><button class="primary-button" type="submit">Guardar evento</button></div></form></dialog>
   </div>
   </main>
-  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
   <script src="./config.js"></script><script src="./app.js" defer></script>
 </body>
 </html>
