@@ -1,5 +1,17 @@
 # Setup y límites de despliegue
 
+## GitHub Pages público
+
+Sitio: https://claudiomaza.github.io/apps/
+
+- La portada está en `index.html`; Calendario en `/calendario/` y Registro de notas en `/notas/`.
+- Para una app adicional, crear una carpeta con `index.html`, sus recursos y su `config.js`; se servirá bajo `/<carpeta>/` tras publicar en `main`.
+- Pages está configurado para desplegar desde la raíz de la rama `main`. Los cambios a esa rama actualizan el sitio.
+- Todo lo que se ponga en el repo o en esos frontends es público. No guardar claves, tokens privados ni datos personales allí.
+
+---
+
+
 ## Drive
 
 Carpeta de proyectos: https://drive.google.com/drive/folders/14KsA8scXgN2wDL-HDtFQHS_95LCf1U8s
