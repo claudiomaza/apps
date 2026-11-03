@@ -9,6 +9,8 @@ Carpeta de proyectos: https://drive.google.com/drive/folders/14KsA8scXgN2wDL-HDt
 - Spec de optimizaciones comunes: [Drive](https://drive.google.com/file/d/12aVV2PZQNBvxp9YWgy3iQZs5mPAi9oFw/view)
 - Código Apps Script Calendario (Markdown autocontenido): [Drive](https://drive.google.com/file/d/15Gy7lV9RJw4AT3kPoOcBK7rwMLjccF5o/view)
 - Código Apps Script Registro de notas (Markdown autocontenido): [Drive](https://drive.google.com/file/d/1KPpT-NgigILhG5K5GNfyYgg86wcn85KQ/view)
+- Endpoint Web App Notas: `https://script.google.com/macros/s/AKfycbwU11LlONKIliay7ogGZDVrXQLWSV589BhTzhe2Kq2UML3zVBlOi13FryEAnYCynKYv3g/exec`
+- Endpoint Web App Calendario: `https://script.google.com/macros/s/AKfycbzxT-VeFBlD-MJ9n2acttT2VYtmbB3cS5YsUkCQstlarMuqGYZi0pi5JppSll0lmM47/exec`
 
 Las pestañas y encabezados iniciales están creados. Hojas `Inbox` y `Config` se reservan para iteraciones posteriores; este primer backend CRUD escribe directamente en la hoja principal, mientras que las importaciones usan `setValues()`.
 
@@ -29,9 +31,9 @@ Las optimizaciones transversales acordadas están documentadas en [SPEC-PERFORMA
 
 ## Frontend y publicación
 
-Los archivos de frontend no contienen URLs de backend ni secretos (`config.js` mantiene `API_URL` vacío). La cuenta GitHub es Free y el repo se creó privado. Antes de publicar Pages hay que escoger hosting/visibilidad; no volver público el repo sin consentimiento explícito.
+Los archivos `config.js` guardan las URLs públicas de las Web Apps; son configuración pública, no secretos. Para cambiar un endpoint, se edita su `API_URL`; una variable `.env` no llega al navegador en este frontend estático sin agregar un paso de build. El repo GitHub sigue privado; no volverlo público sin consentimiento explícito.
 
-Una vez configurado un backend seguro, asignar la URL de la Web App en cada `config.js`. No desplegar `Acceso: cualquiera` ejecutando como propietario para la app de notas: su contenido es información educativa. El backend de este prototipo no incluye autenticación/autorización por docente, curso u organización, por lo que no debe desplegarse con datos reales.
+No desplegar `Acceso: cualquiera` ejecutando como propietario para la app de notas: su contenido es información educativa. El backend de este prototipo no incluye autenticación/autorización por docente, curso u organización, por lo que no debe desplegarse con datos reales.
 
 ## Funcionalidad pendiente de esta primera entrega
 
