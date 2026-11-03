@@ -27,6 +27,17 @@ Aplicar estas pautas a cada proyecto nuevo o al optimizar uno existente. Mantene
 - Al agregar una dependencia inevitable, versionarla en el repo y servirla desde Pages; registrar origen, licencia, versión y por qué no alcanza una API nativa.
 - Validar en QA la pestaña Network o el inventario de recursos: cero solicitudes a CDNs; solo Pages y el endpoint backend autorizado.
 
+## Configuración operativa desde Sheets y código agnóstico
+
+- **Toda app interna debe tener una pestaña `Config` en su Sheet**, desde la primera versión, incluso si inicialmente necesita pocos parámetros. Es la vía normal para cambiar valores operativos sin editar ni volver a desplegar el código.
+- Esquema compartido: encabezados `key` y `value`, una clave única por fila. Leer por nombre de encabezado y clave; nunca depender de posiciones fijas de fila/columna aparte del esquema, ni codificar en el backend valores que deban administrar usuarios. Las hojas/configuraciones iniciales deben crearse y documentarse junto con la app.
+- Al iniciar, cargar la configuración en un mapa genérico y validar claves conocidas, tipos, límites y valores permitidos. Definir defaults seguros para claves opcionales; distinguir explícitamente valor ausente, vacío y valor inválido. Un error de configuración debe fallar claro y cerrado, no ignorarse ni activar un destino alternativo inadvertido.
+- Mantener una caché efímera breve (máximo 30 s para valores operativos) e invalidación administrativa explícita cuando haga falta aplicación inmediata. CacheService nunca es fuente de verdad. Las operaciones deben leer una configuración consistente por petición.
+- Reservar código/deploy para cambiar comportamiento, esquema o reglas de validación; valores de operación (IDs de destino, límites configurables, etiquetas, opciones habilitadas, etc.) deben poder cambiarse desde Config siempre que sea seguro. Documentar expresamente qué ajustes requieren redeploy y cuáles no.
+- Procurar que el código sea lo más **agnóstico y reutilizable** posible: una capa común de lectura, validación, defaults y caché de Config; nombres y valores configurables, no esparcidos como literales por las funciones. Separar reglas genéricas de infraestructura/contrato de los adaptadores o reglas inevitables del dominio. Evitar ramas duplicadas por app, dependencias de nombres/filas concretas, hardcodes de IDs y lógica que suponga un único entorno. No abstraer en exceso: el código de dominio sigue siendo explícito y testeable.
+- No almacenar contraseñas, tokens ni secretos en `Config` en texto plano. Config no sustituye autorización; restringir la edición del Sheet a administradores confiables. Validar entradas como datos no confiables y no permitir que una celda elija funciones, nombres de hojas arbitrarias, URLs ejecutables o acciones sin allowlist.
+- Cada ajuste debe documentar: clave, tipo/formato, default, si admite vacío, validación, efecto, tiempo de propagación y si requiere autorización o redeploy. Probar valores ausentes, válidos, inválidos, vacíos y cambios dentro del TTL.
+
 ## Configuración de destino Google Calendar
 
 - Cada app debe tener una pestaña `Config` con encabezados `key` y `value`. En Calendario, agregar la fila `calendarId` / valor en `Config!B5`. La búsqueda backend se hace por clave y no debe depender del número de fila; B5 es la ubicación inicial documentada. Un valor vacío conserva el calendario principal.

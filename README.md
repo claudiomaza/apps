@@ -10,7 +10,7 @@ Monorepo público para frontends de herramientas internas con Google Apps Script
 
 ## Contrato común para apps nuevas
 
-Toda app nueva debe reutilizar el esquema de acceso descrito en [SPEC-PERFORMANCE.md](./SPEC-PERFORMANCE.md): pestaña `Usuarios`, encabezados `usuario` y `pass`, campo de usuario de texto (no email), contraseña de 1–200 caracteres y autenticación consistente en frontend/backend. No crear formularios ni validaciones de login distintos por producto.
+Toda app nueva debe reutilizar el esquema de acceso descrito en [SPEC-PERFORMANCE.md](./SPEC-PERFORMANCE.md): pestaña `Usuarios`, encabezados `usuario` y `pass`, campo de usuario de texto (no email), contraseña de 1–200 caracteres y autenticación consistente en frontend/backend. No crear formularios ni validaciones de login distintos por producto. Además, cada app debe incluir una pestaña `Config` (`key`/`value`) desde su primera versión y leer de ahí los ajustes operativos para no necesitar un redeploy por cambiar valores; seguir el spec para defaults, validación, TTL y límites de seguridad. El código debe favorecer lectura genérica y agnóstica de esas claves, evitando IDs y valores operativos hardcodeados.
 
 ## Configuración de Google Calendar
 

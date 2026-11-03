@@ -2,6 +2,8 @@
 
 Frontend estático publicado en [GitHub Pages](https://claudiomaza.github.io/apps/notas/) con Apps Script + Google Sheets como backend y fuente de verdad.
 
+Esta app también debe mantener una pestaña `Config` (`key`/`value`) aunque hoy no requiera ajustes operativos adicionales. Los nuevos valores configurables deben leerse genéricamente desde esa hoja para evitar redeploys por cambios de configuración. Ver [spec común](../SPEC-PERFORMANCE.md).
+
 ## Recursos y estilo
 
 - Servir HTML, CSS, JavaScript, manifest, imágenes y cualquier dependencia desde GitHub Pages; no usar CDNs para fuentes, librerías o scripts.

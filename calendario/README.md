@@ -2,6 +2,8 @@
 
 Frontend estático publicado en [GitHub Pages](https://claudiomaza.github.io/apps/calendario/) con Apps Script + Google Sheets como backend y fuente de verdad.
 
+La pestaña `Config` (`key`/`value`) forma parte del contrato común de todas las apps y se lee por claves, no por números de fila. Colocar allí los valores operativos cambiables sin redeploy. Ver las reglas de configuración agnóstica, defaults, validación y caché en el [spec común](../SPEC-PERFORMANCE.md).
+
 ## Recursos y estilo
 
 - Servir HTML, CSS, JavaScript, manifest, imágenes y cualquier dependencia desde GitHub Pages; no usar CDNs para fuentes, librerías o scripts.
