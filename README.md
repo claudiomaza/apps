@@ -1,6 +1,6 @@
 # Apps
 
-Monorepo privado para herramientas internas con frontend estático y Google Apps Script como API sobre Google Sheets.
+Monorepo público para frontends de herramientas internas con Google Apps Script como API sobre Google Sheets. El código y las URLs de los endpoints son públicos; los datos y las operaciones deben protegerse y autorizarse en el backend.
 
 ## Apps
 
@@ -10,8 +10,8 @@ Monorepo privado para herramientas internas con frontend estático y Google Apps
 
 ## Arquitectura inicial
 
-- Frontend separado y estático; las páginas pueden publicarse en Pages cuando se decida hacer público el repositorio o se configure otro hosting.
-- GAS ejecutado como propietario; no desplegar con acceso público hasta definir autenticación/controles de acceso.
+- Frontend estático publicado en GitHub Pages: portada en `/apps/`, Calendario en `/apps/calendario/` y Registro de notas en `/apps/notas/`.
+- GAS se ejecuta como propietario. El backend valida usuario y contraseña para cada sesión; antes de habilitar datos reales hay que restringir permisos de las planillas y definir autorización por rol/curso.
 - Google Sheets es la fuente de verdad.
 - CacheService solo para lecturas regenerables. PropertiesService no se usa como cola de datos.
 - CRUD interactivo directo, control optimista por `version` y lock breve alrededor de la comprobación/escritura.
@@ -19,8 +19,8 @@ Monorepo privado para herramientas internas con frontend estático y Google Apps
 
 ## Estado
 
-Las interfaces son prototipos funcionales en modo local. No contienen URLs de web apps desplegadas ni credenciales. Las hojas de Drive se prepararon por separado. Apps Script debe cargarse como proyecto vinculado a cada hoja, autorizarse, probarse y desplegarse con controles de acceso antes de usar datos reales.
+Las interfaces se publican en GitHub Pages y usan URLs de Web Apps configuradas en `config.js` (públicas, no secretas). Los proyectos Apps Script vinculados a cada hoja deben tener el código backend actualizado, autorizarse y desplegar una nueva versión. Las credenciales se gestionan en la pestaña `Usuarios` de cada Sheet; no usar datos reales hasta completar las medidas de acceso y autorización.
 
 ## Desarrollo local
 
-Abrir cada `index.html` mediante un servidor estático local (no `file://`) para que PWA/fetch se comporten como en hosting. Configurar `API_URL` en `config.js` solo después de desplegar y proteger el backend.
+Abrir cada `index.html` mediante un servidor estático local (no `file://`) para que PWA/fetch se comporten como en hosting. `API_URL` en `config.js` es visible para cualquiera; la autenticación y autorización deben aplicarse en el backend.

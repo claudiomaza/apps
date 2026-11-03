@@ -1,7 +1,8 @@
 /**
  * Backend de Registro de notas para Apps Script vinculado al Sheet.
  * Las cuentas activas se administran en la pestaña `Usuarios` del Sheet,
- * columnas `mail` y `pass`. Las claves se guardan en texto plano.
+ * columnas `usuario` (o el encabezado heredado `mail`) y `pass`.
+ * El usuario puede tener cualquier formato; las claves se guardan en texto plano.
  */
 const CONFIG = Object.freeze({
   SPREADSHEET_ID: '1eH_SMJcaPoA6tEkKakETRKS1TsvGXxHSXHlFB5m02yE',
@@ -17,7 +18,7 @@ function doGet() { return json_({ok:true,service:'apps-gradebook',schemaVersion:
 function doPost(e) {
   try {
     const b=JSON.parse(e&&e.postData&&e.postData.contents||'{}');
-    if(b.action==='auth')return json_(authenticate_(String(b.mail||''),String(b.pass||'')));
+    if(b.action==='auth')return json_(authenticate_(String(b.user!==undefined?b.user:(b.mail||'')),String(b.pass||'')));
     requireSession_(b.sessionToken);
     if(b.action==='list')return json_(listGrades_(b));
     if(b.action==='createBatch')return json_(createGradesBatch_(b));
@@ -25,14 +26,14 @@ function doPost(e) {
     return json_(mutateGrade_(b.action,b));
   } catch(e) { return json_({ok:false,error:publicError_(e)}); }
 }
-function authenticate_(mail,password) {
-  if(String(mail||'').length>254||String(password||'').length>200)throw Error('INVALID_CREDENTIALS');
-  const wanted=String(mail||'').trim().toLowerCase();
-  const user=loadUsers_().find(x=>x.mail.toLowerCase()===wanted);
+function authenticate_(username,password) {
+  if(String(username||'').length>254||String(password||'').length>200)throw Error('INVALID_CREDENTIALS');
+  const wanted=String(username||'').trim().toLowerCase();
+  const user=loadUsers_().find(x=>x.username.toLowerCase()===wanted);
   if(!user||!constantTimeEqual_(password,user.pass))throw Error('INVALID_CREDENTIALS');
-  const now=Date.now(),payload={iat:now,exp:now+CONFIG.SESSION_SECONDS*1000,nonce:Utilities.getUuid(),sub:user.mail,credentialTag:credentialTag_(user)};
+  const now=Date.now(),payload={iat:now,exp:now+CONFIG.SESSION_SECONDS*1000,nonce:Utilities.getUuid(),sub:user.username,credentialTag:credentialTag_(user)};
   const encoded=base64Url_(Utilities.newBlob(JSON.stringify(payload)).getBytes());
-  return {ok:true,sessionToken:encoded+'.'+sign_(encoded),expiresAt:new Date(payload.exp).toISOString(),mail:user.mail};
+  return {ok:true,sessionToken:encoded+'.'+sign_(encoded),expiresAt:new Date(payload.exp).toISOString(),username:user.username};
 }
 function requireSession_(token) {
   if(!token||typeof token!=='string')throw Error('UNAUTHORIZED');
@@ -41,33 +42,33 @@ function requireSession_(token) {
   let payload;
   try { payload=JSON.parse(Utilities.newBlob(Utilities.base64DecodeWebSafe(parts[0])).getDataAsString()); }
   catch(_) { throw Error('UNAUTHORIZED'); }
-  const activeUser=loadUsers_().find(x=>x.mail.toLowerCase()===String(payload.sub||'').toLowerCase());
+  const activeUser=loadUsers_().find(x=>x.username.toLowerCase()===String(payload.sub||'').toLowerCase());
   if(!payload.exp||Date.now()>payload.exp||!payload.nonce||!activeUser||payload.credentialTag!==credentialTag_(activeUser))throw Error('SESSION_EXPIRED');
 }
-function credentialTag_(user){return sign_('credential:'+user.mail+':'+user.pass);}
+function credentialTag_(user){return sign_('credential:'+user.username+':'+user.pass);}
 function loadUsers_(){
-  const cache=CacheService.getScriptCache(),key='auth:users:v1',hit=cache.get(key);
+  const cache=CacheService.getScriptCache(),key='auth:users:v2',hit=cache.get(key);
   if(hit)return JSON.parse(hit);
   const sheet=SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID).getSheetByName(CONFIG.USERS_SHEET);
   if(!sheet)throw Error('USERS_SHEET_NOT_FOUND');
   const last=sheet.getLastRow();
   const values=last?sheet.getRange(1,1,last,2).getDisplayValues():[];
-  if(!values.length||values[0][0]!=='mail'||values[0][1]!=='pass')throw Error('USERS_SHEET_INVALID');
+  if(!values.length||!['mail','usuario'].includes(String(values[0][0]).toLowerCase())||values[0][1]!=='pass')throw Error('USERS_SHEET_INVALID');
   const users=[],seen=new Set();
   values.slice(1).forEach(row=>{
-    const mail=String(row[0]||'').trim(),pass=String(row[1]||'');
-    if(!mail&&!pass)return;
-    if(!/^\S+@\S+\.\S+$/.test(mail)||mail.length>254||pass.length<12||pass.length>200)throw Error('USERS_SHEET_INVALID');
+    const username=String(row[0]||'').trim(),pass=String(row[1]||'');
+    if(!username&&!pass)return;
+    if(!username||username.length>254||/[\u0000-\u001F\u007F]/.test(username)||pass.length<12||pass.length>200)throw Error('USERS_SHEET_INVALID');
     if(users.length>=200)throw Error('USERS_SHEET_INVALID');
-    const normalized=mail.toLowerCase();
+    const normalized=username.toLowerCase();
     if(seen.has(normalized))throw Error('USERS_SHEET_INVALID');
-    seen.add(normalized);users.push({mail,pass});
+    seen.add(normalized);users.push({username,pass});
   });
   if(users.length>200)throw Error('USERS_SHEET_INVALID');
   cache.put(key,JSON.stringify(users),15);
   return users;
 }
-function limpiarCacheUsuarios(){CacheService.getScriptCache().remove('auth:users:v1');}
+function limpiarCacheUsuarios(){const c=CacheService.getScriptCache();c.remove('auth:users:v1');c.remove('auth:users:v2');}
 function sign_(value) {
   const p=PropertiesService.getScriptProperties();let secret=p.getProperty('APP_SESSION_SIGNING_KEY');
   if(!secret){secret=Utilities.getUuid()+Utilities.getUuid()+Utilities.getUuid();p.setProperty('APP_SESSION_SIGNING_KEY',secret);}

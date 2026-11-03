@@ -35,14 +35,14 @@ Aplicar estas pautas a cada proyecto nuevo o al optimizar uno existente. Mantene
 
 - Los endpoints de lote aceptan como máximo 100 filas y escriben con `setValues()`.
 - CRUD usa rangos y una escritura por fila, lock breve, control optimista de versión y caché solo de lecturas.
-- Cada Sheet mantiene una pestaña `Usuarios` con encabezados `mail` y `pass`; el backend autentica contra esas filas.
+- Cada Sheet mantiene una pestaña `Usuarios` con dos columnas: identificador de usuario y `pass`. El primer encabezado puede ser `usuario` (recomendado) o `mail` por compatibilidad con hojas existentes; su valor no tiene que ser un correo. El backend autentica contra esas filas.
 
 ## Gestión de usuarios
 
 - Agregar, actualizar o quitar una fila de `Usuarios` cambia las credenciales de acceso sin modificar ni volver a desplegar el código. El backend usa una caché de 15 segundos; los cambios se reflejan en ese plazo.
-- `mail` debe ser único (sin distinguir mayúsculas) y válido; `pass` debe tener al menos 12 caracteres. Máximo 200 cuentas. No dejar filas con un solo campo completado.
+- El identificador (bajo el encabezado `usuario` o el heredado `mail`) puede ser cualquier texto no vacío de hasta 254 caracteres, sin caracteres de control; se compara sin distinguir mayúsculas y debe ser único. `pass` debe tener entre 12 y 200 caracteres. Máximo 200 cuentas. No dejar filas con un solo campo completado. La interfaz solicita “Usuario”, no “Correo electrónico”. Una fila incompleta o que infrinja los límites hace que el backend rechace la configuración con `USERS_SHEET_INVALID`.
 - `pass` queda en texto plano en la planilla. Toda persona con acceso de lectura al Sheet puede verlo; restringir el acceso del documento a administradores confiables. No compartir el Sheet de Registro de notas con docentes/alumnos como método de acceso a la app sin separar la administración de cuentas; las hojas no son un almacén de secretos.
-- El token firmado incluye el correo, expiración y una huella de credencial; se valida en cada solicitud. Eliminar la fila o cambiar la contraseña invalida la sesión tras refrescarse la caché.
+- El token firmado incluye el usuario, expiración y una huella de credencial; se valida en cada solicitud. Eliminar la fila o cambiar la contraseña invalida la sesión tras refrescarse la caché.
 - La pestaña no agrega roles ni autorización por curso. Un login no reemplaza autorización: definir qué puede leer/escribir cada persona antes de exponer datos educativos.
 - El cliente conserva solo el token temporal en `sessionStorage`, no la contraseña. Nunca devolver ni registrar `pass` desde el backend.
 - Para datos sensibles o acceso multirol, preferir autenticación institucional y almacenamiento adecuado de credenciales; no habilitar datos reales de estudiantes con este prototipo hasta implementar permisos institucionales.
