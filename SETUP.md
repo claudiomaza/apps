@@ -24,7 +24,7 @@ Carpeta de proyectos: https://drive.google.com/drive/folders/14KsA8scXgN2wDL-HDt
 - Endpoint Web App Notas: `https://script.google.com/macros/s/AKfycbwU11LlONKIliay7ogGZDVrXQLWSV589BhTzhe2Kq2UML3zVBlOi13FryEAnYCynKYv3g/exec`
 - Endpoint Web App Calendario: `https://script.google.com/macros/s/AKfycbzxT-VeFBlD-MJ9n2acttT2VYtmbB3cS5YsUkCQstlarMuqGYZi0pi5JppSll0lmM47/exec`
 
-Las pestañas y encabezados iniciales están creados. La pestaña `Config` usa claves en columna A y valores en B. Para el calendario, `calendarId` es opcional: vacío significa el calendario principal; pegá en `Config!B5` el ID de calendario para seleccionar otro. El backend lee la clave por nombre, así que la fila puede moverse sin cambiar el código. Cambios en Config se detectan en hasta 30 segundos; también se puede ejecutar `limpiarCacheConfig()` en Apps Script para aplicar de inmediato.
+Las pestañas y encabezados iniciales están creados. La pestaña `Config` usa claves en A y valores en B; `calendarId` está en `Config!A5:B5` y apunta al calendario dedicado “Agenda de la app”. Para elegir otro: Google Calendar web → ⚙️ Configuración → seleccioná el calendario en la columna izquierda → Integrar el calendario → copiá “ID del calendario” y pegalo en `Config!B5`. No pegues el ID en GitHub. Vaciar B5 vuelve al calendario principal. El backend lee la clave por nombre, así que podés mover la fila. Los cambios se aplican en hasta 30 segundos o inmediatamente al ejecutar `limpiarCacheConfig()` en Apps Script.
 
 ## Apps Script vinculado
 
