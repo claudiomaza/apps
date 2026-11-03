@@ -11,7 +11,7 @@ Monorepo público para frontends de herramientas internas con Google Apps Script
 ## Arquitectura inicial
 
 - Frontend estático publicado en GitHub Pages: portada en `/apps/`, Calendario en `/apps/calendario/` y Registro de notas en `/apps/notas/`.
-- GAS se ejecuta como propietario. El backend valida usuario y contraseña para cada sesión; antes de habilitar datos reales hay que restringir permisos de las planillas y definir autorización por rol/curso.
+- GAS se ejecuta como propietario. El backend valida un usuario no vacío (no necesariamente correo) y una contraseña de 1 a 200 caracteres para cada sesión. Antes de habilitar datos reales hay que restringir permisos de las planillas y definir autorización por rol/curso.
 - Google Sheets es la fuente de verdad.
 - CacheService solo para lecturas regenerables. PropertiesService no se usa como cola de datos.
 - CRUD interactivo directo, control optimista por `version` y lock breve alrededor de la comprobación/escritura.

@@ -58,7 +58,7 @@ function loadUsers_(){
   values.slice(1).forEach(row=>{
     const username=String(row[0]||'').trim(),pass=String(row[1]||'');
     if(!username&&!pass)return;
-    if(!username||username.length>254||/[\u0000-\u001F\u007F]/.test(username)||pass.length<12||pass.length>200)throw Error('USERS_SHEET_INVALID');
+    if(!username||username.length>254||/[\u0000-\u001F\u007F]/.test(username)||pass.length<1||pass.length>200)throw Error('USERS_SHEET_INVALID');
     if(users.length>=200)throw Error('USERS_SHEET_INVALID');
     const normalized=username.toLowerCase();
     if(seen.has(normalized))throw Error('USERS_SHEET_INVALID');
