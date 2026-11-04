@@ -12,7 +12,7 @@ const CONFIG = Object.freeze({
   SESSION_SECONDS: 8 * 60 * 60,
   MAX_PAGE_SIZE: 300,
   MAX_BATCH_SIZE: 100,
-  HEADERS: ['eventId','title','startAt','endAt','allDay','location','description','ownerEmail','status','version','createdAt','updatedAt','deletedAt','calendarEventId','calendarId','recurrence','reminderMinutes']
+  HEADERS: ['eventId','title','startAt','endAt','allDay','location','description','ownerEmail','status','version','createdAt','updatedAt','deletedAt','calendarEventId','calendarId','recurrence','reminderMinutes','reminderAt']
 });
 
 function doGet() {
@@ -160,7 +160,7 @@ function mutateEvent_(action, body) {
       if (index >= 0) return {ok:true,record:rowObject_(sheet.getRange(index+2,1,1,CONFIG.HEADERS.length).getValues()[0].slice(0,CONFIG.HEADERS.length)),duplicate:true};
       const d = validateEvent_(body.changes || {});
       const created = createCalendarEvent_(d);
-      row = [eventId,d.title,d.startAt,d.endAt,d.allDay,d.location,d.description,'','ACTIVE',1,now,now,'',created.event.getId(),created.calendarId,JSON.stringify(d.recurrence),d.reminderMinutes];
+      row = [eventId,d.title,d.startAt,d.endAt,d.allDay,d.location,d.description,'','ACTIVE',1,now,now,'',created.event.getId(),created.calendarId,JSON.stringify(d.recurrence),d.reminderMinutes,d.reminderAt];
       sheet.getRange(last+1,1,1,row.length).setValues([row]);
     } else {
       if (index < 0) throw new Error('NOT_FOUND');
@@ -178,7 +178,7 @@ function mutateEvent_(action, body) {
         const calEvent = updateCalendarEvent_(String(existing[13] || ''),d,String(existing[14] || ''),parseRecurrence_(existing[15]));
         existing[1]=d.title; existing[2]=d.startAt; existing[3]=d.endAt; existing[4]=d.allDay;
         existing[5]=d.location; existing[6]=d.description; existing[9]=Number(existing[9])+1;
-        existing[11]=now; existing[13]=calEvent.event.getId(); existing[14]=calEvent.calendarId; existing[15]=JSON.stringify(d.recurrence); existing[16]=d.reminderMinutes;
+        existing[11]=now; existing[13]=calEvent.event.getId(); existing[14]=calEvent.calendarId; existing[15]=JSON.stringify(d.recurrence); existing[16]=d.reminderMinutes; existing[17]=d.reminderAt;
       }
       row=existing; sheet.getRange(rowNumber,1,1,row.length).setValues([row]);
     }
@@ -208,7 +208,7 @@ function createEventsBatch_(body) {
     const now=new Date().toISOString();
     const rows=fresh.map(({id,d})=>{
       const calEvent=createCalendarEvent_(d),recurring=d.recurrence&&d.recurrence.frequency!=='none';created.push({event:calEvent.event,calendarId:calEvent.calendarId,recurring});
-      return [id,d.title,d.startAt,d.endAt,d.allDay,d.location,d.description,'','ACTIVE',1,now,now,'',calEvent.event.getId(),calEvent.calendarId,JSON.stringify(d.recurrence),d.reminderMinutes];
+      return [id,d.title,d.startAt,d.endAt,d.allDay,d.location,d.description,'','ACTIVE',1,now,now,'',calEvent.event.getId(),calEvent.calendarId,JSON.stringify(d.recurrence),d.reminderMinutes,d.reminderAt];
     });
     sheet.getRange(last+1,1,rows.length,CONFIG.HEADERS.length).setValues(rows);
     SpreadsheetApp.flush(); incrementDataVersion_();
@@ -325,9 +325,10 @@ function validateEvent_(d) {
   const frequency=String(raw.frequency||'none');if(!['none','daily','weekly','monthly','yearly','custom'].includes(frequency))throw new Error('INVALID_RECURRENCE');
   const recurrence=frequency==='custom'?{frequency:'custom',unit:String(raw.unit||''),interval:Number(raw.interval||1),weekdays:Array.isArray(raw.weekdays)?raw.weekdays.map(Number):[],end:String(raw.end||'never'),until:String(raw.until||''),count:Number(raw.count||0)}:{frequency,unit:'',interval:Number(raw.interval||1),weekdays:Array.isArray(raw.weekdays)?raw.weekdays.map(Number):[],end:String(raw.end||'never'),until:String(raw.until||''),count:Number(raw.count||0)};
   if(recurrence.frequency!=='none')recurrenceRule_(recurrence,startAt);
-  const reminderMinutes=d.reminderMinutes===''||d.reminderMinutes===null||d.reminderMinutes===undefined?null:Number(d.reminderMinutes);
+  const reminderMinutes=d.reminderMinutes===''||d.reminderMinutes===null||d.reminderMinutes===undefined?null:Number(d.reminderMinutes),reminderAt=d.reminderAt?String(d.reminderAt):'';
   if(reminderMinutes!==null&&(!Number.isInteger(reminderMinutes)||reminderMinutes<5||reminderMinutes>40320))throw new Error('INVALID_REMINDER');
-  return {title,startAt,endAt,allDay:false,location:String(d.location||'').slice(0,160),description:String(d.description||'').slice(0,1000),recurrence,reminderMinutes};
+  if(reminderAt&&(isNaN(Date.parse(reminderAt))||!reminderMinutes||Math.abs((Date.parse(startAt)-Date.parse(reminderAt))/60000-reminderMinutes)>1))throw new Error('INVALID_REMINDER');
+  return {title,startAt,endAt,allDay:false,location:String(d.location||'').slice(0,160),description:String(d.description||'').slice(0,1000),recurrence,reminderMinutes,reminderAt};
 }
 function dataSheet_() {
   const ss=SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
