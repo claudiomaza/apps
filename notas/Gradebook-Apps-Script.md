@@ -43,6 +43,21 @@ El frontend está en [Registro de notas](https://claudiomaza.github.io/apps/nota
 
 ## Modelo y uso
 
+### Perfil de usuario y responsabilidades por rol
+
+Las únicas credenciales de ingreso son `usuario` y `pass`. Los otros campos describen el perfil y sus permisos; nunca se usan como credenciales:
+
+| Rol | Puede hacer | No puede hacer |
+|---|---|---|
+| `admin` | Leer y administrar toda la libreta; crear/editar escuelas, materias, cursos, divisiones, estudiantes y matrículas; gestionar horarios, instancias, escalas y cortes; operar papelera y restaurar registros; además puede usar los flujos académicos. | — |
+| `docente` | Leer registros de sus alcances; cargar/calificar notas; registrar/corregir asistencia; crear observaciones y entradas del libro de tema dentro de esos cursos. | Leer cursos ajenos; gestionar estructura académica, horarios, cortes, escalas o instancias; crear/modificar matrículas o fichas globales; acceder a papelera, borrar/restaurar registros o gestionar Usuarios. |
+
+`alcances` es la lista de cursos/grupos exactos asignados a un docente; no es texto libre ni un permiso general. Cada elemento tiene cuatro identificadores internos existentes: escuela (`schoolId`), materia (`subjectId`), curso (`courseId`) y división (`divisionId`). El formato para una asignación es `[{"schoolId":"ID","subjectId":"ID","courseId":"ID","divisionId":"ID"}]`; pueden listarse hasta 20. Admin usa `[]`. No inventar ni adivinar IDs: primero deben existir esos registros académicos. En la interfaz se muestran nombres legibles, pero el backend valida los IDs y aplica los permisos.
+
+Ejemplo de perfil: `Claudio Maza | cmaza@mendoza.edu.ar | Docente | [cursos asignados]`. En Google Sheets, la columna `rol` tiene un desplegable con `admin` y `docente`; se agregó una nota explicativa a `rol` y `alcances`. No hay un desplegable útil para `alcances` mientras `Registros` no contenga cursos/divisiones: una lista arbitraria no generaría una asignación válida. Para hacer pruebas de aislamiento, crear primero al menos dos cursos/grupos ficticios o usar dos cursos existentes, y luego asignar un docente distinto a cada uno.
+
+`pass` permanece en texto plano en la hoja; solo administradores confiables deben tener acceso al archivo. No reutilizar contraseñas reales para cuentas de prueba.
+
 ### Multiusuario y asignaciones
 Cada solicitud vuelve a cargar y validar el rol/alcances desde `Usuarios`, de modo que quitar una asignación bloquea el acceso en la siguiente solicitud. Los administradores pueden gestionar todo. Docentes leen solo sus escuelas/materias/cursos/divisiones; pueden preparar/sincronizar notas, asistencia, observaciones y temas allí. Los vínculos de estudiantes solo se leen dentro de esos contextos; el docente no puede asignar o cambiar matrículas ni la ficha global del estudiante. Papelera y cambios de estado son exclusivos de admin. Un alumno presente en más de un curso puede mostrarse en cada alcance asignado, sin revelar otras pertenencias.
 
