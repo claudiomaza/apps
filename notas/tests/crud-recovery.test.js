@@ -11,6 +11,14 @@ const attId='stu::2026-11-12::sch::sub::course::div';
 assert.throws(()=>G.validateRecord({type:'grade',id:'stu::ass',recordId:'grade::stu::ass',data:{studentId:'stu',assessmentId:'ass',status:'graded',attendanceId:''}}),/GRADE_REQUIRES_PRESENT_ATTENDANCE/);
 assert.equal(G.validateRecord({type:'grade',id:'stu::ass',recordId:'grade::stu::ass',data:{studentId:'stu',assessmentId:'ass',status:'graded',attendanceId:attId}}).data.attendanceId,attId);
 assert.throws(()=>G.validateRecord({type:'attendance',id:'wrong',recordId:'attendance::wrong',data:{studentId:'',date:'2026-11-12',schoolId:'sch',subjectId:'sub',courseId:'course',divisionId:'div',status:'present'}}),/INVALID_ATTENDANCE/);
+// Schedule-driven attendance: each weekday/time session has an isolated key.
+const schedule={type:'schedule',id:'sch::sub::course::div::3::09:00',recordId:'schedule::sch::sub::course::div::3::09:00',data:{schoolId:'sch',subjectId:'sub',courseId:'course',divisionId:'div',dayOfWeek:3,startTime:'09:00',endTime:'10:00'}};
+assert.equal(G.validateRecord(schedule).data.dayOfWeek,3);
+assert.equal(G.attendanceKey('stu','2026-11-11',schedule.id),`stu::2026-11-11::${schedule.id}`);
+assert.throws(()=>G.validateRecord({type:'attendance',id:'stu::2026-11-11::sch',recordId:'attendance::stu::2026-11-11::sch',data:{studentId:'stu',date:'2026-11-11',scheduleId:'other',schoolId:'sch',subjectId:'sub',courseId:'course',divisionId:'div',status:'present'}}),/INVALID_ATTENDANCE_KEY/);
+assert.throws(()=>G.validateRecord({...schedule,data:{...schedule.data,startTime:'09:00',endTime:'09:00'}},),/INVALID_SCHEDULE/);
+assert.throws(()=>G.validateRecord({...schedule,data:{...schedule.data,startTime:'10:00',endTime:'09:00'},id:'sch::sub::course::div::3::10:00',recordId:'schedule::sch::sub::course::div::3::10:00'}),/INVALID_SCHEDULE/);
+assert.equal(G.weekdayForDate('2026-11-05'),4);assert.equal(G.weekdayForDate('2026-11-11'),3);assert.equal(G.scheduleMatchesDate(schedule.data,'2026-11-11'),true);assert.equal(G.scheduleMatchesDate(schedule.data,'2026-11-12'),false);assert.equal(G.sameScheduleContext(schedule.data,{schoolId:'sch',subjectId:'sub',courseId:'course',divisionId:'div'}),true);assert.equal(G.sameScheduleContext(schedule.data,{schoolId:'sch',subjectId:'other',courseId:'course',divisionId:'div'}),false);assert.throws(()=>G.weekdayForDate('2026-02-30'),/INVALID_DATE/);
 
 const app=fs.readFileSync(path.join(root,'app.js'),'utf8');
 const backend=fs.readFileSync(path.join(root,'gas/GradebookBackend.gs'),'utf8');
@@ -32,10 +40,30 @@ assert.match(app,/gradeDate=att\?\.data\.date/);
 assert.match(app,/status==='absent'/);
 assert.match(html,/data-tab="attendance"/);
 assert.match(html,/attendance-date/);
+assert.match(html,/attendance-schedule/);
+assert.match(html,/attendance-all-present/);
+assert.match(html,/save-attendance-session/);
+assert.match(html,/data-new="schedule"/);
 assert.match(app,/presentAttendances/);
 
 assert.match(backend,/DUPLICATE_ATTENDANCE/);
 assert.match(app,/attendanceForDate/);
+assert.match(app,/attendance-schedule/);
+assert.match(app,/scheduleForDate/);
+assert.match(app,/type="checkbox" data-attendance-status/);
+assert.match(app,/data-mark-absent/);
+assert.match(app,/dataset\.draft='absent'/);
+assert.match(app,/filter\(\(st,i\)=>Boolean\(cards\[i\]\?\.dataset\.draft\)\)/);
+assert.match(app,/Horario de cursada/);
+assert.match(app,/sessionRoster/);
+assert.match(app,/saveRecords\(changes\)/);
+assert.match(app,/Gradebook\.attendanceKey/);
+assert.match(backend,/INVALID_ATTENDANCE_SESSION/);
+assert.match(backend,/validateScheduleOverlap_/);
+assert.match(backend,/scheduleHasAttendance_/);
+assert.match(backend,/hasBatchConflicts_/);
+assert.match(backend,/hasDuplicateAttendance_/);
+assert.match(backend,/scheduleId\)&&r\[5\]==='ACTIVE'/);
 assert.match(app,/data\._recordId/);
 assert.match(app,/status==='present'/);
 assert.doesNotMatch(app,/data-grade=\"gradeDate\"/);
@@ -53,32 +81,50 @@ const rows=[
  ['scale::x','scale','x','{"name":"X","min":1,"max":10,"mode":"numeric","intervals":[]}',1,'ACTIVE','t','t'],
  ['student::u','student','u','{"studentId":"QA-1","fullName":"Demo"}',1,'ACTIVE','t','t'],
  ['assessment::a','assessment','a','{"name":"A","schoolId":"s","subjectId":"m","courseId":"c","divisionId":"d","cutoffId":"o","scaleId":"x","weight":100,"weightLocked":true}',1,'ACTIVE','t','t'],
- ['attendance::u::2026-11-05::s::m::c::d','attendance','u::2026-11-05::s::m::c::d','{"studentId":"u","date":"2026-11-05","schoolId":"s","subjectId":"m","courseId":"c","divisionId":"d","status":"present"}',1,'ACTIVE','t','t'],
- ['grade::u::a','grade','u::a','{"studentId":"u","assessmentId":"a","status":"absent","value":"","gradeDate":"2026-11-05","attendanceId":"u::2026-11-05::s::m::c::d","observation":""}',1,'ACTIVE','t','t']
+ ['schedule::s::m::c::d::4::09:00','schedule','s::m::c::d::4::09:00','{"schoolId":"s","subjectId":"m","courseId":"c","divisionId":"d","dayOfWeek":4,"startTime":"09:00","endTime":"10:00"}',1,'ACTIVE','t','t'],
+ ['attendance::u::2026-11-05::s::m::c::d::4::09:00','attendance','u::2026-11-05::s::m::c::d::4::09:00','{"studentId":"u","date":"2026-11-05","scheduleId":"s::m::c::d::4::09:00","schoolId":"s","subjectId":"m","courseId":"c","divisionId":"d","status":"present"}',1,'ACTIVE','t','t'],
+ ['grade::u::a','grade','u::a','{"studentId":"u","assessmentId":"a","status":"absent","value":"","gradeDate":"2026-11-05","attendanceId":"u::2026-11-05::s::m::c::d::4::09:00","observation":""}',1,'ACTIVE','t','t']
 ];
 const props=new Map([['DATA_VERSION','7']]);
 const sheetRows=[['recordId','type','entityId','dataJson','version','status','updatedAt','createdAt'],...rows.map(x=>x.slice())];
 const sheet={getLastRow:()=>sheetRows.length,getDataRange(){return{getDisplayValues:()=>[sheetRows[0].map(String)]}},getRange(r,c,n=1,m=1){return{getValues(){return sheetRows.slice(r-1,r-1+n).map(x=>x.slice(c-1,c-1+m));},getDisplayValues(){return this.getValues().map(row=>row.map(String));},setValues(vals){vals.forEach((v,i)=>{sheetRows[r-1+i].splice(c-1,m,...v);});}};}};
 const context={console,Date,JSON,Math,Number,String,Array,Object,Set,Map,Error,RegExp,PropertiesService:{getScriptProperties:()=>({getProperty:k=>props.get(k)||null,setProperty:(k,v)=>props.set(k,v)})},LockService:{getScriptLock:()=>({tryLock:()=>true,releaseLock:()=>{}})},SpreadsheetApp:{openById:()=>({getSheetByName:(name)=>name==='Config'?{getDataRange:()=>({getDisplayValues:()=>[['key','value']]})}:sheet}),flush:()=>{}},Utilities:{},};
-vm.runInNewContext(backend+'\n;globalThis.__test={changeRecordStatus_,listTrash_,hasActiveDependents_,hasMissingParents_,validateGradeAttendance_};',context);
+vm.runInNewContext(backend+'\n;globalThis.__test={changeRecordStatus_,listTrash_,hasActiveDependents_,hasMissingParents_,validateGradeAttendance_,validateAttendanceSession_,validateScheduleOverlap_,scheduleHasAttendance_,validateScheduleEdit_,hasBatchConflicts_,hasDuplicateAttendance_,validDate_};',context);
 const api=context.__test;
 const assessmentData=JSON.parse(rows.find(x=>x[1]==='assessment')[3]),attendanceData=JSON.parse(rows.find(x=>x[1]==='attendance')[3]);
-assert.equal(api.validateGradeAttendance_({studentId:'u',assessmentId:'a',attendanceId:'u::2026-11-05::s::m::c::d',gradeDate:'2026-11-05'},rows.slice(1),[]),true);
-assert.throws(()=>api.validateGradeAttendance_({studentId:'u',assessmentId:'a',attendanceId:'u::2026-11-05::s::m::c::d',gradeDate:'2026-11-12'},rows.slice(1),[]),e=>e.message==='GRADE_REQUIRES_PRESENT_ATTENDANCE');
+const scheduleData=JSON.parse(rows.find(x=>x[1]==='schedule')[3]);
+assert.equal(api.validateAttendanceSession_({schoolId:'s',subjectId:'m',courseId:'c',divisionId:'d',date:'2026-11-05'},scheduleData),true);
+assert.throws(()=>api.validateAttendanceSession_({schoolId:'s',subjectId:'other',courseId:'c',divisionId:'d',date:'2026-11-05'},scheduleData),e=>e.message==='INVALID_ATTENDANCE_SESSION');
+assert.throws(()=>api.validateAttendanceSession_({schoolId:'s',subjectId:'m',courseId:'c',divisionId:'d',date:'2026-11-06'},scheduleData),e=>e.message==='INVALID_ATTENDANCE_SESSION');
+assert.throws(()=>api.validateAttendanceSession_({schoolId:'s',subjectId:'m',courseId:'c',divisionId:'d',date:'2026-02-30'},scheduleData),e=>e.message==='INVALID_ATTENDANCE_SESSION');
+assert.equal(api.validDate_('2026-11-05'),true);assert.equal(api.validDate_('2026-02-30'),false);
+assert.throws(()=>api.validateScheduleOverlap_({...scheduleData,startTime:'09:30',endTime:'10:30'},rows.slice(1),[], 'new::id'),e=>e.message==='SCHEDULE_OVERLAP');
+assert.equal(api.scheduleHasAttendance_('s::m::c::d::4::09:00',rows.slice(1)),true);
+assert.equal(api.scheduleHasAttendance_('another',rows.slice(1)),false);
+assert.throws(()=>api.validateScheduleEdit_('schedule::s::m::c::d::4::09:00',{...scheduleData,startTime:'10:00'},rows.slice(1)),e=>e.message==='SCHEDULE_HAS_ATTENDANCE');
+assert.equal(api.validateScheduleEdit_('schedule::s::m::c::d::4::09:00',scheduleData,rows.slice(1)),true);
+assert.equal(api.hasBatchConflicts_([{status:'created'},{status:'conflict'}]),true);
+assert.equal(api.hasBatchConflicts_([{status:'created'}]),false);
+const attendanceWrite={value:{recordId:'new',type:'attendance'},input:{data:{studentId:'u',date:'2026-11-05',scheduleId:'s::m::c::d::4::09:00'}}};
+assert.equal(api.hasDuplicateAttendance_(attendanceWrite,rows.slice(1),[]),true);
+const secondSession={...attendanceWrite,input:{data:{...attendanceWrite.input.data,scheduleId:'s::m::c::d::4::11:00'}}};
+assert.equal(api.hasDuplicateAttendance_(secondSession,rows.slice(1),[]),false);
+assert.equal(api.validateGradeAttendance_({studentId:'u',assessmentId:'a',attendanceId:'u::2026-11-05::s::m::c::d::4::09:00',gradeDate:'2026-11-05'},rows.slice(1),[]),true);
+assert.throws(()=>api.validateGradeAttendance_({studentId:'u',assessmentId:'a',attendanceId:'u::2026-11-05::s::m::c::d::4::09:00',gradeDate:'2026-11-12'},rows.slice(1),[]),e=>e.message==='GRADE_REQUIRES_PRESENT_ATTENDANCE');
 const absentRows=rows.slice(1).map(r=>r.slice());const attendanceRow=absentRows.find(r=>r[1]==='attendance');attendanceData.status='absent';attendanceRow[3]=JSON.stringify(attendanceData);
 assert.throws(()=>api.validateGradeAttendance_({studentId:'u',assessmentId:'a',attendanceId:attendanceRow[2],gradeDate:'2026-11-05'},absentRows,[]),e=>e.message==='GRADE_REQUIRES_PRESENT_ATTENDANCE');
 assert.throws(()=>api.changeRecordStatus_({recordId:'assessment::a',expectedVersion:1},true),e=>e.message==='RECORD_HAS_DEPENDENTS');
-assert.throws(()=>api.changeRecordStatus_({recordId:'attendance::u::2026-11-05::s::m::c::d',expectedVersion:1},true),e=>e.message==='RECORD_HAS_DEPENDENTS');
+assert.throws(()=>api.changeRecordStatus_({recordId:'attendance::u::2026-11-05::s::m::c::d::4::09:00',expectedVersion:1},true),e=>e.message==='RECORD_HAS_DEPENDENTS');
 assert.throws(()=>api.changeRecordStatus_({recordId:'student::u',expectedVersion:1},true),e=>e.message==='RECORD_HAS_DEPENDENTS');
 assert.throws(()=>api.changeRecordStatus_({recordId:'division::d',expectedVersion:1},true),e=>e.message==='RECORD_HAS_DEPENDENTS');
 const noMembershipRows=rows.slice(1).filter(r=>r[1]!=='membership');
-assert.equal(api.hasMissingParents_({type:'attendance',data:{studentId:'u',schoolId:'s',subjectId:'m',courseId:'c',divisionId:'d'}},noMembershipRows),true);
+assert.equal(api.hasMissingParents_({type:'attendance',data:{studentId:'u',schoolId:'s',subjectId:'m',courseId:'c',divisionId:'d',scheduleId:'s::m::c::d::4::09:00'}},noMembershipRows),true);
 const deleted=api.changeRecordStatus_({recordId:'grade::u::a',expectedVersion:1},true);
 assert.equal(deleted.record.status,'DELETED');
 assert.equal(deleted.record.version,2);
-assert.equal(sheetRows[11][5],'DELETED');
+assert.equal(sheetRows[12][5],'DELETED');
 assert.equal(api.listTrash_({}).records.length,1);
-const gradeJson=JSON.parse(sheetRows[11][3]);
+const gradeJson=JSON.parse(sheetRows[12][3]);
 assert.equal(gradeJson.status,'absent');
 assert.throws(()=>api.changeRecordStatus_({recordId:'grade::u::a',expectedVersion:1},false),e=>e.message==='DATA_CONFLICT');
 const restored=api.changeRecordStatus_({recordId:'grade::u::a',expectedVersion:2},false);
@@ -87,9 +133,9 @@ assert.equal(restored.record.version,3);
 assert.equal(api.listTrash_({}).records.length,0);
 // Simulate a normal optimistic save after recovery: same stable grade ID, new value/date.
 gradeJson.status='graded';gradeJson.value='8';gradeJson.gradeDate='2026-11-12';
-sheetRows[11][3]=JSON.stringify(gradeJson);sheetRows[11][4]=4;
-assert.equal(JSON.parse(sheetRows[11][3]).gradeDate,'2026-11-12');
-assert.equal(JSON.parse(sheetRows[11][3]).value,'8');
+sheetRows[12][3]=JSON.stringify(gradeJson);sheetRows[12][4]=4;
+assert.equal(JSON.parse(sheetRows[12][3]).gradeDate,'2026-11-12');
+assert.equal(JSON.parse(sheetRows[12][3]).value,'8');
 const recovered=api.changeRecordStatus_({recordId:'grade::u::a',expectedVersion:4},true);
 assert.equal(recovered.record.data.gradeDate,'2026-11-12');
 assert.equal(recovered.record.data.value,'8');
