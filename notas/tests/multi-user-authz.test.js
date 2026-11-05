@@ -2,10 +2,10 @@
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const vm=require('node:vm');
-const backend=fs.readFileSync(require('node:path').join(__dirname,'../gas/GradebookBackend.gs'),'utf8');
+const backend=fs.readFileSync(require('node:path').join(__dirname,'../../gas/notas/GradebookBackend.gs'),'utf8');
 const context={console,Date,JSON,Math,Number,String,Array,Object,Set,Map,Error,RegExp};
-vm.runInNewContext(backend+'\n;globalThis.__authz={parseAccess_,scopeMatches_,recordVisible_,assertRecordWriteAllowed_,listRecords_,listTrash_,changeRecordStatus_,users_,CONFIG};',context);
-const {parseAccess_,scopeMatches_,recordVisible_,assertRecordWriteAllowed_,listRecords_,listTrash_,changeRecordStatus_,users_,CONFIG}=context.__authz;
+vm.runInNewContext(backend+'\n;globalThis.__authz={parseAccess_,scopeMatches_,recordVisible_,assertRecordWriteAllowed_,listRecords_,listTrash_,changeRecordStatus_,users_,listUsers_,saveTeacher_,validateTeacherInput_,requireAdmin_,CONFIG};',context);
+const {parseAccess_,scopeMatches_,recordVisible_,assertRecordWriteAllowed_,listRecords_,listTrash_,changeRecordStatus_,users_,listUsers_,saveTeacher_,validateTeacherInput_,requireAdmin_,CONFIG}=context.__authz;
 const a={schoolId:'s1',subjectId:'sub1',courseId:'c1',divisionId:'d1'}, b={schoolId:'s2',subjectId:'sub2',courseId:'c2',divisionId:'d2'};
 const teacher={role:'docente',scopes:[a],profile:{mail:'a@example.test',name:'Docente A'}};
 assert.deepEqual(JSON.parse(JSON.stringify(parseAccess_('admin',''))),{role:'admin',scopes:[]});
@@ -88,3 +88,7 @@ assert.throws(()=>listTrash_({},teacher),e=>e.message==='ACCESS_DENIED');
 assertRecordWriteAllowed_({type:'school',id:'s3',data:{name:'New'}},[],rows,{role:'admin',scopes:[]});
 const fakeRows=[['recordId','type','id','dataJson','version','status','updatedAt','createdAt'],...rows];let pageRead=0;const fakeSheet={getLastRow:()=>fakeRows.length,getRange(r,c,n,m){return{getValues:()=>{pageRead++;return fakeRows.slice(r-1,r-1+n).map(x=>x.slice(c-1,c-1+m));},getDisplayValues:()=>[CONFIG.HEADERS]};}};context.PropertiesService={getScriptProperties:()=>({getProperty:k=>k==='DATA_VERSION'?'9':null})};context.SpreadsheetApp={openById:()=>({getSheetByName:name=>name==='Config'?{getDataRange:()=>({getDisplayValues:()=>[['key','value']]})}:fakeSheet})};const pageA=listRecords_({limit:300},{username:'teacherA',...teacher});const pageB=listRecords_({limit:300},{username:'teacherB',role:'docente',scopes:[b],profile:{mail:'b@example.test',name:'Docente B'}});assert.deepEqual(Array.from(pageA.records,r=>r.id).sort(),['as1','att1','c1','co1','d1','m1','ob1','s1','sc1','sch1','stu1','sub1']);assert.deepEqual(Array.from(pageB.records,r=>r.id).sort(),['as2','att2','c2','co2','d2','m2','s2','sc2','sch2','stu2','sub2','tp2']);assert.equal(pageA.records.some(r=>r.id==='as2'),false);assert.equal(pageB.records.some(r=>r.id==='as1'),false);assert.equal(pageA.username,'teacherA');assert.equal(pageB.username,'teacherB');assert.equal(pageA.profile.name,'Docente A');assert.equal(pageB.profile.mail,'b@example.test');assert.equal(pageRead,2);
 console.log('Multi-user course-scope authorization and filtered pagination tests PASS');
+
+assert.equal(typeof listUsers_,'function','admin user-management API must be implemented');
+assert.throws(()=>requireAdmin_({role:'docente'}),e=>e.message==='ACCESS_DENIED');
+assert.equal(requireAdmin_({role:'admin'}),true);
