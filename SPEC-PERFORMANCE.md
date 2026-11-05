@@ -149,3 +149,5 @@ Medir antes/después con hojas pequeñas, típicas y grandes, incluyendo filas v
 - no comparar solo una caché caliente: medir también primera lectura y expiración.
 
 No declarar mejora de capacidad por una microprueba aislada. Registrar datos, concurrencia, tamaño de lote, tiempo de ejecución, errores y versión del código. Las cuotas de GAS cambian: verificarlas al preparar el despliegue.
+
+- **Sincronización/stage:** los cambios preparados se agrupan en memoria (máximo 100) hasta una acción explícita Sincronizar hacia Sheets; no se guardan borradores offline/locales. Estado rojo = pendientes/conflicto, verde = sin pendientes; mostrar fecha y hora de última sincronización confirmada. Conflictos muestran comparación y ofrecen conservar versión remota o preparar explícitamente la versión local con la nueva versión base; nunca se pisan automáticamente. El botón rojo/verdes y su fecha/hora confirman el push del stage hacia Sheets, no el despliegue de Pages ni de Apps Script.

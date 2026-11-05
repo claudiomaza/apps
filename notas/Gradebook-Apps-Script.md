@@ -107,3 +107,11 @@ function publicError_(e){const allow=['INVALID_ACTION','CONFIG_SHEET_NOT_FOUND',
 
 ### Observaciones y libro de tema
 La app admite registros normalizados `observation` (fecha, grupo, texto y estudiante opcional) y `topic` (fecha, grupo, tema y actividad). Son registros independientes de `grade`; no se agregan columnas a la libreta. Los lotes validan longitud y fecha, y mantienen referencias de contexto para impedir bajas de entidades con registros dependientes.
+
+
+### Sincronización desde la app
+La app prepara cambios solo en memoria, con un máximo de 100 registros por sesión de preparación; el botón Sincronizar envía el lote a `saveBatch`. Rojo indica cambios en espera, verde que no quedan cambios y muestra hora de la última sincronización confirmada. Los conflictos requieren resolución manual. No se conserva un stage local al recargar/cerrar sesión. Esto sincroniza con Sheets; no despliega GitHub Pages ni Apps Script.
+
+- **Botón Sync:** rojo con cambios pendientes o conflicto; verde cuando no hay pendientes. Muestra conteo y fecha/hora local de la última confirmación. El botón envía un lote `saveBatch` de hasta 100 cambios hacia Sheets; no despliega Pages ni Apps Script. Los conflictos abren revisión de la versión remota; nunca se pisan automáticamente. El stage no sobrevive al cierre/recarga.
+
+- Si hay conflicto optimista, el diálogo muestra payload staged y remoto; ofrece explícitamente conservar Sheets o preparar el staged con la versión remota como base, y requiere otro click de Sync para enviar.
