@@ -37,9 +37,9 @@ En la configuración del proyecto Apps Script, activá **Mostrar el archivo de m
 3. Pegá el manifiesto anterior, guardá y autorizá el scope de Sheets cuando Google lo solicite.
 4. Desplegá como aplicación web: **Ejecutar como: yo** y **Quién tiene acceso: cualquiera**. Esto corresponde a `USER_DEPLOYING` y `ANYONE_ANONYMOUS` del manifiesto.
 5. Confirmá el endpoint con `/exec`; la respuesta esperada es `service: gradebook-normalized`.
-6. Cargá una fila administrativa en `Usuarios` de este libro. La pestaña del Sheet anterior es independiente.
+6. Usá las credenciales ya existentes en la pestaña `Usuarios` de la planilla que corresponde a este deployment. No hay registro de cuentas desde la app; cualquier usuario nuevo se administra en esa pestaña.
 
-El frontend está en [Registro de notas](https://claudiomaza.github.io/apps/notas/) y usa la URL `/exec` configurada en `apps/notas/config.js`. Si cambia la implementación, actualizá ese archivo y publicá Pages nuevamente. La app opera como borrador IndexedDB mientras no haya sesión; `Guardar en Sheets` requiere conexión y cuenta válida.
+El frontend está en [Registro de notas](https://claudiomaza.github.io/apps/notas/) y usa la URL `/exec` configurada en `apps/notas/config.js`. Si cambia la implementación, actualizá ese archivo y publicá Pages nuevamente. El acceso a la app requiere sesión válida en el Sheet. No hay cuenta local ni modo de borrador offline; los cambios confirmados se guardan directamente en Sheets.
 
 ## Modelo y uso
 
@@ -49,12 +49,12 @@ El frontend está en [Registro de notas](https://claudiomaza.github.io/apps/nota
 - Una nota por estudiante e instancia; fechas particulares y observaciones por calificación.
 - Pesos por materia/corte totalizan 100%; el remanente se redistribuye entre instancias no fijadas y existe la acción `Repartir por igual`.
 - Ausente/No entregó cuentan cero; Pendiente/Eximido se excluyen y se renormaliza el promedio ponderado.
-- Los cambios se guardan primero en IndexedDB; solo `Guardar en Sheets` los sincroniza en lotes de hasta 100. El backend valida versiones y devuelve conflictos por registro.
-- Excel usa filas normalizadas en `Registros`; `Libreta` es una vista generada. La importación previsualiza y resuelve conflictos antes de pasar cambios al borrador local; no borra datos por ausencia.
+- La app requiere sesión y conexión con Sheets. Cada cambio confirmado se escribe directamente en el backend, con control optimista de versión; las importaciones se validan y confirman en lotes de hasta 100. No hay almacenamiento local persistente ni modo offline. El token de sesión se conserva temporalmente en `sessionStorage`; los registros se mantienen en memoria durante la sesión y se vuelven a leer de Sheets al recargar.
+- Excel usa filas normalizadas en `Registros`; `Libreta` es una vista generada. La importación previsualiza y resuelve conflictos antes de escribirlos directamente a Sheets; no borra datos por ausencia.
 
 ## Frontend y QA
 
-Servir HTML, CSS, JS y librerías desde el propio GitHub Pages; sin CDNs externos. La caché local es solo respaldo offline; online debe preferirse la versión publicada más reciente. Probar con datos ficticios en 390×844 y desktop, incluyendo la consola, accesibilidad y overflow. No escribir datos reales en la hoja durante QA.
+Servir HTML, CSS, JS y librerías desde el propio GitHub Pages; sin CDNs externos. El service worker puede cachear recursos estáticos para actualizar la app, pero no debe guardar datos de notas ni habilitar uso offline; toda consulta y escritura requiere conexión y sesión válida con Sheets. Probar con datos ficticios en 390×844 y desktop, incluyendo la consola, accesibilidad y overflow. No escribir datos reales en la hoja durante QA.
 
 ## Code.gs
 
@@ -64,7 +64,7 @@ Servir HTML, CSS, JS y librerías desde el propio GitHub Pages; sin CDNs externo
 /**
  * Registro de notas — backend normalizado.
  * Implementar en un proyecto Apps Script vinculado a Registro de notas — Libro académico.
- * Sheets es la fuente compartida; IndexedDB solo guarda borradores del navegador.
+ * Sheets es la fuente de verdad; el cliente no persiste registros localmente.
  */
 const CONFIG=Object.freeze({SPREADSHEET_ID:'1d9yL3ZhjdQIxRQEFVXltRA_QtjIZc6UrcO_1NyT1oA4',DATA_SHEET:'Registros',USERS_SHEET:'Usuarios',SESSION_SECONDS:8*60*60,MAX_PAGE_SIZE:300,MAX_BATCH_SIZE:100,HEADERS:['recordId','type','entityId','dataJson','version','status','updatedAt','createdAt']});
 function doGet(){return json_({ok:true,service:'gradebook-normalized',schemaVersion:1});}
@@ -87,5 +87,4 @@ function applyRows_(sh,updates){if(!updates.length)return;updates.sort((a,b)=>a.
 function limpiarCacheConfig(){}
 function json_(x){return ContentService.createTextOutput(JSON.stringify(x)).setMimeType(ContentService.MimeType.JSON);}
 function publicError_(e){const allow=['INVALID_ACTION','CONFIG_SHEET_NOT_FOUND','CONFIG_SHEET_INVALID','CONFIG_VALUE_INVALID','USERS_SHEET_NOT_FOUND','USERS_SHEET_INVALID','INVALID_CREDENTIALS','UNAUTHORIZED','SESSION_EXPIRED','SHEET_NOT_FOUND','HEADER_MISMATCH','INVALID_CURSOR','DATA_CHANGED','INVALID_STORED_RECORD','INVALID_RECORD','INVALID_BATCH','DUPLICATE_STUDENT_ID','WEIGHT_REMAINDER','BUSY_RETRY'];return allow.includes(e&&e.message)?e.message:'INTERNAL_ERROR';}
-
 ```
