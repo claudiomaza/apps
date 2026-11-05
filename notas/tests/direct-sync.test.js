@@ -1,0 +1,13 @@
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const html=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
+const app=fs.readFileSync(path.join(__dirname,'../app.js'),'utf8');
+assert.doesNotMatch(html,/local-draft|offline-store\.js|borrador local|IndexedDB|save-all|pending-count/iu);
+assert.match(html,/<button id=\"login-button\"[^>]*>Ingresar y sincronizar<\/button>/);
+assert.match(html,/id=\"app-content\" hidden/);
+assert.doesNotMatch(app,/indexedDB|localOnly|offline-store|borrador local|Guardar en Sheets para sincronizar/);
+assert.match(app,/action!==['\"]auth['\"]&&!sessionToken/);
+assert.match(app,/api\(['\"]saveBatch/);
+console.log('Login-required direct-to-Sheets contract PASS');
