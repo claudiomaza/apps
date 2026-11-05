@@ -1,15 +1,18 @@
-# Registro de notas — Apps Script para la planilla nueva
+# Registro de notas — Apps Script normalizado
 
-Pegá el código completo de abajo como `Code.gs` en un proyecto Apps Script vinculado a la planilla. La URL `/exec` final se configura en `apps/notas/config.js`.
+**Sheet:** https://docs.google.com/spreadsheets/d/1d9yL3ZhjdQIxRQEFVXltRA_QtjIZc6UrcO_1NyT1oA4/edit
 
-- Sheet ID: `1d9yL3ZhjdQIxRQEFVXltRA_QtjIZc6UrcO_1NyT1oA4`
-- Pestañas iniciales: `Registros`, `Config`, `Usuarios`, `Instrucciones`
-- El proyecto ya crea/valida el encabezado canónico de `Registros` en primera ejecución. Config/Usuarios ya están inicializadas.
-- Manifiesto `appsscript.json`: zona horaria argentina, runtime V8, scope de Sheets, ejecución como la persona que despliega y acceso anónimo al endpoint. El acceso anónimo solo permite llegar al login de la app; las operaciones de datos requieren la sesión emitida tras autenticar contra `Usuarios`.
-- No cargar datos reales hasta implementar autorización por materia/escuela/curso.
-- Crear el proyecto desde **Extensiones → Apps Script** dentro de esta planilla. El backend abre el ID fijo del Sheet nuevo; no apuntes el código a la planilla antigua.
+## Configuración
 
-## appsscript.json
+La aplicación usa el libro **Registro de notas — Libro académico**, con las pestañas `Registros`, `Config`, `Usuarios` e `Instrucciones`. El backend incluido apunta explícitamente a este ID y no al Sheet anterior `Registro de notas`.
+
+`Config` usa `key` / `value`; `maxPageSize` admite 1–300 (default 300) y `maxBatchSize` 1–100 (default 100). `Usuarios` requiere una fila por cuenta, con encabezados exactos `usuario` y `pass`. Las cuentas de otro spreadsheet no se comparten automáticamente: la cuenta tiene que existir en la pestaña `Usuarios` de **este libro académico**. `pass` se guarda en texto plano; limitar el acceso de Drive a administradores de confianza.
+
+El acceso anónimo de la Web App permite que la página pública llame al endpoint, pero no habilita lectura/escritura sin autenticar: `auth` comprueba las credenciales de `Usuarios` y las demás acciones requieren una sesión firmada. No cargar datos reales hasta implementar autorización por docente, escuela, materia y curso.
+
+## Manifiesto `appsscript.json`
+
+En la configuración del proyecto Apps Script, activá **Mostrar el archivo de manifiesto `appsscript.json`** y reemplazá su contenido por:
 
 ```json
 {
@@ -27,53 +30,35 @@ Pegá el código completo de abajo como `Code.gs` en un proyecto Apps Script vin
 }
 ```
 
-En el editor de Apps Script, activá **Mostrar el archivo de manifiesto `appsscript.json`** en la configuración del proyecto; pegá este contenido y guardá. Luego seleccioná como aplicación web **Ejecutar como: yo** y **Quién tiene acceso: cualquiera**, para que el navegador pueda llamar el endpoint. El endpoint no autoriza operaciones por sí solo: `auth` comprueba usuario/contraseña de `Usuarios` y las demás acciones exigen el token firmado de sesión. No uses datos reales de estudiantes hasta implementar permisos por docente/escuela/curso.
+## Instalación y despliegue
 
+1. Abrí el Sheet enlazado arriba → **Extensiones → Apps Script**.
+2. Reemplazá todo el contenido de `Code.gs` con el bloque completo de este manual. No agregues el backend viejo al mismo proyecto: ambos declaran nombres globales duplicados.
+3. Pegá el manifiesto anterior, guardá y autorizá el scope de Sheets cuando Google lo solicite.
+4. Desplegá como aplicación web: **Ejecutar como: yo** y **Quién tiene acceso: cualquiera**. Esto corresponde a `USER_DEPLOYING` y `ANYONE_ANONYMOUS` del manifiesto.
+5. Confirmá el endpoint con `/exec`; la respuesta esperada es `service: gradebook-normalized`.
+6. Cargá una fila administrativa en `Usuarios` de este libro. La pestaña del Sheet anterior es independiente.
 
----
+El frontend está en [Registro de notas](https://claudiomaza.github.io/apps/notas/) y usa la URL `/exec` configurada en `apps/notas/config.js`. Si cambia la implementación, actualizá ese archivo y publicá Pages nuevamente. La app opera como borrador IndexedDB mientras no haya sesión; `Guardar en Sheets` requiere conexión y cuenta válida.
 
-# Guía de uso y despliegue
+## Modelo y uso
 
-Interfaz estática publicada en GitHub Pages: [Registro de notas](https://claudiomaza.github.io/apps/notas/). El libro académico es una Google Sheet con pestañas `Registros`, `Config`, `Usuarios` e `Instrucciones`. El backend normalizado ya está desplegado en la URL configurada en `apps/notas/config.js`; para iniciar sesión aún debe existir una cuenta en `Usuarios`:
-
-- [Abrir la nueva planilla Registro de notas — Libro académico](https://docs.google.com/spreadsheets/d/1d9yL3ZhjdQIxRQEFVXltRA_QtjIZc6UrcO_1NyT1oA4/edit)
-- El backend normalizado para pegar en Apps Script está en [`Gradebook-Apps-Script.md`](Gradebook-Apps-Script.md). El `Code.gs` copiable también está en [`../gas/notas/GradebookBackend.gs`](../gas/notas/GradebookBackend.gs).
-- **Configuración actual:** la URL `/exec` del backend normalizado está en `apps/notas/config.js`; si se crea otra implementación, actualizarla y volver a publicar Pages.
-
-## Modelo de datos
-
-`Registros` usa ocho columnas estables (`recordId`, `type`, `entityId`, `dataJson`, `version`, `status`, `updatedAt`, `createdAt`) y una fila por escuela, materia, curso/año, división, subgrupo, estudiante, pertenencia, corte, escala, instancia o calificación. No se agregan columnas por evaluación. Un ID identifica una ficha de estudiante; las pertenencias a varios grupos/materias son registros distintos. La libreta ancha se genera dinámicamente en frontend.
+`Registros` usa ocho columnas estables (`recordId`, `type`, `entityId`, `dataJson`, `version`, `status`, `updatedAt`, `createdAt`) y una fila por escuela, materia, curso/año, división, subgrupo, estudiante, pertenencia, corte, escala, instancia o calificación. No se agregan columnas por evaluación. La libreta ancha se genera dinámicamente en frontend.
 
 - Escalas numéricas y cualitativas configurables con equivalencias por intervalo; las categorías cualitativas se convierten usando el punto medio.
 - Una nota por estudiante e instancia; fechas particulares y observaciones por calificación.
 - Pesos por materia/corte totalizan 100%; el remanente se redistribuye entre instancias no fijadas y existe la acción `Repartir por igual`.
 - Ausente/No entregó cuentan cero; Pendiente/Eximido se excluyen y se renormaliza el promedio ponderado.
+- Los cambios se guardan primero en IndexedDB; solo `Guardar en Sheets` los sincroniza en lotes de hasta 100. El backend valida versiones y devuelve conflictos por registro.
+- Excel usa filas normalizadas en `Registros`; `Libreta` es una vista generada. La importación previsualiza y resuelve conflictos antes de pasar cambios al borrador local; no borra datos por ausencia.
 
-## Edición offline y sincronización
+## Frontend y QA
 
-La interfaz mantiene borradores en IndexedDB. Crear, editar roster, instancia o calificación persiste localmente; la pestaña puede cerrarse y el mismo navegador conserva el borrador. **Solo el botón `Guardar en Sheets` envía los registros pendientes en lotes de hasta 100.** El backend valida ID/tipo/contenido y control optimista de versión; devuelve conflictos para resolver entre el valor del Sheet y el borrador local. Si hay timeout, no se reintenta a ciegas: actualizar primero para comprobar la versión. IndexedDB es almacenamiento de este dispositivo, no un respaldo ni una copia compartida hasta que Sheets confirme el guardado.
-
-La importación lee el formato normalizado en la pestaña `Registros`, valida y previsualiza altas/cambios/conflictos, permite corregir DatosJSON por fila y aplicar cambios al borrador; no escribe en Sheet hasta pulsar Guardar. La pestaña `Libreta` del XLSX es solo una vista generada y no se importa como esquema canónico. La exportación incluye también una pestaña `Instrucciones`.
-
-## Seguridad
-
-**No cargar datos reales de estudiantes todavía.** La aplicación no implementa autorización por docente, materia, escuela o curso. La sesión actual es de acceso global al libro. Se creó un Sheet nuevo vacío; no se migraron estudiantes. Restringí sus permisos a usuarios autorizados. `Usuarios!pass` queda en texto plano y la hoja debe permanecer limitada al administrador.
-
-## Despliegue manual Apps Script
-
-1. Abrí el Sheet nuevo y elegí Extensiones → Apps Script. Reemplazá el contenido de `Code.gs` con el bloque normalizado de este documento; no pegues junto al backend viejo porque ambos declaran nombres globales iguales.
-2. En Configuración del proyecto, habilitá mostrar `appsscript.json`, pegá el manifiesto incluido arriba y guardá.
-3. Autorizá el permiso de Sheets al ejecutar/desplegar.
-4. Desplegar → Nueva implementación → Aplicación web: ejecutar como **yo** y acceso **cualquiera** (anónimo), según el manifiesto. La app conserva autorización propia: login contra `Usuarios` y token firmado para las demás operaciones.
-5. Probá `/exec`: debe responder `service: gradebook-normalized`. La URL del endpoint se configura en `apps/notas/config.js`; nunca pongas contraseñas allí.
-
-Con el despliegue verificado el backend está operativo. Para iniciar sesión, primero cargá al menos una cuenta administrativa en `Usuarios` (encabezados `usuario`, `pass`). Hasta que exista, la app puede abrir solo el borrador local de IndexedDB.
-
-## QA
-
-Los tests funcionales deben usar datos sintéticos y un backend/fixture aislado. No se deben crear registros en el Sheet compartido de notas durante QA. Revisar Pages en 390×844 y desktop con el navegador visual disponible; no declarar QA visual PASS por checks estáticos o HTTP solamente.
+Servir HTML, CSS, JS y librerías desde el propio GitHub Pages; sin CDNs externos. La caché local es solo respaldo offline; online debe preferirse la versión publicada más reciente. Probar con datos ficticios en 390×844 y desktop, incluyendo la consola, accesibilidad y overflow. No escribir datos reales en la hoja durante QA.
 
 ## Code.gs
+
+**Backend normalizado vigente.** Reemplazá el archivo completo; no mezcles este bloque con el código del libro anterior.
 
 ```javascript
 /**
