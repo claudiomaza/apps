@@ -5,20 +5,40 @@ Pegá el código completo de abajo como `Code.gs` en un proyecto Apps Script vin
 - Sheet ID: `1d9yL3ZhjdQIxRQEFVXltRA_QtjIZc6UrcO_1NyT1oA4`
 - Pestañas iniciales: `Registros`, `Config`, `Usuarios`, `Instrucciones`
 - El proyecto ya crea/valida el encabezado canónico de `Registros` en primera ejecución. Config/Usuarios ya están inicializadas.
-- Scope requerido: Sheets. No uses acceso público; limitar web app a usuarios autorizados.
+- Manifiesto `appsscript.json`: zona horaria argentina, runtime V8, scope de Sheets, ejecución como la persona que despliega y acceso anónimo al endpoint. El acceso anónimo solo permite llegar al login de la app; las operaciones de datos requieren la sesión emitida tras autenticar contra `Usuarios`.
 - No cargar datos reales hasta implementar autorización por materia/escuela/curso.
 - Crear el proyecto desde **Extensiones → Apps Script** dentro de esta planilla. El backend abre el ID fijo del Sheet nuevo; no apuntes el código a la planilla antigua.
+
+## appsscript.json
+
+```json
+{
+  "timeZone": "America/Argentina/Buenos_Aires",
+  "dependencies": {},
+  "exceptionLogging": "STACKDRIVER",
+  "runtimeVersion": "V8",
+  "oauthScopes": [
+    "https://www.googleapis.com/auth/spreadsheets"
+  ],
+  "webapp": {
+    "executeAs": "USER_DEPLOYING",
+    "access": "ANYONE_ANONYMOUS"
+  }
+}
+```
+
+En el editor de Apps Script, activá **Mostrar el archivo de manifiesto `appsscript.json`** en la configuración del proyecto; pegá este contenido y guardá. Luego seleccioná como aplicación web **Ejecutar como: yo** y **Quién tiene acceso: cualquiera**, para que el navegador pueda llamar el endpoint. El endpoint no autoriza operaciones por sí solo: `auth` comprueba usuario/contraseña de `Usuarios` y las demás acciones exigen el token firmado de sesión. No uses datos reales de estudiantes hasta implementar permisos por docente/escuela/curso.
 
 
 ---
 
 # Guía de uso y despliegue
 
-Interfaz estática publicada en GitHub Pages: [Registro de notas](https://claudiomaza.github.io/apps/notas/). El nuevo libro académico es una Google Sheet vacía con pestañas `Registros`, `Config`, `Usuarios` e `Instrucciones`:
+Interfaz estática publicada en GitHub Pages: [Registro de notas](https://claudiomaza.github.io/apps/notas/). El libro académico es una Google Sheet con pestañas `Registros`, `Config`, `Usuarios` e `Instrucciones`. El backend normalizado ya está desplegado en la URL configurada en `apps/notas/config.js`; para iniciar sesión aún debe existir una cuenta en `Usuarios`:
 
 - [Abrir la nueva planilla Registro de notas — Libro académico](https://docs.google.com/spreadsheets/d/1d9yL3ZhjdQIxRQEFVXltRA_QtjIZc6UrcO_1NyT1oA4/edit)
 - El backend normalizado para pegar en Apps Script está en [`Gradebook-Apps-Script.md`](Gradebook-Apps-Script.md). El `Code.gs` copiable también está en [`../gas/notas/GradebookBackend.gs`](../gas/notas/GradebookBackend.gs).
-- **Pendiente antes de sincronizar:** crear/desplegar la Web App de Apps Script y pegar su URL `/exec` en `apps/notas/config.js`. Este archivo se deja intencionalmente vacío para no seguir usando el endpoint legado que escribe al Sheet anterior.
+- **Configuración actual:** la URL `/exec` del backend normalizado está en `apps/notas/config.js`; si se crea otra implementación, actualizarla y volver a publicar Pages.
 
 ## Modelo de datos
 
@@ -41,13 +61,13 @@ La importación lee el formato normalizado en la pestaña `Registros`, valida y 
 
 ## Despliegue manual Apps Script
 
-1. Abrí el Sheet y elegí Extensiones → Apps Script.
-2. Pegá `GradebookBackend.gs` completo en `Code.gs` (o copiá el bloque entero del manual Markdown).
-3. Guardá, revisá el permiso de Sheets y probá `/exec` respondiendo `service: gradebook-normalized`.
-4. Desplegar → Nueva implementación → Aplicación web. Elegí ejecutar como propietario; restringí acceso a tu cuenta/equipo. No publicar como “cualquiera”.
-5. Pegá la URL `/exec` en `config.js`, commit/push y espera despliegue Pages. La URL Apps Script es configuración pública del frontend, nunca poner credenciales ahí.
+1. Abrí el Sheet nuevo y elegí Extensiones → Apps Script. Reemplazá el contenido de `Code.gs` con el bloque normalizado de este documento; no pegues junto al backend viejo porque ambos declaran nombres globales iguales.
+2. En Configuración del proyecto, habilitá mostrar `appsscript.json`, pegá el manifiesto incluido arriba y guardá.
+3. Autorizá el permiso de Sheets al ejecutar/desplegar.
+4. Desplegar → Nueva implementación → Aplicación web: ejecutar como **yo** y acceso **cualquiera** (anónimo), según el manifiesto. La app conserva autorización propia: login contra `Usuarios` y token firmado para las demás operaciones.
+5. Probá `/exec`: debe responder `service: gradebook-normalized`. La URL del endpoint se configura en `apps/notas/config.js`; nunca pongas contraseñas allí.
 
-La hoja ya está creada/preparada, pero el backend **no está desplegado**: requiere ejecución desde tu proyecto de Apps Script con autorización del propietario. Hasta eso, la interfaz opera solo como borrador IndexedDB.
+Con el despliegue verificado el backend está operativo. Para iniciar sesión, primero cargá al menos una cuenta administrativa en `Usuarios` (encabezados `usuario`, `pass`). Hasta que exista, la app puede abrir solo el borrador local de IndexedDB.
 
 ## QA
 
