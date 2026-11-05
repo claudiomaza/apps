@@ -1,7 +1,7 @@
 /**
  * Registro de notas — backend normalizado.
  * Implementar en un proyecto Apps Script vinculado a Registro de notas — Libro académico.
- * Sheets es la fuente compartida; IndexedDB solo guarda borradores del navegador.
+ * Sheets es la fuente de verdad; el cliente no persiste registros localmente.
  */
 const CONFIG=Object.freeze({SPREADSHEET_ID:'1d9yL3ZhjdQIxRQEFVXltRA_QtjIZc6UrcO_1NyT1oA4',DATA_SHEET:'Registros',USERS_SHEET:'Usuarios',SESSION_SECONDS:8*60*60,MAX_PAGE_SIZE:300,MAX_BATCH_SIZE:100,HEADERS:['recordId','type','entityId','dataJson','version','status','updatedAt','createdAt']});
 function doGet(){return json_({ok:true,service:'gradebook-normalized',schemaVersion:1});}
