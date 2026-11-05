@@ -35,7 +35,7 @@ HTML, CSS, JavaScript, manifest, fuentes e imágenes deben servirse desde GitHub
 
 ## Estado
 
-Las interfaces se publican en GitHub Pages y usan URLs de Web Apps configuradas en `config.js` (públicas, no secretas). Los proyectos Apps Script vinculados a cada hoja deben tener el código backend actualizado, autorizarse y desplegar una nueva versión. Las credenciales se gestionan en la pestaña `Usuarios` de cada Sheet; no usar datos reales hasta completar las medidas de acceso y autorización.
+Las interfaces se publican en GitHub Pages y usan URLs de Web Apps configuradas en `config.js` (públicas, no secretas). Los proyectos Apps Script vinculados a cada hoja deben tener el código backend actualizado, autorizarse y desplegar una nueva versión. Las credenciales de acceso se validan en `Usuarios`. En Registro de notas, solo el admin inicial se configura en la hoja; los docentes se crean desde la app con permisos validados por Apps Script. No usar datos reales hasta completar QA de autorizaciones.
 
 ## Desarrollo local
 
