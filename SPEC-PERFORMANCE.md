@@ -4,6 +4,10 @@
 
 Aplicar estas pautas a cada proyecto nuevo o al optimizar uno existente. Mantener Sheets como fuente de verdad; ninguna mejora de rendimiento debe convertir CacheService o PropertiesService en almacenamiento durable, ni cambiar la semántica CRUD sin documentarlo y probarlo.
 
+## Ubicación de planillas
+
+Toda hoja de cálculo de Google creada para una app del repositorio debe crearse directamente dentro de la carpeta de Google Drive [`apps`](https://drive.google.com/drive/folders/14KsA8scXgN2wDL-HDtFQHS_95LCf1U8s). Esto incluye las hojas de datos/configuración y cualquier planilla auxiliar generada por el flujo de la app. Al crearla, verificar el padre de Drive y conservar allí la hoja; no dejarla en Mi unidad raíz ni en carpetas temporales. Esta regla aplica a nuevas planillas: no mover hojas existentes como parte de una tarea distinta sin revisar enlaces, permisos, integraciones y solicitar autorización cuando el movimiento pueda afectar accesos.
+
 ## Reglas de implementación
 
 1. **Leer lo mínimo necesario.** Preferir `getRange(fila, columna, cantidadFilas, cantidadColumnas).getValues()` sobre `getDataRange()` cuando se conozca un rango acotado. No traer columnas irrelevantes ni la hoja completa para una respuesta paginada.
