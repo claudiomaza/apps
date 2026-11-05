@@ -22,7 +22,7 @@ Las apps combinan autenticación y primera lista en una llamada cuando el backen
 
 ## Caché y persistencia del cliente
 
-Durante desarrollo/cambios en curso, los service workers usan red sin caché local y eliminan las cachés anteriores de la app; una vez estable se activa la política de caché versionada de producción. Los recursos grandes opcionales se cargan bajo demanda. Las dos estrategias de persistencia especificadas son API/backend (hoy Sheets, con sincronización por lotes) y Git/GitHub (commit versionado detrás de un backend seguro); ambas requieren stage explícito en IndexedDB y las mismas operaciones/reglas de Sync. Estado actual, límites y migración pendiente están detallados en [SPEC-PERFORMANCE.md](./SPEC-PERFORMANCE.md).
+Durante desarrollo/cambios en curso, los service workers usan red sin caché local y eliminan las cachés anteriores de la app; una vez estable se activa la política de caché versionada de producción. Los recursos grandes opcionales se cargan bajo demanda. Para los datos de la app hay un solo destino remoto: Apps Script autorizado sobre Sheets. Los cambios deben stagearse en IndexedDB y sincronizarse explícitamente a Sheets con operaciones equivalentes al flujo Git/GitHub (comparación de base, revisión, conflictos, confirmación, operaciones idempotentes), sin que Git/GitHub sea backend de datos alternativo. El estado actual y las brechas están especificados en [SPEC-PERFORMANCE.md](./SPEC-PERFORMANCE.md).
 
 ## Recursos frontend
 
