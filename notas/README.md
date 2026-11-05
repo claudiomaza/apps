@@ -1,31 +1,40 @@
 # Registro de notas
 
-Frontend estático publicado en [GitHub Pages](https://claudiomaza.github.io/apps/notas/) con Apps Script + Google Sheets como backend y fuente de verdad.
+Interfaz estática publicada en GitHub Pages: [Registro de notas](https://claudiomaza.github.io/apps/notas/). El nuevo libro académico es una Google Sheet vacía con pestañas `Registros`, `Config`, `Usuarios` e `Instrucciones`:
 
-La pestaña `Config` (`key`/`value`) es obligatoria. El backend la lee genéricamente y cachea hasta 30 s; hoy admite `maxPageSize` (default 300, rango 1–300) y `maxBatchSize` (default 100, rango 1–100). Los valores vacíos usan el default. Se pueden ajustar desde Sheets sin redeploy; `limpiarCacheConfig()` invalida la caché inmediatamente. Las reglas generales están en el [spec común](../SPEC-PERFORMANCE.md).
+- [Abrir la nueva planilla Registro de notas — Libro académico](https://docs.google.com/spreadsheets/d/1d9yL3ZhjdQIxRQEFVXltRA_QtjIZc6UrcO_1NyT1oA4/edit)
+- El backend normalizado para pegar en Apps Script está en [`../gas/notas/Registro-de-notas-Backend.md`](../gas/notas/Registro-de-notas-Backend.md). El `Code.gs` copiable también está en [`../gas/notas/GradebookBackend.gs`](../gas/notas/GradebookBackend.gs).
+- **Pendiente antes de sincronizar:** crear/desplegar la Web App de Apps Script y pegar su URL `/exec` en `apps/notas/config.js`. Este archivo se deja intencionalmente vacío para no seguir usando el endpoint legado que escribe al Sheet anterior.
 
-## Recursos y estilo
+## Modelo de datos
 
-- Servir HTML, CSS, JavaScript, manifest, imágenes y cualquier dependencia desde GitHub Pages; no usar CDNs para fuentes, librerías o scripts.
-- Preferir APIs nativas del navegador y fuentes del sistema. Mantener la interfaz minimalista, responsive/mobile-first y con estados visibles de carga, guardado, error y éxito.
-- La única solicitud de origen externo necesaria es a la API de Apps Script configurada en `config.js`. Ese endpoint es público; no poner secretos ni datos personales en el frontend.
+`Registros` usa ocho columnas estables (`recordId`, `type`, `entityId`, `dataJson`, `version`, `status`, `updatedAt`, `createdAt`) y una fila por escuela, materia, curso/año, división, subgrupo, estudiante, pertenencia, corte, escala, instancia o calificación. No se agregan columnas por evaluación. Un ID identifica una ficha de estudiante; las pertenencias a varios grupos/materias son registros distintos. La libreta ancha se genera dinámicamente en frontend.
 
-## Datos y seguridad
+- Escalas numéricas y cualitativas configurables con equivalencias por intervalo; las categorías cualitativas se convierten usando el punto medio.
+- Una nota por estudiante e instancia; fechas particulares y observaciones por calificación.
+- Pesos por materia/corte totalizan 100%; el remanente se redistribuye entre instancias no fijadas y existe la acción `Repartir por igual`.
+- Ausente/No entregó cuentan cero; Pendiente/Eximido se excluyen y se renormaliza el promedio ponderado.
 
-La aplicación usa su propio Sheet y su pestaña `Usuarios`; no copiar la configuración de Google Calendar de la app Calendario. El login actual no implementa autorización por rol, docente o curso. No cargar datos reales de estudiantes hasta que esa autorización institucional esté definida e implementada. Las claves de `Usuarios` quedan en texto plano y el acceso al Sheet debe restringirse a administradores confiables.
+## Edición offline y sincronización
 
-## Apps Script
+La interfaz mantiene borradores en IndexedDB. Crear, editar roster, instancia o calificación persiste localmente; la pestaña puede cerrarse y el mismo navegador conserva el borrador. **Solo el botón `Guardar en Sheets` envía los registros pendientes en lotes de hasta 100.** El backend valida ID/tipo/contenido y control optimista de versión; devuelve conflictos para resolver entre el valor del Sheet y el borrador local. Si hay timeout, no se reintenta a ciegas: actualizar primero para comprobar la versión. IndexedDB es almacenamiento de este dispositivo, no un respaldo ni una copia compartida hasta que Sheets confirme el guardado.
 
-Para activar cambios en el backend, copiar `Code.gs` y `appsscript.json` desde [`../gas/notas/`](../gas/notas/) al proyecto vinculado, revisar/autorizar permisos y desplegar una nueva versión. Manual completo: [Drive](https://drive.google.com/file/d/1KPpT-NgigILhG5K5GNfyYgg86wcn85KQ/view).
+La importación lee el formato normalizado en la pestaña `Registros`, valida y previsualiza altas/cambios/conflictos, permite corregir DatosJSON por fila y aplicar cambios al borrador; no escribe en Sheet hasta pulsar Guardar. La pestaña `Libreta` del XLSX es solo una vista generada y no se importa como esquema canónico. La exportación incluye también una pestaña `Instrucciones`.
 
-## Rendimiento
+## Seguridad
 
-El login solicita la primera lista con `includeInitialList:true`, reduciendo dos viajes HTTP a uno cuando se instala y despliega el backend actualizado. El servidor mantiene CacheService efímero para listas/config; la UI reutiliza resultados en memoria durante 30 s, fuerza lectura en Actualizar/reconexión y aplica la respuesta de CRUD localmente sin refetch.
+**No cargar datos reales de estudiantes todavía.** La aplicación no implementa autorización por docente, materia, escuela o curso. La sesión actual es de acceso global al libro. Se creó un Sheet nuevo vacío; no se migraron estudiantes. Restringí sus permisos a usuarios autorizados. `Usuarios!pass` queda en texto plano y la hoja debe permanecer limitada al administrador.
 
-## QA antes de publicar
+## Despliegue manual Apps Script
 
-- Revisar con Moli usando `--layout` en viewport `390x844` y escritorio; comprobar overflow horizontal, tabla/formularios, foco y estados de carga/guardado/error.
-- Verificar Network: cero requests a CDNs; solo recursos GitHub Pages y el endpoint Apps Script.
-- Si el navegador visual no inicia, reportar QA visual como BLOCKED y separar esa limitación de las comprobaciones HTTP/estáticas.
+1. Abrí el Sheet y elegí Extensiones → Apps Script.
+2. Pegá `GradebookBackend.gs` completo en `Code.gs` (o copiá el bloque entero del manual Markdown).
+3. Guardá, revisá el permiso de Sheets y probá `/exec` respondiendo `service: gradebook-normalized`.
+4. Desplegar → Nueva implementación → Aplicación web. Elegí ejecutar como propietario; restringí acceso a tu cuenta/equipo. No publicar como “cualquiera”.
+5. Pegá la URL `/exec` en `config.js`, commit/push y espera despliegue Pages. La URL Apps Script es configuración pública del frontend, nunca poner credenciales ahí.
 
-Ver también el [spec común](../SPEC-PERFORMANCE.md) y [setup del repo](../SETUP.md).
+La hoja ya está creada/preparada, pero el backend **no está desplegado**: requiere ejecución desde tu proyecto de Apps Script con autorización del propietario. Hasta eso, la interfaz opera solo como borrador IndexedDB.
+
+## QA
+
+Los tests funcionales deben usar datos sintéticos y un backend/fixture aislado. No se deben crear registros en el Sheet compartido de notas durante QA. Revisar Pages en 390×844 y desktop con el navegador visual disponible; no declarar QA visual PASS por checks estáticos o HTTP solamente.
