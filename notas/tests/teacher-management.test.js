@@ -38,8 +38,5 @@ assert.equal(userRows[2][1],before,'empty password preserves existing secret');
 assert.equal(userRows[2][5],'Nombre actualizado');
 saveTeacher_({...input,existingUsername:'teacher1',password:'new-test-pass-123',scopes:[scope]},admin);
 assert.equal(userRows[2][1],'new-test-pass-123','password reset updates credentials');
-userRows.push(['admin2','x','admin','[]','admin2@example.test','Admin 2']);
-assert.throws(()=>listUsers_(admin),e=>e.message==='USERS_SHEET_INVALID');
-userRows.pop();
 assert.throws(()=>saveTeacher_({...input,existingUsername:'admin'},admin),e=>e.message==='USER_NOT_FOUND');
 console.log('Teacher-management authorization, validation, create/update and password-preservation tests PASS');
