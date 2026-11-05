@@ -69,6 +69,7 @@ const absentRows=rows.slice(1).map(r=>r.slice());const attendanceRow=absentRows.
 assert.throws(()=>api.validateGradeAttendance_({studentId:'u',assessmentId:'a',attendanceId:attendanceRow[2],gradeDate:'2026-11-05'},absentRows,[]),e=>e.message==='GRADE_REQUIRES_PRESENT_ATTENDANCE');
 assert.throws(()=>api.changeRecordStatus_({recordId:'assessment::a',expectedVersion:1},true),e=>e.message==='RECORD_HAS_DEPENDENTS');
 assert.throws(()=>api.changeRecordStatus_({recordId:'attendance::u::2026-11-05::s::m::c::d',expectedVersion:1},true),e=>e.message==='RECORD_HAS_DEPENDENTS');
+assert.throws(()=>api.changeRecordStatus_({recordId:'student::u',expectedVersion:1},true),e=>e.message==='RECORD_HAS_DEPENDENTS');
 assert.throws(()=>api.changeRecordStatus_({recordId:'division::d',expectedVersion:1},true),e=>e.message==='RECORD_HAS_DEPENDENTS');
 const noMembershipRows=rows.slice(1).filter(r=>r[1]!=='membership');
 assert.equal(api.hasMissingParents_({type:'attendance',data:{studentId:'u',schoolId:'s',subjectId:'m',courseId:'c',divisionId:'d'}},noMembershipRows),true);
