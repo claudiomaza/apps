@@ -14,10 +14,11 @@ assert.match(html,/<form id="login-form">[\s\S]*?<input id="access-user"[^>]*req
 assert.match(html,/id="app-content" hidden/);
 assert.match(html,/id="sync-button"/);
 assert.match(html,/id="sync-state"/);
-assert.match(html,/styles\.css\?v=20261105-gradebook38/);
-assert.match(html,/app\.js\?v=20261105-gradebook38/);
-assert.match(sw,/notas-static-gradebook38/);
-assert.match(sw,/app\.js\?v=20261105-gradebook38/);
+assert.match(html,/styles\.css\?v=20261105-nocache/);
+assert.match(html,/app\.js\?v=20261105-nocache/);
+assert.match(html,/sw\.js\?v=20261105-nocache/);
+assert.match(sw,/notas-static-/);
+assert.match(sw,/fetch\(e\.request,\{cache:'no-store'\}\)/);
 assert.doesNotMatch(app,/indexedDB|localOnly|offline-store|borrador local|Guardar en Sheets para sincronizar/);
 assert.match(app,/action!==['"]auth['"]&&!sessionToken/);
 assert.match(app,/api\(['"]saveBatch/);

@@ -20,6 +20,10 @@ En Calendario, la pestaña `Config` usa `key` / `value`; `calendarId` está en `
 
 Las apps combinan autenticación y primera lista en una llamada cuando el backend soporta `includeInitialList`, conservan caché de lecturas efímera y actualizan la UI desde la respuesta del CRUD. El detalle de recorridos por bloques, caché versionada, límites y fallbacks está en [SPEC-PERFORMANCE.md](./SPEC-PERFORMANCE.md). Backend modificado requiere desplegar una nueva versión de Apps Script.
 
+## Caché y persistencia del cliente
+
+Durante desarrollo/cambios en curso, los service workers usan red sin caché local y eliminan las cachés anteriores de la app; una vez estable se activa la política de caché versionada de producción. Los recursos grandes opcionales se cargan bajo demanda. Las dos estrategias de persistencia especificadas son API/backend (hoy Sheets, con sincronización por lotes) y Git/GitHub (commit versionado detrás de un backend seguro); ambas requieren stage explícito en IndexedDB y las mismas operaciones/reglas de Sync. Estado actual, límites y migración pendiente están detallados en [SPEC-PERFORMANCE.md](./SPEC-PERFORMANCE.md).
+
 ## Recursos frontend
 
 HTML, CSS, JavaScript, manifest, fuentes e imágenes deben servirse desde GitHub Pages, sin CDNs externos. Preferir APIs nativas del navegador y fuentes del sistema; si una dependencia externa es imprescindible, versionarla dentro del repo y documentar versión, origen, licencia y motivo. La única URL externa de runtime prevista es la API de Apps Script.
