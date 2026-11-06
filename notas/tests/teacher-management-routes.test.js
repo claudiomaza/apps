@@ -1,11 +1,13 @@
 'use strict';
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
-const source=fs.readFileSync(path.join(__dirname,'../../gas/notas/GradebookBackend.gs'),'utf8');
-const context={console,Date,JSON,Math,Number,String,Array,Object,Set,Map,Error,RegExp};
+let source=fs.readFileSync(path.join(__dirname,'../../gas/notas/GradebookBackend.gs'),'utf8');
+source=source.replace('const access=requireSession_(b.sessionToken);','const access=routeAccess_(b.sessionToken);').replace("case'listUsers':return json_(listUsers_(access));","case'listUsers':return json_(routeListUsers_(access));").replace("case'saveTeacher':return json_(saveTeacher_(b,access));","case'saveTeacher':return json_(routeSaveTeacher_(b,access));");
+source=source.replace("function routeSaveTeacher_(body,access){if(access.role!=='admin')throw Error('ACCESS_DENIED');return{ok:true,user:{username:body.username}};}","");
+const context={console,Date,JSON,Math,Number,String,Array,Object,Set,Map,Error,RegExp,ContentService:{createTextOutput:value=>({setMimeType:()=>({text:value})}),MimeType:{JSON:'application/json'}}};
 vm.runInNewContext(source+'\n;globalThis.__doPost=doPost;',context);
-context.json_=x=>x;context.publicError_=e=>e.message;context.requireSession_=token=>{if(token==='admin-token')return{role:'admin'};if(token==='teacher-token')return{role:'docente'};throw Error('UNAUTHORIZED');};
-let seen=[];context.listUsers_=access=>{seen.push(['listUsers',access.role]);if(access.role!=='admin')throw Error('ACCESS_DENIED');return{ok:true,users:[]};};context.saveTeacher_=(body,access)=>{seen.push(['saveTeacher',access.role,body.username]);if(access.role!=='admin')throw Error('ACCESS_DENIED');return{ok:true,user:{username:body.username}};};
-const post=(action,sessionToken,extra={})=>context.__doPost({postData:{contents:JSON.stringify({action,sessionToken,...extra})}});
+context.routeAccess_=token=>{if(token==='admin-token')return{role:'admin'};if(token==='teacher-token')return{role:'docente'};throw new Error('UNAUTHORIZED');};
+let seen=[];context.routeListUsers_=access=>{seen.push(['listUsers',access.role]);if(access.role!=='admin')throw new Error('ACCESS_DENIED');return{ok:true,users:[]};};context.routeSaveTeacher_=(body,access)=>{seen.push(['saveTeacher',access.role,body.username]);if(access.role!=='admin')throw new Error('ACCESS_DENIED');return{ok:true,user:{username:body.username}};};
+const post=(action,sessionToken,extra={})=>JSON.parse(context.__doPost({postData:{contents:JSON.stringify({action,sessionToken,...extra})}}).text);
 assert.deepEqual(JSON.parse(JSON.stringify(post('listUsers','admin-token'))),{ok:true,users:[]});
 assert.deepEqual(JSON.parse(JSON.stringify(post('saveTeacher','admin-token',{username:'doc1'}))),{ok:true,user:{username:'doc1'}});
 assert.deepEqual(JSON.parse(JSON.stringify(post('listUsers','teacher-token'))),{ok:false,error:'ACCESS_DENIED'});
@@ -19,5 +21,5 @@ assert.match(html,/data-admin-only data-tab="users"/);for(const id of ['teacher-
 assert.match(app,/if\(!d\.sessionToken\|\|!\['admin','docente'\]\.includes\(d\.access\?\.role\)\|\|!d\.profile\?\.name\|\|!d\.profile\?\.mail\)throw Error\('BACKEND_VERSION_OUTDATED'\)/);
 assert.match(app,/api\('listUsers'\)/);assert.match(app,/api\('saveTeacher'/);assert.match(app,/stagedRecords\.has\(r\.recordId\)/);assert.match(app,/password\?\{password\}:\{\}/);assert.match(app,/Boolean\(password\)!==Boolean\(confirmPassword\)/);
 const documented=manual.slice(manual.indexOf('```javascript',manual.indexOf('## Code.gs'))+'```javascript'.length).split('```')[0].trim();
-assert.equal(documented,source.trim(),'manual Apps Script code must exactly match tested backend');
+assert.equal(documented,fs.readFileSync(path.join(__dirname,'../../gas/notas/GradebookBackend.gs'),'utf8').trim(),'manual Apps Script code must exactly match checked-in backend');
 console.log('Apps Script route/session role-gating and frontend/manual contract tests PASS');
