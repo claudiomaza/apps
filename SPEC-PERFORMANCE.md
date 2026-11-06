@@ -3,7 +3,7 @@
 ## Fuente de verdad del proyecto y documentación
 
 - **GitHub es la fuente de verdad** del código, los specs, las decisiones, la documentación operativa y el historial de cambios de las apps internas. El repositorio canónico es [`claudiomaza/apps`](https://github.com/claudiomaza/apps); el spec común vive en [`SPEC-PERFORMANCE.md`](https://github.com/claudiomaza/apps/blob/main/SPEC-PERFORMANCE.md).
-- Este documento de Drive se sincroniza una última vez con la versión del repo y queda como copia de referencia/enlace. **Desde esta sincronización, los cambios futuros se hacen en GitHub**, no en la copia de Drive; si aparece una edición en Drive, debe incorporarse explícitamente al repo antes de considerarla vigente.
+- Drive conserva únicamente las planillas de datos que usan las apps como bases de datos; no se guardan allí specs, manuales, instrucciones ni copias de trabajo. Todos los cambios futuros de documentación se hacen y revisan en GitHub.
 - Mantener en GitHub los cambios de código, configuración versionable, specs, documentación, planes y decisiones, con commits identificables y revisión en ramas/PR cuando corresponda. No considerar una copia local o un archivo de Drive como actualizado hasta verificarlo contra el repo.
 - GitHub no reemplaza las fuentes operativas de datos: las planillas siguen siendo la fuente de verdad de los datos de cada app; credenciales y secretos permanecen en sus almacenes seguros, nunca en el repositorio.
 - Merge a `main`, publicación de Pages y despliegue de Apps Script son acciones separadas: la existencia de un commit/PR no autoriza por sí sola esos pasos. Desplegar solo con los gates y verificaciones definidos para cada app.

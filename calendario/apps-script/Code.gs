@@ -1,10 +1,3 @@
-# Backend Apps Script — Calendario
-
-En el proyecto vinculado a Calendario, reemplazá el archivo `Code.gs` por el contenido completo de abajo. Después implementá una nueva versión del deployment web app de ese proyecto.
-
-> Este archivo documenta el código incorporado en el merge `74e05f968d67be1992cc5fe3f2612059da6d2538`. Este repositorio no despliega Apps Script: hay que copiarlo al proyecto indicado y publicar una nueva versión por separado.
-
-```javascript
 /**
  * Backend Calendario para Apps Script vinculado al Sheet.
  * Las cuentas activas se administran en la pestaña `Usuarios` del Sheet,
@@ -371,4 +364,3 @@ function publicError_(err) {
   return allowed.includes(err.message)?err.message:'INTERNAL_ERROR';
 }
 
-```
