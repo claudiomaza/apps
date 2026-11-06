@@ -1,6 +1,6 @@
 /**
  * Registro de notas — backend normalizado.
- * Implementar en un proyecto Apps Script vinculado a Registro de notas — Libro académico.
+ * Implementar en un proyecto Apps Script vinculado a notas.
  * Sheets es la fuente de verdad; cada request aplica rol y alcances vigentes desde Usuarios.
  */
 const CONFIG=Object.freeze({SPREADSHEET_ID:'1d9yL3ZhjdQIxRQEFVXltRA_QtjIZc6UrcO_1NyT1oA4',DATA_SHEET:'Registros',USERS_SHEET:'Usuarios',SESSION_SECONDS:8*60*60,MAX_PAGE_SIZE:300,MAX_BATCH_SIZE:100,MAX_USERS:200,MAX_SCOPES:20,HEADERS:['recordId','type','entityId','dataJson','version','status','updatedAt','createdAt']});
