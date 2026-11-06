@@ -42,8 +42,8 @@ assert(html.indexOf('id="view-admin"')<html.indexOf('data-new="school"'),'quick 
 assert.match(html,/id="grade-date"/);assert.match(html,/id="grade-schedule"/);assert.match(html,/aria-haspopup="true"/);assert.match(html,/aria-controls="config-menu"/);
 assert(!/id="(?:grade-entry-list|attendance-list|observation-list|topic-list|student-cards|assessment-cards|admin-records|trash-records|teacher-list)" class="cards"/.test(html),'record collections use tables');
 assert.match(css,/\.config-popover/);assert.match(css,/\.grade-session-toolbar/);
-assert.match(html,/sw\.js\?v=20261106-admin-tables-v1/);assert.match(sw,/notas-static-/);
-assert(source.includes('students.flatMap((st,i)=>{const card=cards[i];if(!card?.dataset.draft)return[];'),'attendance drafts remain aligned with the correct student row');
+assert.match(html,/sw\.js\?v=20261106-admin-tables-v2/);assert.match(sw,/notas-static-/);
+assert(source.includes("students.flatMap(st=>{const card=cards.find(x=>x.dataset.attendanceStudent===st.id);if(!card?.dataset.draft)return[];"),'attendance drafts remain aligned with student after sorting');
 
 // Verify the renderer rejects date/weekday mismatch rather than preserving a stale session option.
 records.find(r=>r.type==='schedule'&&r.id===schedules[0]).data.dayOfWeek=2;context.gradeAssessmentKey='';el('#grade-assessment').value=assessments[0];context.renderGradeEntry();assert.equal(el('#grade-schedule').value,'','A mismatched weekday cannot be selected');assert.equal(el('#save-grade-session').disabled,true,'Cannot save notes without a date-matched class session');

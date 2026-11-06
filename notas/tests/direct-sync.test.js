@@ -14,9 +14,9 @@ assert.match(html,/<form id="login-form">[\s\S]*?<input id="access-user"[^>]*req
 assert.match(html,/id="app-content" hidden/);assert.match(html,/stage-store\.js/);
 assert.match(html,/id="sync-button"/);
 assert.match(html,/id="sync-state"/);
-assert.match(html,/styles\.css\?v=20261106-idb-stage/);
-assert.match(html,/app\.js\?v=20261106-idb-stage/);
-assert.match(html,/sw\.js\?v=20261106-idb-stage/);
+assert.match(html,/styles\.css\?v=20261106-admin-tables-v2/);
+assert.match(html,/app\.js\?v=20261106-admin-tables-v2/);
+assert.match(html,/sw\.js\?v=20261106-admin-tables-v2/);
 assert.match(sw,/notas-static-/);
 assert.match(sw,/fetch\(e\.request,\{cache:'no-store'\}\)/);
 assert.match(app,/StageStore\.replace/);assert.match(app,/StageStore\.list/);assert.match(app,/localStorage\.removeItem\('notasStagedRecords:/);assert.doesNotMatch(app,/api\(restore\?'restoreRecord':'trashRecord'/);assert.doesNotMatch(app,/localOnly|offline-store|borrador local|Guardar en Sheets para sincronizar/);
