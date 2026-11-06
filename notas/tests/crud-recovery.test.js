@@ -56,7 +56,7 @@ assert.match(app,/JSON\.stringify\(remoteVersion\.data\)!==JSON\.stringify\(r\.d
 assert.match(app,/stageRecord\(/);
 assert.match(app,/function persistStage\(/);
 assert.match(app,/function restoreStage\(/);
-assert.match(app,/notasStagedRecords/);assert.match(app,/INDEXEDDB/);
+assert.match(app,/notasStagedRecords/);assert.match(app,/StageStore/);
 assert.match(app,/stageOwnerKey/);
 assert.match(app,/await loadRemote\(\);[\s\S]*for\(const r of stagedRecords\.values\(\)\)/);
 assert.match(app,/staged\.expectedVersion=Number\(remote\?\.expectedVersion\|\|0\)/);
