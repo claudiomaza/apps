@@ -56,14 +56,14 @@ assert.match(app,/JSON\.stringify\(remoteVersion\.data\)!==JSON\.stringify\(r\.d
 assert.match(app,/stageRecord\(/);
 assert.match(app,/function persistStage\(/);
 assert.match(app,/function restoreStage\(/);
-assert.match(app,/notasStagedRecords/);
+assert.match(app,/notasStagedRecords/);assert.match(app,/INDEXEDDB/);
 assert.match(app,/stageOwnerKey/);
-assert.match(app,/await loadRemote\(\);for\(const r of stagedRecords\.values\(\)\)/);
+assert.match(app,/await loadRemote\(\);[\s\S]*for\(const r of stagedRecords\.values\(\)\)/);
 assert.match(app,/staged\.expectedVersion=Number\(remote\?\.expectedVersion\|\|0\)/);
-assert.match(app,/stagedRecords\.values\(\)\)\{const remote=latestRemoteRecords\.find/);
+assert.match(app,/if\(r\.operation\)\{const active=latestRemoteRecords\.find/);
 assert.match(app,/if\(\(remote\?Number\(remote\.expectedVersion\):0\)!==Number\(r\.expectedVersion\)\)/);
 assert.match(app,/staged\.expectedVersion=Number\(remote\?\.expectedVersion\|\|0\)/);
-assert.match(html,/Los borradores quedan guardados en este navegador/);
+assert.match(html,/Los borradores quedan guardados en IndexedDB/);
 assert.doesNotMatch(html,/se pierden al cerrar o recargar/);
 assert.doesNotMatch(app,/sessionStorage\.setItem\(['"]notasStaged/);
 assert.match(app,/lastSuccessfulSync/);

@@ -30,8 +30,10 @@ function doPost(e) {
     }
     requireSession_(body.sessionToken);
     if (body.action === 'list') {const result=listEvents_(body);result.calendarName=calendarDisplayName_();return json_(result);}
+    if(body.action==='getEvent')return json_(getEventById_(body));
+    if(body.action==='getOperation')return json_(getOperation_(body));
     if (body.action === 'exportEvents') {const result=exportEventsPage_(body);result.calendarName=calendarDisplayName_();return json_(result);}
-    if (body.action === 'createBatch') return json_(createEventsBatch_(body));
+    if (body.action === 'createBatch') throw new Error('SYNC_REQUIRED');
     if (!['create','update','delete'].includes(body.action)) throw new Error('INVALID_ACTION');
     return json_(mutateEvent_(body.action, body));
   } catch (err) {
@@ -144,22 +146,32 @@ function exportEventsPage_(q){
   } finally {lock.releaseLock();}
 }
 
+function getEventById_(body){const id=String(body.eventId||'');if(!/^[\w-]{8,80}$/.test(id))throw new Error('INVALID_EVENT_ID');const sheet=dataSheet_(),last=sheet.getLastRow(),ids=last>1?sheet.getRange(2,1,last-1,1).getDisplayValues().flat():[],index=ids.indexOf(id);if(index<0)return{ok:true,found:false};return{ok:true,found:true,record:rowObject_(sheet.getRange(index+2,1,1,CONFIG.HEADERS.length).getValues()[0])};}
+
+function operationSheet_(){const ss=SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);let sh=ss.getSheetByName('SyncOperations');if(!sh){sh=ss.insertSheet('SyncOperations');sh.getRange(1,1,1,7).setValues([['idempotencyKey','requestHash','state','eventId','action','version','updatedAt']]);}const expected=['idempotencyKey','requestHash','state','eventId','action','version','updatedAt'];if(sh.getRange(1,1,1,expected.length).getDisplayValues()[0].some((x,i)=>x!==expected[i]))throw new Error('OPERATION_SHEET_INVALID');return sh;}
+function operationHash_(action,body){const request=JSON.stringify({action,eventId:String(body.eventId||''),expectedVersion:Number(body.expectedVersion||0),changes:body.changes||{}});return Utilities.base64EncodeWebSafe(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,request,Utilities.Charset.UTF_8)).replace(/=+$/,'');}
+function beginOperation_(action,body){const key=String(body.idempotencyKey||'');if(!/^[\w-]{8,100}$/.test(key))throw new Error('INVALID_IDEMPOTENCY_KEY');const sh=operationSheet_(),last=sh.getLastRow(),rows=last>1?sh.getRange(2,1,last-1,7).getValues():[],hash=operationHash_(action,body),index=rows.findIndex(r=>r[0]===key);if(index>=0){const row=rows[index];if(row[1]!==hash||row[3]!==String(body.eventId||'')||row[4]!==action)throw new Error('IDEMPOTENCY_KEY_REUSED');if(row[2]==='DONE')return{done:true,record:{eventId:row[3],version:Number(row[5]||0)}};if(row[2]==='UNKNOWN'||row[2]==='PENDING')throw new Error('OUTCOME_UNKNOWN');const rn=index+2;sh.getRange(rn,3,1,5).setValues([['PENDING',row[3],action,Number(row[5]||0),new Date().toISOString()]]);return{done:false,rowNumber:rn,key,hash};}const rn=last+1;sh.getRange(rn,1,1,7).setValues([[key,hash,'PENDING',String(body.eventId||''),action,Number(body.expectedVersion||0),new Date().toISOString()]]);return{done:false,rowNumber:rn,key,hash};}
+function finishOperation_(op,state,eventId,version){if(!op||op.done)return;operationSheet_().getRange(op.rowNumber,3,1,5).setValues([[state,eventId||'',op.action||'',Number(version||0),new Date().toISOString()]]);}
+function getOperation_(body){const key=String(body.idempotencyKey||'');if(!/^[\w-]{8,100}$/.test(key))throw new Error('INVALID_IDEMPOTENCY_KEY');const lock=LockService.getScriptLock();if(!lock.tryLock(5000))throw new Error('BUSY_RETRY');try{const sh=operationSheet_(),last=sh.getLastRow(),rows=last>1?sh.getRange(2,1,last-1,7).getValues():[],index=rows.findIndex(x=>x[0]===key);if(index<0)return{ok:true,found:false};let r=rows[index];if(r[2]==='PENDING'){const sheet=dataSheet_(),n=sheet.getLastRow(),ids=n>1?sheet.getRange(2,1,n-1,1).getDisplayValues().flat():[],i=ids.indexOf(String(r[3]));if(i>=0){const event=rowObject_(sheet.getRange(i+2,1,1,CONFIG.HEADERS.length).getValues()[0]),expected=Number(r[5]||0),committed=r[4]==='create'?event.status==='ACTIVE'&&Number(event.version)===1:r[4]==='update'?event.status==='ACTIVE'&&Number(event.version)===expected+1:r[4]==='delete'?event.status==='DELETED'&&Number(event.version)===expected+1:false;if(committed){finishOperation_({rowNumber:index+2,action:r[4]},'DONE',r[3],event.version);return{ok:true,found:true,state:'DONE',eventId:r[3],version:Number(event.version)};}}}return{ok:true,found:true,state:r[2],eventId:r[3],version:Number(r[5]||0)};}finally{lock.releaseLock();}}
+
 function mutateEvent_(action, body) {
   const eventId = String(body.eventId || '');
   if (!/^[\w-]{8,80}$/.test(eventId)) throw new Error('INVALID_EVENT_ID');
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(5000)) throw new Error('BUSY_RETRY');
+  let operation=null,calendarSideEffect=false;
   try {
     const sheet = dataSheet_();
     const last = sheet.getLastRow();
     const ids = last > 1 ? sheet.getRange(2,1,last-1,1).getDisplayValues().flat() : [];
     const index = ids.indexOf(eventId);
     const now = new Date().toISOString();
+    operation=beginOperation_(action,body);if(operation.done)return{ok:true,duplicate:true,record:operation.record};operation.action=action;
     let row;
     if (action === 'create') {
-      if (index >= 0) return {ok:true,record:rowObject_(sheet.getRange(index+2,1,1,CONFIG.HEADERS.length).getValues()[0].slice(0,CONFIG.HEADERS.length)),duplicate:true};
+      if(index>=0){const prior=rowObject_(sheet.getRange(index+2,1,1,CONFIG.HEADERS.length).getValues()[0].slice(0,CONFIG.HEADERS.length)),wanted=validateEvent_(body.changes||{}),same=['title','startAt','endAt','location','description','reminderMinutes','reminderAt'].every(k=>JSON.stringify(prior[k])===JSON.stringify(wanted[k]))&&JSON.stringify(prior.recurrence||{frequency:'none'})===JSON.stringify(wanted.recurrence||{frequency:'none'});if(!same)throw new Error('CONFLICT');finishOperation_(operation,'DONE',eventId,prior.version);return{ok:true,record:prior,duplicate:true};}
       const d = validateEvent_(body.changes || {});
-      const created = createCalendarEvent_(d);
+      calendarSideEffect=true;const created = createCalendarEvent_(d);
       row = [eventId,d.title,d.startAt,d.endAt,d.allDay,d.location,d.description,'','ACTIVE',1,now,now,'',created.event.getId(),created.calendarId,JSON.stringify(d.recurrence),d.reminderMinutes,d.reminderAt];
       sheet.getRange(last+1,1,1,row.length).setValues([row]);
     } else {
@@ -167,15 +179,15 @@ function mutateEvent_(action, body) {
       const rowNumber = index+2;
       const existing = sheet.getRange(rowNumber,1,1,CONFIG.HEADERS.length).getValues()[0];
       while(existing.length<CONFIG.HEADERS.length)existing.push('');
-      if (Number(body.expectedVersion) !== Number(existing[9])) throw new Error('CONFLICT');
-      if (existing[8] === 'DELETED') throw new Error('NOT_FOUND');
+      if(existing[8]==='DELETED'){if(action==='delete'){const duplicate=rowObject_(existing);finishOperation_(operation,'DONE',eventId,duplicate.version);return{ok:true,duplicate:true,record:duplicate};}throw new Error('NOT_FOUND');}
+      if(Number(body.expectedVersion)!==Number(existing[9])){if(action==='update'){const desired=validateEvent_(Object.assign(rowObject_(existing),body.changes||{})),current=rowObject_(existing),same=Object.keys(body.changes||{}).every(k=>JSON.stringify(current[k])===JSON.stringify(desired[k]));if(same){finishOperation_(operation,'DONE',eventId,current.version);return{ok:true,duplicate:true,record:current};}}throw new Error('CONFLICT');}
       if (action === 'delete') {
-        deleteCalendarEvent_(String(existing[13] || ''),String(existing[14] || ''),parseRecurrence_(existing[15]));
+        calendarSideEffect=true;deleteCalendarEvent_(String(existing[13] || ''),String(existing[14] || ''),parseRecurrence_(existing[15]));
         existing[8]='DELETED'; existing[9]=Number(existing[9])+1; existing[11]=now; existing[12]=now;
       } else {
         const merged=Object.assign(rowObject_(existing),body.changes||{});if(!(body.changes&&Object.prototype.hasOwnProperty.call(body.changes,'recurrence')))merged.recurrence=parseRecurrence_(existing[15]);
         const d=validateEvent_(merged);
-        const calEvent = updateCalendarEvent_(String(existing[13] || ''),d,String(existing[14] || ''),parseRecurrence_(existing[15]));
+        calendarSideEffect=true;const calEvent = updateCalendarEvent_(String(existing[13] || ''),d,String(existing[14] || ''),parseRecurrence_(existing[15]));
         existing[1]=d.title; existing[2]=d.startAt; existing[3]=d.endAt; existing[4]=d.allDay;
         existing[5]=d.location; existing[6]=d.description; existing[9]=Number(existing[9])+1;
         existing[11]=now; existing[13]=calEvent.event.getId(); existing[14]=calEvent.calendarId; existing[15]=JSON.stringify(d.recurrence); existing[16]=d.reminderMinutes; existing[17]=d.reminderAt;
@@ -184,8 +196,8 @@ function mutateEvent_(action, body) {
     }
     SpreadsheetApp.flush();
     incrementDataVersion_();
-    return {ok:true,record:rowObject_(row)};
-  } finally { lock.releaseLock(); }
+    const result={ok:true,record:rowObject_(row)};finishOperation_(operation,'DONE',eventId,result.record.version);return result;
+  } catch(err){if(typeof operation!=='undefined'&&operation&&!operation.done)finishOperation_(operation,calendarSideEffect?'UNKNOWN':'FAILED',eventId,body.expectedVersion);throw err;} finally { lock.releaseLock(); }
 }
 
 function createEventsBatch_(body) {
@@ -348,6 +360,6 @@ function parseRecurrence_(value){if(!value)return {frequency:'none'};if(typeof v
 function rowObject_(r) { const o={}; CONFIG.HEADERS.forEach((h,i)=>o[h]=r[i] instanceof Date?r[i].toISOString():r[i]);if(CONFIG.HEADERS.includes('recurrence'))o.recurrence=parseRecurrence_(o.recurrence);return o; }
 function json_(value) { return ContentService.createTextOutput(JSON.stringify(value)).setMimeType(ContentService.MimeType.JSON); }
 function publicError_(err) {
-  const allowed=['INVALID_ACTION','INVALID_FROM','INVALID_CURSOR','EXPORT_CHANGED','BUSY_RETRY','INVALID_RECURRENCE','INVALID_REMINDER','INVALID_EVENT_ID','INVALID_EVENT','INVALID_BATCH','NOT_FOUND','CONFLICT','SHEET_NOT_FOUND','CONFIG_SHEET_NOT_FOUND','CALENDAR_NOT_FOUND','USERS_SHEET_NOT_FOUND','USERS_SHEET_INVALID','INVALID_CREDENTIALS','UNAUTHORIZED','SESSION_EXPIRED'];
+  const allowed=['INVALID_ACTION','SYNC_REQUIRED','INVALID_IDEMPOTENCY_KEY','IDEMPOTENCY_KEY_REUSED','OUTCOME_UNKNOWN','OPERATION_SHEET_INVALID','INVALID_FROM','INVALID_CURSOR','EXPORT_CHANGED','BUSY_RETRY','INVALID_RECURRENCE','INVALID_REMINDER','INVALID_EVENT_ID','INVALID_EVENT','INVALID_BATCH','NOT_FOUND','CONFLICT','SHEET_NOT_FOUND','CONFIG_SHEET_NOT_FOUND','CALENDAR_NOT_FOUND','USERS_SHEET_NOT_FOUND','USERS_SHEET_INVALID','INVALID_CREDENTIALS','UNAUTHORIZED','SESSION_EXPIRED'];
   return allowed.includes(err.message)?err.message:'INTERNAL_ERROR';
 }
