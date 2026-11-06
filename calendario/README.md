@@ -23,7 +23,7 @@ Para cambiarlo:
 
 El valor vacío usa el calendario principal. El backend actualizado vuelve a leer `Config` en hasta 30 segundos; `limpiarCacheConfig()` aplica el cambio inmediatamente. Cambiar el valor no requiere redeploy una vez que el backend descrito abajo esté instalado. Los eventos nuevos guardan el ID de destino para que editar/eliminar sigan apuntando al mismo calendario aunque luego se cambie Config.
 
-**Activación pendiente:** instalar en el proyecto Apps Script el `Code.gs` y `appsscript.json` actualizados desde [`../gas/calendario/`](../gas/calendario/), revisar/autorizar los scopes pedidos y desplegar una nueva versión. Hasta ese redeploy, el endpoint publicado todavía usa el comportamiento anterior. Manual completo e instrucciones: [Drive](https://drive.google.com/file/d/15Gy7lV9RJw4AT3kPoOcBK7rwMLjccF5o/view).
+**Activación pendiente:** instalar en el proyecto Apps Script el `Code.gs` y `appsscript.json` versionados en [`apps-script/`](./apps-script/), revisar/autorizar los scopes pedidos y desplegar una nueva versión. Hasta ese redeploy, el endpoint publicado todavía usa el comportamiento anterior. Manual e instrucciones de instalación: [`apps-script/README.md`](./apps-script/README.md), con [`Code.gs`](./apps-script/Code.gs) y [`appsscript.json`](./apps-script/appsscript.json) versionados en GitHub.
 
 ## Rendimiento
 

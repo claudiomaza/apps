@@ -1,46 +1,18 @@
-# Apps
+# Apps internas
 
-Monorepo público para frontends de herramientas internas con Google Apps Script como API sobre Google Sheets. El código y las URLs de los endpoints son públicos; los datos y las operaciones deben protegerse y autorizarse en el backend.
+Repositorio público con las apps internas y sus contratos comunes. **GitHub es la fuente de verdad** del código, los specs, las decisiones y la documentación; Drive queda solo para las planillas que funcionan como bases de datos; los specs, manuales e instrucciones se mantienen únicamente en GitHub.
 
-## Apps
+## Estructura
 
-- `calendario/`: gestión de eventos; ver [`calendario/README.md`](./calendario/README.md) para configurar el ID de Google Calendar.
-- `notas/`: registro de calificaciones; ver [`notas/README.md`](./notas/README.md) para setup, límites y seguridad.
-- `gas/`: backend Apps Script de referencia (un proyecto vinculado por hoja; el ID se configura en Script Properties o `appsscript.json` al crear el proyecto).
+- [`SPEC-PERFORMANCE.md`](./SPEC-PERFORMANCE.md): contratos comunes y reglas para futuras apps.
+- [`SETUP.md`](./SETUP.md): mapa operativo del repositorio, Sheets y despliegues separados.
+- [`notas/`](./notas/): frontend publicado de Registro de notas y [`apps-script/`](./notas/apps-script/) con backend, manifiesto e instalación.
+- [`calendario/`](./calendario/): frontend publicado de Calendario y [`apps-script/`](./calendario/apps-script/) con backend, manifiesto e instalación.
 
-## Contrato común para apps nuevas
+GitHub Pages conserva las rutas públicas `/apps/`, `/apps/notas/` y `/apps/calendario/`. Los cambios de HTML/JS/CSS modifican el sitio al publicarse desde `main`; Apps Script se copia/despliega aparte desde el `Code.gs` versionado en cada app.
 
-Toda app nueva debe reutilizar el esquema de acceso descrito en [SPEC-PERFORMANCE.md](./SPEC-PERFORMANCE.md): pestaña `Usuarios`, encabezados `usuario` y `pass`, campo de usuario de texto (no email), contraseña de 1–200 caracteres y autenticación consistente en frontend/backend. No crear formularios ni validaciones de login distintos por producto. Además, cada app debe incluir una pestaña `Config` (`key`/`value`) desde su primera versión y leer de ahí los ajustes operativos para no necesitar un redeploy por cambiar valores; seguir el spec para defaults, validación, TTL y límites de seguridad. El código debe favorecer lectura genérica y agnóstica de esas claves, evitando IDs y valores operativos hardcodeados.
+## Fuentes de datos y seguridad
 
-## Configuración de Google Calendar
+Los dos Google Sheets en Drive son las bases de datos operativas: [Registro de notas — Libro académico](https://docs.google.com/spreadsheets/d/1d9yL3ZhjdQIxRQEFVXltRA_QtjIZc6UrcO_1NyT1oA4/edit) y [Calendario](https://docs.google.com/spreadsheets/d/1OypDck9kNKtTPHOdNWPLCqU9Sjr591a9bL6S3YhjFH0/edit). Sus pestañas guardan datos/configuración; no guardan documentación del proyecto.
 
-En Calendario, la pestaña `Config` usa `key` / `value`; `calendarId` está en `Config!A5:B5`. Vacía `value`, usa el calendario principal. Para pasos detallados, ver [`calendario/README.md`](./calendario/README.md) y [SETUP.md](./SETUP.md). El backend guarda el ID por evento y no requiere redeploy para cambios posteriores de la celda, una vez que el código actualizado está instalado y desplegado.
-
-## Rendimiento
-
-Las apps combinan autenticación y primera lista en una llamada cuando el backend soporta `includeInitialList`, conservan caché de lecturas efímera y actualizan la UI desde la respuesta del CRUD. El detalle de recorridos por bloques, caché versionada, límites y fallbacks está en [SPEC-PERFORMANCE.md](./SPEC-PERFORMANCE.md). Backend modificado requiere desplegar una nueva versión de Apps Script.
-
-## Caché y persistencia del cliente
-
-Durante desarrollo/cambios en curso, los service workers usan red sin caché local y eliminan las cachés anteriores de la app; una vez estable se activa la política de caché versionada de producción. Los recursos grandes opcionales se cargan bajo demanda. Para los datos de la app hay un solo destino remoto: Apps Script autorizado sobre Sheets. Los cambios deben stagearse en IndexedDB y sincronizarse explícitamente a Sheets con operaciones equivalentes al flujo Git/GitHub (comparación de base, revisión, conflictos, confirmación, operaciones idempotentes), sin que Git/GitHub sea backend de datos alternativo. El estado actual y las brechas están especificados en [SPEC-PERFORMANCE.md](./SPEC-PERFORMANCE.md).
-
-## Recursos frontend
-
-HTML, CSS, JavaScript, manifest, fuentes e imágenes deben servirse desde GitHub Pages, sin CDNs externos. Preferir APIs nativas del navegador y fuentes del sistema; si una dependencia externa es imprescindible, versionarla dentro del repo y documentar versión, origen, licencia y motivo. La única URL externa de runtime prevista es la API de Apps Script.
-
-## Arquitectura inicial
-
-- Frontend estático publicado en GitHub Pages: portada en `/apps/`, Calendario en `/apps/calendario/` y Registro de notas en `/apps/notas/`.
-- GAS se ejecuta como propietario. El backend valida un usuario no vacío (no necesariamente correo) y una contraseña de 1 a 200 caracteres para cada sesión. Los permisos de las planillas y de su carpeta se verificaron restringidos al propietario; Registro de notas aún requiere autorización por rol/curso antes de usar datos reales.
-- Google Sheets es la fuente de verdad.
-- CacheService solo para lecturas regenerables. PropertiesService no se usa como cola de datos.
-- CRUD interactivo directo, control optimista por `version` y lock breve alrededor de la comprobación/escritura.
-- `setValues()` para lotes/importaciones.
-
-## Estado
-
-Las interfaces se publican en GitHub Pages y usan URLs de Web Apps configuradas en `config.js` (públicas, no secretas). Los proyectos Apps Script vinculados a cada hoja deben tener el código backend actualizado, autorizarse y desplegar una nueva versión. Las credenciales de acceso se validan en `Usuarios`. En Registro de notas, solo el admin inicial se configura en la hoja; los docentes se crean desde la app con permisos validados por Apps Script. No usar datos reales hasta completar QA de autorizaciones.
-
-## Desarrollo local
-
-Abrir cada `index.html` mediante un servidor estático local (no `file://`) para que PWA/fetch se comporten como en hosting. `API_URL` en `config.js` es visible para cualquiera; la autenticación y autorización deben aplicarse en el backend.
+El repositorio y GitHub Pages son públicos. No incluir claves, contraseñas, tokens, datos personales ni IDs/valores operativos que deban mantenerse privados. La autenticación/autorización siempre se valida del lado del backend.
