@@ -13,6 +13,6 @@ GitHub Pages conserva las rutas públicas `/apps/`, `/apps/notas/` y `/apps/cale
 
 ## Fuentes de datos y seguridad
 
-Los dos Google Sheets en Drive son las bases de datos operativas: [Registro de notas — Libro académico](https://docs.google.com/spreadsheets/d/1d9yL3ZhjdQIxRQEFVXltRA_QtjIZc6UrcO_1NyT1oA4/edit) y [Calendario](https://docs.google.com/spreadsheets/d/1OypDck9kNKtTPHOdNWPLCqU9Sjr591a9bL6S3YhjFH0/edit). Sus pestañas guardan datos/configuración; no guardan documentación del proyecto.
+Los dos Google Sheets en Drive son las bases de datos operativas: [notas](https://docs.google.com/spreadsheets/d/1d9yL3ZhjdQIxRQEFVXltRA_QtjIZc6UrcO_1NyT1oA4/edit) y [Calendario](https://docs.google.com/spreadsheets/d/1OypDck9kNKtTPHOdNWPLCqU9Sjr591a9bL6S3YhjFH0/edit). Sus pestañas guardan datos/configuración; no guardan documentación del proyecto.
 
 El repositorio y GitHub Pages son públicos. No incluir claves, contraseñas, tokens, datos personales ni IDs/valores operativos que deban mantenerse privados. La autenticación/autorización siempre se valida del lado del backend.
