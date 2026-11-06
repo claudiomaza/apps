@@ -6,9 +6,9 @@ Este directorio contiene el backend y el manifiesto versionados junto al fronten
 
 1. Abrí la planilla → **Extensiones → Apps Script**.
 2. Reemplazá el contenido del archivo `Code.gs` del proyecto vinculado por [`Code.gs`](./Code.gs). Debe quedar una sola implementación de las funciones globales.
-3. Activá «Mostrar el archivo de manifiesto `appsscript.json`» y comparalo/actualizalo con [`appsscript.json`](./appsscript.json); revisá y autorizá los scopes requeridos.
+3. Activá «Mostrar el archivo de manifiesto `appsscript.json`» y comparalo/actualizalo con [`appsscript.json`](./appsscript.json); revisá y autorizá los scopes requeridos. Para cambiar el nombre desde la app se solicita `https://www.googleapis.com/auth/calendar`; Google pedirá consentimiento del propietario.
 4. Creá una nueva implementación de Web App, ejecutando como propietario y con el acceso configurado para que Pages pueda llamar al endpoint. Copiá el URL `/exec` a `calendario/config.js` solo si el deployment cambió.
-5. Probá GET y login/lecturas antes de usar datos reales. Desplegar Apps Script y publicar GitHub Pages son pasos independientes.
+5. Probá GET y login/lecturas antes de usar datos reales. La acción backend `renameCalendar` solo acepta el propietario indicado por `Config` (`ownerUser`; si no existe, `cmaza`). El frontend debe pedir confirmación antes de llamar; desplegar Apps Script y publicar GitHub Pages son pasos independientes.
 
 No pegues secretos, tokens, contraseñas ni valores operativos de Sheets en GitHub. El `calendarId` vive en la pestaña `Config` de Sheets; las reglas comunes están en [`../../SPEC-PERFORMANCE.md`](../../SPEC-PERFORMANCE.md).
 
