@@ -11,7 +11,7 @@
 
 Drive se usa para las hojas operativas de base de datos, no para guardar specs o manuales del proyecto:
 
-- [Registro de notas — Libro académico](https://docs.google.com/spreadsheets/d/1d9yL3ZhjdQIxRQEFVXltRA_QtjIZc6UrcO_1NyT1oA4/edit)
+- [notas](https://docs.google.com/spreadsheets/d/1d9yL3ZhjdQIxRQEFVXltRA_QtjIZc6UrcO_1NyT1oA4/edit)
 - [Calendario](https://docs.google.com/spreadsheets/d/1OypDck9kNKtTPHOdNWPLCqU9Sjr591a9bL6S3YhjFH0/edit)
 
 Los datos y la configuración operativa (`Config`, usuarios, calendario de destino, etc.) se mantienen en las hojas según el contrato de cada app. No pegar valores privados en código o documentación pública.
