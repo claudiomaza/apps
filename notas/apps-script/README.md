@@ -1,11 +1,11 @@
 # Apps Script — Registro de notas
 
-El código, el manifiesto y este manual viven en GitHub junto al frontend. La base operativa es el Sheet [Registro de notas — Libro académico](https://docs.google.com/spreadsheets/d/1d9yL3ZhjdQIxRQEFVXltRA_QtjIZc6UrcO_1NyT1oA4/edit).
+El código, el manifiesto y este manual viven en GitHub junto al frontend. La base operativa es el Sheet [notas](https://docs.google.com/spreadsheets/d/1d9yL3ZhjdQIxRQEFVXltRA_QtjIZc6UrcO_1NyT1oA4/edit).
 
 
 ## Configuración
 
-La aplicación usa el libro **Registro de notas — Libro académico**, con las pestañas `Registros`, `Config`, `Usuarios` e `Instrucciones`. El backend incluido apunta explícitamente a este ID y no al Sheet anterior `Registro de notas`.
+La aplicación usa el libro **notas**, con las pestañas `Registros`, `Config`, `Usuarios` e `Instrucciones`. El backend incluido apunta explícitamente a este ID y no al Sheet anterior `Registro de notas`.
 
 `Config` usa `key` / `value`; `maxPageSize` admite 1–300 (default 300) y `maxBatchSize` 1–100 (default 100). `Usuarios` requiere encabezados exactos `usuario`, `pass`, `rol`, `alcances`, `mail`, `nombre`, en ese orden exacto; una fila por cuenta, máximo 200. `mail` y `nombre` son obligatorios (máximo 254 y 200 caracteres, respectivamente). Solo `usuario` y `pass` se escriben en el formulario para entrar; `rol`, `alcances`, `mail` y `nombre` forman el perfil y autorizaciones de la cuenta. Ejemplo de perfil: Claudio Maza · cmaza@mendoza.edu.ar · Docente. `rol` es `admin` o `docente`. `alcances` es un JSON array (docente: 1–20 contextos exactos `{ "schoolId":"...", "subjectId":"...", "courseId":"...", "divisionId":"..." }`; admin: `[]`). Los identificadores deben ser IDs internos existentes, no nombres. Para cada docente, el perfil puede verse como nombre + mail + rol; `alcances` define los cursos/grupos asignados. Esos alcances se construyen con los IDs internos de los registros ya existentes, pero en la pantalla se muestran sus nombres, no hace falta que el usuario conozca ni escriba IDs. El único usuario que se configura manualmente en la hoja es el admin inicial. Las cuentas docentes, sus datos y sus alcances se crean y editan desde la pestaña «Usuarios y permisos» de la app; Apps Script permite esas acciones solo a sesiones admin y valida que los cuatro IDs existan. Los usuarios se vuelven a leer en cada solicitud protegida, por lo que quitar alcances invalida el acceso al curso en la próxima solicitud. `pass` sigue en texto plano; limitar Drive a administradores confiables y no compartir la hoja con docentes.
 
