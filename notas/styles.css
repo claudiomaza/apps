@@ -19,3 +19,4 @@
 .summary-grade-track{grid-column:1/-1;height:8px;border-radius:99px;background:#edf0eb;overflow:hidden}.summary-grade-track i{display:block;height:100%;border-radius:inherit;background:#579875}
 .summary-chart-subtitle{margin:14px 0 6px;font-size:.82rem;color:var(--green)}.summary-grade-item{display:grid;grid-template-columns:minmax(90px,1fr) auto;gap:4px 10px;padding:8px 0;border-top:1px solid var(--line);font-size:.75rem}.summary-grade-item strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.summary-grade-item span,.summary-grade-item small{color:var(--muted)}.summary-grade-item small{grid-column:1/-1}
 .summary-grade-track{grid-column:1/-1;height:8px;border-radius:99px;background:#edf0eb;overflow:hidden}.summary-grade-track i{display:block;height:100%;border-radius:inherit;background:#579875}
+.summary-year-help{grid-column:1/-1;margin:0;color:var(--muted);font-size:.78rem}

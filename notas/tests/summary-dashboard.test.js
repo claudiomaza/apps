@@ -33,19 +33,33 @@ const stats=Summary.stats({attendance:filter('attendance',{cycle:'2026'}),grades
 assert.equal(stats.attendanceRate,67);assert.equal(stats.averageGrade,7);assert.equal(stats.students,3);assert.equal(stats.classes,2);
 console.log('PASS: global summary filters keep cycle year, entry cohort, and exact student memberships distinct.');
 const app=require('node:fs').readFileSync(require('node:path').join(__dirname,'../app.js'),'utf8');
-assert.match(app,/inputField\('cohortYear','Cohorte de ingreso/,'student editor exposes cohort year');
+assert.match(app,/inputField\('cohortYear','Año en que empezó \(cohorte\)/,'student editor explicitly requests entry year for cohort');
 assert.match(app,/data\.cohortYear=String\(values\.cohortYear\|\|''\)\.trim\(\)/,'saving a student persists its cohort');
 assert.match(app,/s\.data\.cohortYear\|\|'Cohorte pendiente'/,'legacy students without cohort are explicitly identified');
+assert.match(app,/Año escolar \(grupo\)/,'student summary distinguishes current year of study from entry cohort');
+assert.match(app,/Summary\.yearOf\(r,all\)/,'student row gets current academic cycle from dated records, not cohort or school year');
+assert.deepEqual(Summary.schoolYears('s1',[...all,{type:'course',id:'c1',data:{name:'2°'}},{type:'course',id:'c2',data:{name:'3°'}}]).sort(),['2°','3°'],'school years are read from each current course membership, not guessed from cohort');
+assert.deepEqual(Summary.schoolYears('s1',[...all,{type:'course',id:'c1',data:{name:'2°'}},{type:'course',id:'c2',data:{name:'3°'}}],{school:'a'}),['2°'],'school-year labels follow active summary context');
+const html=require('node:fs').readFileSync(require('node:path').join(__dirname,'../index.html'),'utf8');
+assert.match(html,/Ciclo lectivo \(año cursado\)/,'cycle filter means year of course activity');
+assert.match(html,/Cohorte \(año de ingreso\)/,'cohort filter means year student started');
+assert.match(html,/Cohorte = año en que empezó.*Ciclo lectivo = año en que cursa.*Año escolar = curso actual/,'the summary explains the three independent year concepts');
+assert.match(app,/Año en que empezó \(cohorte\)/,'student form distinguishes entry cohort from school year');
+assert.match(html,/<th>Cohorte de ingreso<\/th><th>Ciclo lectivo<\/th><th>Año escolar \(grupo\)<\/th><th>Materias y grupos<\/th>/,'student table displays entry year, academic year, and course level separately');
+assert.match(app,/Summary\.yearOf\(r,all\)/,'student cycle year is derived from dated records, never from cohort or school year');
+assert.deepEqual(Summary.schoolYears('s1',[...all,{type:'course',id:'c1',data:{name:'2.º'}},{type:'course',id:'c2',data:{name:'3.º'}}]).sort(),['2.º','3.º'],'course year comes from current group membership');
 console.log('PASS: cohort is editable, persists per student and leaves historical blanks intact.');
 
 const attendanceMatrix=Summary.attendanceSessions(all.filter(x=>x.type==='attendance'));
 assert.deepEqual(attendanceMatrix.map(x=>[x.date,x.students.s1||'',x.students.s2||'']),[['2026-04-10','present',''],['2026-04-11','','absent'],['2026-04-11','present','']],'attendance sessions remain separate by context/date');
 const detailed=Summary.stats({attendance:all.filter(x=>x.type==='attendance'),grades:[{data:{status:'graded',value:8}},{data:{status:'exempt'}},{data:{status:'pending'}}],students,topics:all.filter(x=>x.type==='topic'),subjects:[]});
 assert.equal(detailed.present,2);assert.equal(detailed.absent,1);assert.equal(detailed.sessions,3);assert.equal(detailed.exempt,1);assert.equal(detailed.pending,1);assert.equal(detailed.classes,2);
+assert.deepEqual(Summary.schoolYears('s1',[...all,{type:'course',id:'c1',data:{name:'2.º'}},{type:'course',id:'c2',data:{name:'3.º'}}]).sort(),['2.º','3.º'],'school years are read from memberships, not inferred from cohort');
+assert.deepEqual(Summary.schoolYears('s1',[...all,{type:'course',id:'c1',data:{name:'2.º'}},{type:'course',id:'c2',data:{name:'3.º'}}],{school:'a'}),['2.º'],'school-year labels follow active summary filters');
 assert.deepEqual(Summary.attendanceByDay(all.filter(x=>x.type==='attendance')).map(x=>[x.weekday,x.present,x.absent]),[['viernes',1,0],['sábado',1,1]],'attendance charts group present/absent by weekday');
 assert.deepEqual(Summary.gradesByAssessment([{data:{assessmentId:'a',status:'graded',value:'8'}},{data:{assessmentId:'a',status:'exempt'}},{data:{assessmentId:'b',status:'pending'}}],[{id:'a',data:{name:'Evaluación 1',date:'2026-04-10',subjectId:'math'}},{id:'b',data:{name:'Evaluación 2',date:'2026-04-11',subjectId:'math'}}]).map(x=>[x.name,x.average,x.graded,x.exempt,x.pending]),[['Evaluación 1',8,1,1,0],['Evaluación 2',null,0,0,1]]);
 assert.doesNotMatch(app,/Exentas|Eximidas/);assert.match(app,/Eximidos/);assert.match(app,/summary-attendance-matrix/);assert.match(app,/summary-grade-matrix/);assert.match(app,/attendanceSessions/);assert.match(app,/gradeMark/);
-const html=require('node:fs').readFileSync(require('node:path').join(__dirname,'../index.html'),'utf8');assert.match(html,/id="config-menu"[\s\S]*data-tab="admin">Registros<\/button><button[^>]*data-tab="trash">Papelera<\/button>/);assert(html.indexOf('data-tab="admin"')>html.indexOf('id="config-menu"')&&html.indexOf('data-tab="trash"')>html.indexOf('data-tab="admin"'),'Registros y Papelera aparecen juntos dentro de Config');
+assert.match(html,/id="config-menu"[\s\S]*data-tab="admin">Registros<\/button><button[^>]*data-tab="trash">Papelera<\/button>/);assert(html.indexOf('data-tab="admin"')>html.indexOf('id="config-menu"')&&html.indexOf('data-tab="trash"')>html.indexOf('data-tab="admin"'),'Registros y Papelera aparecen juntos dentro de Config');
 assert.match(html,/app\.js\?v=20261107-summary2/);assert.match(html,/summary\.js\?v=20261107-summary2/);
 
 const membership={schoolId:'a',subjectId:'math',courseId:'c1',divisionId:'d1',subgroupIds:['sub1']};

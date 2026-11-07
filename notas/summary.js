@@ -3,6 +3,7 @@ function yearOf(r, records) {const d=r.data||{};if(d.date||d.gradeDate)return St
 function cohortOf(id, records) {const s=records.find(x=>x.type==='student'&&x.id===id),v=s?.data?.cohortYear??s?.data?.cohort??'';return /^\d{4}$/.test(String(v))?String(v):'unassigned';}
 function matchesContext(filters,d={}) {return ['school','subject','course','division'].every(k=>!filters[k]||d[k+'Id']===filters[k]);}
 function sameGroup(a={},b={}) {return ['schoolId','subjectId','courseId','divisionId'].every(k=>(a[k]||'')===(b[k]||''));}
+function schoolYears(studentId,records,filters={}) {return [...new Set(records.filter(r=>r.type==='membership'&&r.data?.studentId===studentId&&matchesContext(filters,r.data)).map(m=>records.find(r=>r.type==='course'&&r.id===m.data.courseId)?.data?.name||'').filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es',{numeric:true}));}
 function hasActivity(m,records,filters={}) {return records.some(r=>['attendance','assessment','grade','topic','observation'].includes(r.type)&&['schoolId','subjectId','courseId','divisionId'].every(k=>r.data?.[k]===m.data?.[k])&&(!filters.cycle||yearOf(r,records)===String(filters.cycle))&&(!filters.from||!(r.data?.date||r.data?.gradeDate)||String(r.data.date||r.data.gradeDate)>=filters.from)&&(!filters.to||!(r.data?.date||r.data?.gradeDate)||String(r.data.date||r.data.gradeDate)<=filters.to));}
 function filterRecords(input, records, filters={}) {
  const live=records.filter(x=>!x.deletedAt&&x.status!=='DELETED'),students=live.filter(x=>x.type==='student'),studentIds=new Set(students.filter(s=>(!filters.cohort||cohortOf(s.id,live)===filters.cohort)&&(!filters.student||s.id===filters.student)).map(s=>s.id));
@@ -36,4 +37,4 @@ function gradesByAssessment(grades=[],assessments=[]) {
  return [...by.values()].map(x=>({id:x.id,name:x.name,date:x.date,subjectId:x.subjectId,graded:x.graded,pending:x.pending,notSubmitted:x.notSubmitted,absent:x.absent,exempt:x.exempt,average:x.values.length?Math.round(x.values.reduce((a,b)=>a+b,0)*100/x.values.length)/100:null})).sort((a,b)=>a.date.localeCompare(b.date)||a.name.localeCompare(b.name));
 }
 
-const api={yearOf,cohortOf,filterRecords,stats,attendanceSessions,attendanceByDay,gradesByAssessment,sameGroup};if(typeof module!=='undefined'&&module.exports)module.exports=api;else globalThis.Summary=api;
+const api={yearOf,cohortOf,filterRecords,stats,attendanceSessions,attendanceByDay,gradesByAssessment,sameGroup,schoolYears};if(typeof module!=='undefined'&&module.exports)module.exports=api;else globalThis.Summary=api;
