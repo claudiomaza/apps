@@ -1,0 +1,15 @@
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const html=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
+const app=fs.readFileSync(path.join(__dirname,'../app.js'),'utf8');
+assert.match(html,/getRegistrations\(\)/,'old service workers must be discovered');
+assert.match(html,/\.unregister\(\)/,'old service workers must be unregistered');
+assert.match(html,/caches\.keys\(\)/,'old app caches must be enumerated');
+assert.match(html,/startsWith\("notas-static-"\)/,'only Notes-owned caches may be deleted');
+assert.doesNotMatch(html,/serviceWorker\.register\(/,'Notes must not register a caching-capable worker');
+assert.match(html,/http-equiv="Cache-Control" content="no-store/,'document should request no-store behavior');
+assert.match(html,/app\.js\?v=20261107-nostore1/,'app bundle must be cache-busted');
+assert.match(app,/cache:'no-store'/,'API responses must bypass browser HTTP cache');
+console.log('Notes cache cleanup/no-store contract PASS');
