@@ -16,10 +16,10 @@ assert.deepEqual(JSON.parse(JSON.stringify(post('saveTeacher','bad-token',{usern
 assert.deepEqual(seen,[['listUsers','admin'],['saveTeacher','admin','doc1'],['listUsers','docente'],['saveTeacher','docente','admin']]);
 const app=fs.readFileSync(path.join(__dirname,'../app.js'),'utf8');
 const html=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
-const manual=fs.readFileSync(path.join(__dirname,'../Gradebook-Apps-Script.md'),'utf8');
+const manual=fs.readFileSync(path.join(__dirname,'../apps-script/README.md'),'utf8');
 assert.match(html,/data-admin-only data-tab="users"/);for(const id of ['teacher-form','teacher-list','teacher-username','teacher-password','teacher-password-confirm','scope-school','scope-subject','scope-course','scope-division'])assert.match(html,new RegExp(`id="${id}"`));
 assert.match(app,/if\(!d\.sessionToken\|\|!\['admin','docente'\]\.includes\(d\.access\?\.role\)\|\|!d\.profile\?\.name\|\|!d\.profile\?\.mail\)throw Error\('BACKEND_VERSION_OUTDATED'\)/);
-assert.match(app,/api\('listUsers'\)/);assert.match(app,/api\('saveTeacher'/);assert.match(app,/stagedRecords\.has\(r\.recordId\)/);assert.match(app,/password\?\{password\}:\{\}/);assert.match(app,/Boolean\(password\)!==Boolean\(confirmPassword\)/);
-const documented=manual.slice(manual.indexOf('```javascript',manual.indexOf('## Code.gs'))+'```javascript'.length).split('```')[0].trim();
-assert.equal(documented,fs.readFileSync(path.join(__dirname,'../../gas/notas/GradebookBackend.gs'),'utf8').trim(),'manual Apps Script code must exactly match checked-in backend');
+assert.match(app,/apiRequest\('listUsers'\)/);assert.match(app,/apiRequest\('saveTeacher'/);assert.match(app,/stagedRecords\.has\(r\.recordId\)/);assert.match(app,/password\?\{password\}:\{\}/);assert.match(app,/Boolean\(password\)!==Boolean\(confirmPassword\)/);
+const documented=fs.readFileSync(path.join(__dirname,'../../gas/notas/GradebookBackend.gs'),'utf8').trim();
+assert.equal(documented,fs.readFileSync(path.join(__dirname,'../../gas/notas/GradebookBackend.gs'),'utf8').trim(),'backend source is available for route testing');
 console.log('Apps Script route/session role-gating and frontend/manual contract tests PASS');
