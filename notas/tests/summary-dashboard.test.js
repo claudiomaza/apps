@@ -65,8 +65,8 @@ assert.deepEqual(Summary.schoolYears('s1',[...all,{type:'course',id:'c1',data:{n
 assert.deepEqual(Summary.attendanceByDay(all.filter(x=>x.type==='attendance')).map(x=>[x.weekday,x.present,x.absent]),[['viernes',1,0],['sábado',1,1]],'attendance charts group present/absent by weekday');
 assert.deepEqual(Summary.gradesByAssessment([{data:{assessmentId:'a',status:'graded',value:'8'}},{data:{assessmentId:'a',status:'exempt'}},{data:{assessmentId:'b',status:'pending'}}],[{id:'a',data:{name:'Evaluación 1',date:'2026-04-10',subjectId:'math'}},{id:'b',data:{name:'Evaluación 2',date:'2026-04-11',subjectId:'math'}}]).map(x=>[x.name,x.average,x.graded,x.exempt,x.pending]),[['Evaluación 1',8,1,1,0],['Evaluación 2',null,0,0,1]]);
 assert.doesNotMatch(app,/Exentas|Eximidas/);assert.match(app,/Eximidos/);assert.match(app,/summary-attendance-matrix/);assert.match(app,/summary-grade-matrix/);assert.match(app,/attendanceSessions/);assert.match(app,/gradeMark/);
-assert.match(html,/id="config-menu"[\s\S]*data-tab="admin">Registros<\/button><button[^>]*data-tab="trash">Papelera<\/button>/);assert(html.indexOf('data-tab="admin"')>html.indexOf('id="config-menu"')&&html.indexOf('data-tab="trash"')>html.indexOf('data-tab="admin"'),'Registros y Papelera aparecen juntos dentro de Config');
-assert.match(html,/app\.js\?v=20261107-summary2/);assert.match(html,/summary\.js\?v=20261107-summary2/);
+assert(html.indexOf('aria-controls="configuration-menu"')<html.indexOf('data-tab="admin"')&&html.indexOf('data-tab="admin"')<html.indexOf('data-tab="trash"'),'Registros y Papelera están dentro de Configuración');
+assert.match(html,/app\.js\?v=20261107-nav-final/);assert.match(html,/summary\.js\?v=20261107-nav-final/);
 
 const membership={schoolId:'a',subjectId:'math',courseId:'c1',divisionId:'d1',subgroupIds:['sub1']};
 assert.equal(Summary.sameGroup(membership,all.find(x=>x.type==='attendance').data),true,'extra membership fields must not hide attendance');assert.equal(Summary.sameGroup(membership,{...membership,subjectId:'hist'}),false,'different groups never mix');
