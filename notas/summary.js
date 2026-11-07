@@ -1,6 +1,7 @@
 'use strict';
 function yearOf(r, records) {const d=r.data||{};if(d.date||d.gradeDate)return String(d.date||d.gradeDate).slice(0,4);if(d.assessmentId)return String(records.find(x=>x.type==='assessment'&&x.id===d.assessmentId)?.data?.date||'').slice(0,4);return '';}
 function cohortOf(id, records) {const s=records.find(x=>x.type==='student'&&x.id===id),v=s?.data?.cohortYear??s?.data?.cohort??'';return /^\d{4}$/.test(String(v))?String(v):'unassigned';}
+function cohortLabel(id,records) {const s=records.find(x=>x.type==='student'&&x.id===id),year=cohortOf(id,records),date=String(s?.data?.cohortStartDate||'');return year==='unassigned'?'Cohorte pendiente':/^\d{4}-\d{2}-\d{2}$/.test(date)?`${year} · ${date.slice(8,10)}/${date.slice(5,7)}`:year;}
 function matchesContext(filters,d={}) {return ['school','subject','course','division'].every(k=>!filters[k]||d[k+'Id']===filters[k]);}
 function sameGroup(a={},b={}) {return ['schoolId','subjectId','courseId','divisionId'].every(k=>(a[k]||'')===(b[k]||''));}
 function schoolYears(studentId,records,filters={}) {return [...new Set(records.filter(r=>r.type==='membership'&&r.data?.studentId===studentId&&matchesContext(filters,r.data)).map(m=>records.find(r=>r.type==='course'&&r.id===m.data.courseId)?.data?.name||'').filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es',{numeric:true}));}
@@ -37,4 +38,4 @@ function gradesByAssessment(grades=[],assessments=[]) {
  return [...by.values()].map(x=>({id:x.id,name:x.name,date:x.date,subjectId:x.subjectId,graded:x.graded,pending:x.pending,notSubmitted:x.notSubmitted,absent:x.absent,exempt:x.exempt,average:x.values.length?Math.round(x.values.reduce((a,b)=>a+b,0)*100/x.values.length)/100:null})).sort((a,b)=>a.date.localeCompare(b.date)||a.name.localeCompare(b.name));
 }
 
-const api={yearOf,cohortOf,filterRecords,stats,attendanceSessions,attendanceByDay,gradesByAssessment,sameGroup,schoolYears};if(typeof module!=='undefined'&&module.exports)module.exports=api;else globalThis.Summary=api;
+const api={yearOf,cohortOf,cohortLabel,filterRecords,stats,attendanceSessions,attendanceByDay,gradesByAssessment,sameGroup,schoolYears};if(typeof module!=='undefined'&&module.exports)module.exports=api;else globalThis.Summary=api;
