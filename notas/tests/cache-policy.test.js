@@ -12,4 +12,5 @@ assert.doesNotMatch(html,/serviceWorker\.register\(/,'Notes must not register a 
 assert.match(html,/http-equiv="Cache-Control" content="no-store/,'document should request no-store behavior');
 assert.match(html,/app\.js\?v=20261107-nostore1/,'app bundle must be cache-busted');
 assert.match(app,/cache:'no-store'/,'API responses must bypass browser HTTP cache');
+assert.doesNotMatch(app,/headers:\{[^}]*Cache-Control/,'avoid custom request headers that can trigger Apps Script CORS preflight');
 console.log('Notes cache cleanup/no-store contract PASS');
