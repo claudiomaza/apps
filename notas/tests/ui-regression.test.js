@@ -46,7 +46,15 @@ assert.match(html,/data-summary-panel="statistics"[\s\S]*id="summary-kpis"[\s\S]
 assert.match(html,/id="attendance-list" class="attendance-rows"/);assert.match(html,/id="grade-entry-list" class="grade-rows"/);
 assert.match(css,/\.attendance-rows tr/);assert.match(css,/\.grade-rows tr/);
 assert.match(html,/id="configuration-menu"[\s\S]*data-tab="students"[\s\S]*data-tab="users"[\s\S]*data-tab="assessments"/,'Configuración contains roster, teachers and evaluations');
-assert(html.indexOf('aria-controls="configuration-menu"')<html.indexOf('data-tab="admin"')&&html.indexOf('data-tab="admin"')<html.indexOf('data-tab="trash"'),'Registros and Papelera are in Configuración');assert(html.includes('id="view-trash"'),'Papelera view exists');assert.match(html,/id="summary-filter-cycle"[\s\S]*id="summary-filter-cohort"[\s\S]*id="summary-filter-school"[\s\S]*id="summary-filter-subject"[\s\S]*id="summary-filter-student"/,'Summary has global cycle, cohort, group and student filters');assert.doesNotMatch(html,/data-summary-tab="topics"|data-summary-panel="topics"/,'the topic book is not a Panorama tab or fixed statistics content');
+assert(html.indexOf('aria-controls="configuration-menu"')<html.indexOf('data-tab="admin"')&&html.indexOf('data-tab="admin"')<html.indexOf('data-tab="trash"'),'Registros and Papelera are in Configuración');assert(html.includes('id="view-trash"'),'Papelera view exists');assert.match(html,/id="summary-filter-cycle"[\s\S]*id="summary-filter-cohort"[\s\S]*id="summary-filter-school"[\s\S]*id="summary-filter-subject"[\s\S]*id="summary-filter-student"/,'Summary has global cycle, cohort, group and student filters');assert(!html.match(/<section class="summary-panel" data-summary-panel="statistics"[\s\S]*?<\/section>/)?.[0].includes('id="summary-topic-rows"'),'topic table is separate from statistics content');
+assert.match(html,/data-summary-tab="overview">Panorama[\s\S]*data-summary-tab="topics">Libro de tema/,'read-only topic book sits beside Panorama');
+assert.match(html,/data-summary-panel="topics"[\s\S]*id="summary-topic-rows"/,'Panorama topic view has a separate read-only table');
+assert.match(html,/<section id="view-topic" class="tab-view" hidden>[\s\S]*id="new-topic"/,"editable topic register remains hidden until selected from Registrar");
+assert.match(html,/id="teacher-scopes"[\s\S]*class="teacher-availability"/,'assignment and availability are colocated');
+assert.match(html,/availability-teacher[\s\S]*availability-selected-name[\s\S]*availability-list/,'availability names its selected teacher');
+assert.match(source,/\$\('#availability-teacher'\)\.onchange[\s\S]*\$\('#scope-teacher'\)\.value/,'availability selection updates assigned teacher');
+assert.match(source,/\$\('#summary-topic-rows'\)\.innerHTML=topics/,'overview topic rows use current summary filters');
+
 assert.match(html,/summary-filters[\s\S]*data-summary-panel="statistics"/,'global filters live outside the statistics tab');
 assert.match(html,/summary-subject-statistics/,'statistics expose per-subject indicators');
 assert.match(html,/id="attendance-search"[^\n]*id="attendance-status-filter"/,'attendance register has search and status filters');
@@ -71,3 +79,17 @@ const from=records.find(r=>r.type==='attendance'&&r.data.studentId==='ZQA-2026-0
 console.log('PASS: 3 subjects; 21 student rows each in Libreta, Notas and Asistencia; grade entry date follows assessment and a valid class schedule is selected.');
 
 assert.match(css,/\.summary-year-help/,'summary distinguishes cohort, school year and academic cycle');
+
+
+assert.match(html,/data-summary-tab="overview">Panorama<\/button><button class="tab" type="button" data-summary-tab="topics">Libro de tema/,"topic view sits beside Panorama");
+assert.match(html,/data-summary-panel="topics"[\s\S]*id="summary-topic-rows"/,"Panorama topic content has its own view");
+assert.match(html,/<section id="view-topic" class="tab-view" hidden>[\s\S]*id="new-topic"/,"editable topic register remains hidden until selected from Registrar");
+assert.match(html,/id="teacher-scopes"[\s\S]*class="teacher-availability"/,"availability is next to assignment card");
+assert.match(html,/availability-teacher[\s\S]*availability-selected-name[\s\S]*availability-list/,"availability names selected teacher");
+assert.match(source,/\$\('#availability-teacher'\)\.onchange[\s\S]*\$\('#scope-teacher'\)\.value/,"availability selection updates assignment teacher");
+assert.match(source,/\$\('#summary-topic-rows'\)\.innerHTML=topics/,"read-only topic list uses summary filter results");
+
+
+assert.match(css,/\.users-layout\{grid-template-columns:minmax\(260px,\.9fr\) minmax\(300px,1fr\) minmax\(300px,1fr\)\}/,'assignment and availability have adjacent desktop columns');
+assert.match(css,/@media\(max-width:950px\)\{\.users-layout\{grid-template-columns:1fr\}/,'teacher cards stack on smaller screens');
+assert.match(css,/\.attendance-rows td:first-child\{min-width:190px\}/,'attendance student names have room per row');

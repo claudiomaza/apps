@@ -14,7 +14,8 @@ assert.equal(Summary.ageOn('2000-11-08',new Date('2026-11-07T12:00:00Z')),25,'ag
 assert.equal(Summary.ageOn('2000-11-07',new Date('2026-11-07T12:00:00Z')),26,'age advances on birthday');
 assert.equal(Summary.ageOn('2000-02-30',new Date('2026-11-07T12:00:00Z')),null,'invalid birth dates do not produce an age');
 const htmlBefore=require('node:fs').readFileSync(require('node:path').join(__dirname,'../index.html'),'utf8');
-assert.doesNotMatch(htmlBefore,/data-summary-tab="topics"|data-summary-panel="topics"/,'topic book must not appear in dashboard panorama');
+assert.match(htmlBefore,/data-summary-tab="overview">Panorama[\s\S]*data-summary-tab="topics">Libro de tema/,'topic book appears as a separate overview tab');
+assert.match(htmlBefore,/data-summary-panel="topics"[\s\S]*id="summary-topic-rows"/,'topic book has its own read-only panel');
 assert.match(htmlBefore,/summary-filters[\s\S]*data-summary-panel="statistics"[\s\S]*summary-kpis/,'global filters remain outside the selected Statistics panel');
 assert.match(htmlBefore,/summary-subject-statistics/,'Statistics includes a per-subject and group indicators table');
 assert.match(htmlBefore,/id="attendance-search"[\s\S]*id="attendance-status-filter"/,'attendance has explicit search and status filters');
