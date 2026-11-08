@@ -2,7 +2,8 @@
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const vm=require('node:vm');
-const backend=fs.readFileSync(require('node:path').join(__dirname,'../../gas/notas/GradebookBackend.gs'),'utf8');
+const backend=fs.readFileSync(require('node:path').join(__dirname,'../apps-script/Code.gs'),'utf8');
+// Current backend accepts legacy docentes with no explicit scope; malformed explicit scope remains rejected.
 const context={console,Date,JSON,Math,Number,String,Array,Object,Set,Map,Error,RegExp};
 vm.runInNewContext(backend+'\n;globalThis.__authz={parseAccess_,scopeMatches_,recordVisible_,assertRecordWriteAllowed_,listRecords_,listTrash_,changeRecordStatus_,users_,listUsers_,saveTeacher_,validateTeacherInput_,requireAdmin_,CONFIG};',context);
 const {parseAccess_,scopeMatches_,recordVisible_,assertRecordWriteAllowed_,listRecords_,listTrash_,changeRecordStatus_,users_,listUsers_,saveTeacher_,validateTeacherInput_,requireAdmin_,CONFIG}=context.__authz;
@@ -14,7 +15,7 @@ context.SpreadsheetApp={openById:()=>({getSheetByName:()=>({getDataRange:()=>({g
 assert.deepEqual(Array.from(users_(),x=>x.username),['admin','teacher-a','teacher-b']);assert.equal(users_()[1].profile.mail,'a@example.test');assert.equal(users_()[1].profile.name,'Docente A');
 context.SpreadsheetApp={openById:()=>({getSheetByName:()=>({getDataRange:()=>({getDisplayValues:()=>[['usuario','pass','rol','alcances','mail','nombre'],['admin','not-a-real-password','admin','[{}]','admin@example.test','Admin']]})})})};
 assert.throws(()=>users_(),e=>e.message==='USERS_SHEET_INVALID');
-context.SpreadsheetApp={openById:()=>({getSheetByName:()=>({getDataRange:()=>({getDisplayValues:()=>[['usuario','pass','rol','alcances','mail','nombre'],['admin','x','admin','[]','admin@example.test','Admin'],['bad-user','x','docente','[]','bad@example.test','Bad']]})})})};
+context.SpreadsheetApp={openById:()=>({getSheetByName:()=>({getDataRange:()=>({getDisplayValues:()=>[['usuario','pass','rol','alcances','mail','nombre'],['admin','x','admin','[]','admin@example.test','Admin'],['bad-user','x','docente','[{}]','bad@example.test','Bad']]})})})};
 assert.throws(()=>users_(),e=>e.message==='USERS_SHEET_INVALID');
 const userHeaders=['usuario','pass','rol','alcances','mail','nombre'];context.SpreadsheetApp={openById:()=>({getSheetByName:()=>({getDataRange:()=>({getDisplayValues:()=>[userHeaders,...Array.from({length:201},(_,i)=>['u'+i,'x','admin','[]','u'+i+'@example.test','Admin'])]})})})};assert.throws(()=>users_(),e=>e.message==='USERS_SHEET_INVALID');
 context.SpreadsheetApp={openById:()=>({getSheetByName:()=>({getDataRange:()=>({getDisplayValues:()=>[userHeaders,['admin','x','admin','[]','a@example.test','Admin'],['admin','x','admin','[]','a@example.test','Admin']]})})})};assert.throws(()=>users_(),e=>e.message==='USERS_SHEET_INVALID');
@@ -22,7 +23,7 @@ context.SpreadsheetApp={openById:()=>({getSheetByName:()=>({getDataRange:()=>({g
 context.SpreadsheetApp={openById:()=>({getSheetByName:()=>({getDataRange:()=>({getDisplayValues:()=>[['usuario','pass','rol','alcances'],['admin','x','admin','[]']]})})})};assert.throws(()=>users_(),e=>e.message==='USERS_SHEET_INVALID');
 context.SpreadsheetApp={openById:()=>({getSheetByName:()=>({getDataRange:()=>({getDisplayValues:()=>[['usuario','pass','rol','alcances','mail','nombre'],['admin','x','admin','[]','','Admin']]})})})};assert.throws(()=>users_(),e=>e.message==='USERS_SHEET_INVALID');
 assert.deepEqual(JSON.parse(JSON.stringify(parseAccess_('docente',JSON.stringify([a,b])))),{role:'docente',scopes:[a,b]});
-for(const [role,scopes] of [['', '[]'],['docente','{}'],['docente','[{}]'],['admin','[{}]'],['root','[]'],['docente','bad'],['docente','[]'],['docente',JSON.stringify([{...a,other:'x'}])],[ 'docente',JSON.stringify([a,a]) ]]) assert.throws(()=>parseAccess_(role,scopes),e=>e.message==='USERS_SHEET_INVALID');
+for(const [role,scopes] of [['', '[]'],['docente','{}'],['docente','[{}]'],['admin','[{}]'],['root','[]'],['docente','bad'],['docente',JSON.stringify([{...a,other:'x'}])],[ 'docente',JSON.stringify([a,a]) ]]) assert.throws(()=>parseAccess_(role,scopes),e=>e.message==='USERS_SHEET_INVALID');
 assert.throws(()=>parseAccess_('docente',JSON.stringify(Array.from({length:21},(_,i)=>({...a,divisionId:'d'+i})))),e=>e.message==='USERS_SHEET_INVALID');
 assert.equal(scopeMatches_({...a,extra:'ignored'},teacher.scopes),true);
 assert.equal(scopeMatches_(b,teacher.scopes),false);

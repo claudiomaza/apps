@@ -15,7 +15,7 @@ assert.match(html,/id="app-content" hidden/);assert.match(html,/stage-store\.js/
 assert.match(html,/id="sync-button"/);
 assert.match(html,/id="sync-state"/);
 assert.match(html,/styles\.css\?v=20261108-schedule-generator2/);
-assert.match(html,/app\.js\?v=20261108-schedule-generator2/);
+assert.match(html,/app\.js\?v=20261108-ctx-init1/);
 
 assert.match(sw,/notas-static-/);
 assert.match(sw,/fetch\(e\.request,\{cache:'no-store'\}\)/);

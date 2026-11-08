@@ -11,14 +11,14 @@ const context={state:{date:new Date(2026,10,1),events:[
   ...Array.from({length:6},(_,i)=>({eventId:`extra-${i}`,title:`Extra ${i+1}`,startAt:`2026-11-08T${String(13+i).padStart(2,'0')}:00:00-03:00`,endAt:`2026-11-08T${String(14+i).padStart(2,'0')}:00:00-03:00`})),
   {eventId:'c',title:'Otro día',startAt:'2026-11-09T08:00:00-03:00',endAt:'2026-11-09T09:00:00-03:00'},
   {eventId:'d',title:'Eliminado',startAt:'2026-11-08T20:00:00-03:00',endAt:'2026-11-08T21:00:00-03:00',status:'DELETED'},
-]},$:(s)=>({'#month-label':{textContent:''},'#grid':grid,'#events':events,'#day-events-title':title,'#day-events-list':list,'#day-events-dialog':dialog,'#close-day-events':closeButton}[s]),isoDay:d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`,escapeHtml:s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),formatReminderDisplay:()=>'',formatRecurrence:()=> 'No se repite',Intl,Date,Map,String,Number};
+]},document:{querySelectorAll:()=>[]},weekStartsOn:()=>1,groupById:()=>null,$:(s)=>({'#month-label':{textContent:''},'#grid':grid,'#events':events,'#day-events-title':title,'#day-events-list':list,'#day-events-dialog':dialog,'#close-day-events':closeButton}[s]),isoDay:d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`,escapeHtml:s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),formatReminderDisplay:()=>'',formatRecurrence:()=> 'No se repite',Intl,Date,Map,String,Number,weekStartsOn:()=>1,groupById:()=>null};
 vm.runInNewContext(`${extract('render','openDayEvents')}\n${extract('openDayEvents','escapeHtml')}`,context);
 context.render();
 assert.match(grid.innerHTML,/Ver 8 eventos del 8 de noviembre/,'day cell is keyboard-accessible with the event count');
 assert.equal((grid.innerHTML.match(/class="day-dot color-/g)||[]).length,9,'all eight active events on Nov 8 and one on Nov 9 have a dot; deleted event excluded');
-assert.equal((grid.innerHTML.match(/class="day-dot color-[0-5]"/g)||[]).length,9,'all dots cycle through the palette');
+assert.equal((grid.innerHTML.match(/class="day-dot color-[0-5] /g)||[]).length,9,'all dots cycle through the palette');
 assert.match(grid.innerHTML,/class="day-event-count">8</,'day count includes every active event, not only visible dots');
-assert.equal((grid.innerHTML.match(/class="day-dot color-0"/g)||[]).length,3,'dot colors cycle for large event counts');
+assert.equal((grid.innerHTML.match(/class="day-dot color-0 /g)||[]).length,3,'dot colors cycle for large event counts');
 context.openDayEvents('2026-11-08');
 assert.equal(dialog.opened,true,'selecting a day opens the native modal dialog');
 assert.match(title.textContent,/8 de noviembre/,'dialog identifies the selected date');
