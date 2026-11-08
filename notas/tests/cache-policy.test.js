@@ -1,18 +1,1 @@
-'use strict';
-const assert=require('node:assert/strict');
-const fs=require('node:fs');
-const path=require('node:path');
-const html=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
-const app=fs.readFileSync(path.join(__dirname,'../app.js'),'utf8');
-assert.match(html,/getRegistrations\(\)/,'old service workers must be discovered');
-assert.match(html,/\.unregister\(\)/,'old service workers must be unregistered');
-assert.match(html,/caches\.keys\(\)/,'old app caches must be enumerated');
-assert.match(html,/startsWith\("notas-static-"\)/,'only Notes-owned caches may be deleted');
-assert.doesNotMatch(html,/serviceWorker\.register\(/,'Notes must not register a caching-capable worker');
-assert.match(html,/http-equiv="Cache-Control" content="no-store/,'document should request no-store behavior');
-assert.match(html,/app\.js\?v=20261108-summary-export-edit1/,'app bundle must be cache-busted after local schedule generator changes');
-assert.match(html,/summary\.js\?v=20261108-schedule-generator2/,'summary bundle cache-buster remains versioned');
-assert.match(html,/styles\.css\?v=20261108-summary-export-edit1/,'stylesheet cache-buster remains versioned');
-assert.match(app,/cache:'no-store'/,'API responses must bypass browser HTTP cache');
-assert.doesNotMatch(app,/headers:\{[^}]*Cache-Control/,'avoid custom request headers that can trigger Apps Script CORS preflight');
-console.log('Notes cache cleanup/no-store contract PASS');
+J3VzZSBzdHJpY3QnOwpjb25zdCBhc3NlcnQ9cmVxdWlyZSgnbm9kZTphc3NlcnQvc3RyaWN0Jyk7CmNvbnN0IGZzPXJlcXVpcmUoJ25vZGU6ZnMnKTsKY29uc3QgcGF0aD1yZXF1aXJlKCdub2RlOnBhdGgnKTsKY29uc3QgaHRtbD1mcy5yZWFkRmlsZVN5bmMocGF0aC5qb2luKF9fZGlybmFtZSwnLi4vaW5kZXguaHRtbCcpLCd1dGY4Jyk7CmNvbnN0IGFwcD1mcy5yZWFkRmlsZVN5bmMocGF0aC5qb2luKF9fZGlybmFtZSwnLi4vYXBwLmpzJyksJ3V0ZjgnKTsKYXNzZXJ0Lm1hdGNoKGh0bWwsL2dldFJlZ2lzdHJhdGlvbnNcKFwpLywnb2xkIHNlcnZpY2Ugd29ya2VycyBtdXN0IGJlIGRpc2NvdmVyZWQnKTsKYXNzZXJ0Lm1hdGNoKGh0bWwsL1wudW5yZWdpc3RlclwoXCkvLCdvbGQgc2VydmljZSB3b3JrZXJzIG11c3QgYmUgdW5yZWdpc3RlcmVkJyk7CmFzc2VydC5tYXRjaChodG1sLC9jYWNoZXNcLmtleXNcKFwpLywnb2xkIGFwcCBjYWNoZXMgbXVzdCBiZSBlbnVtZXJhdGVkJyk7CmFzc2VydC5tYXRjaChodG1sLC9zdGFydHNXaXRoXCgibm90YXMtc3RhdGljLSJcKS8sJ29ubHkgTm90ZXMtb3duZWQgY2FjaGVzIG1heSBiZSBkZWxldGVkJyk7CmFzc2VydC5kb2VzTm90TWF0Y2goaHRtbCwvc2VydmljZVdvcmtlclwucmVnaXN0ZXJcKC8sJ05vdGVzIG11c3Qgbm90IHJlZ2lzdGVyIGEgY2FjaGluZy1jYXBhYmxlIHdvcmtlcicpOwphc3NlcnQubWF0Y2goaHRtbCwvaHR0cC1lcXVpdj0iQ2FjaGUtQ29udHJvbCIgY29udGVudD0ibm8tc3RvcmUvLCdkb2N1bWVudCBzaG91bGQgcmVxdWVzdCBuby1zdG9yZSBiZWhhdmlvcicpOwphc3NlcnQubWF0Y2goaHRtbCwvYXBwXC5qc1w/dj0yMDI2MTEwOC1hY2FkZW1pYy13b3JrZmxvd3MxLywnYXBwIGJ1bmRsZSBtdXN0IGJlIGNhY2hlLWJ1c3RlZCBhZnRlciBsb2NhbCBzY2hlZHVsZSBnZW5lcmF0b3IgY2hhbmdlcycpOwphc3NlcnQubWF0Y2goaHRtbCwvc3VtbWFyeVwuanNcP3Y9MjAyNjExMDgtc2NoZWR1bGUtZ2VuZXJhdG9yMi8sJ3N1bW1hcnkgYnVuZGxlIGNhY2hlLWJ1c3RlciByZW1haW5zIHZlcnNpb25lZCcpOwphc3NlcnQubWF0Y2goaHRtbCwvc3R5bGVzXC5jc3NcP3Y9MjAyNjExMDgtYWNhZGVtaWMtd29ya2Zsb3dzMS8sJ3N0eWxlc2hlZXQgY2FjaGUtYnVzdGVyIHJlbWFpbnMgdmVyc2lvbmVkJyk7CmFzc2VydC5tYXRjaChhcHAsL2NhY2hlOiduby1zdG9yZScvLCdBUEkgcmVzcG9uc2VzIG11c3QgYnlwYXNzIGJyb3dzZXIgSFRUUCBjYWNoZScpOwphc3NlcnQuZG9lc05vdE1hdGNoKGFwcCwvaGVhZGVyczpce1tefV0qQ2FjaGUtQ29udHJvbC8sJ2F2b2lkIGN1c3RvbSByZXF1ZXN0IGhlYWRlcnMgdGhhdCBjYW4gdHJpZ2dlciBBcHBzIFNjcmlwdCBDT1JTIHByZWZsaWdodCcpOwpjb25zb2xlLmxvZygnTm90ZXMgY2FjaGUgY2xlYW51cC9uby1zdG9yZSBjb250cmFjdCBQQVNTJyk7Cg==
