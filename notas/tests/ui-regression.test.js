@@ -97,3 +97,16 @@ assert.match(css,/@media\(max-width:950px\)\{\.users-layout\{grid-template-colum
 assert.match(css,/\.attendance-rows td:first-child\{min-width:190px\}/,'attendance student names have room per row');
 
 assert.match(html,/id="view-users"[\s\S]*<div class="users-layout"><div class="teacher-actions">[\s\S]*id="teacher-scopes"[\s\S]*<\/div><section class="teacher-availability">[\s\S]*<\/section><section><h3>Docentes existentes<\/h3>[\s\S]*id="teacher-list"[\s\S]*<\/section><\/div><\/section><section id="view-assessments"/,"assignment, availability and teacher table stay inside the hidden users view");
+
+assert.match(html,/id="view-users"[\s\S]*id="export-schedules"[^>]*>Exportar DDJJ docente/,'teacher DDJJ export is located in Docentes y permisos');
+assert.match(html,/id="view-libreta"[\s\S]*id="export-subject-teachers"[^>]*>Exportar materias y docentes/,'Libreta export reports subjects and assigned teachers');
+assert.match(source,/export-subject-teachers[\s\S]*teacherId/,'subject export includes teacher assignments');
+assert.match(css,/summary-matrix tbody th\[scope="row"\][\s\S]*text-transform:\s*none/,'summary matrix student row headers avoid column-heading typography');
+
+assert.match(source,/export-subject-teachers[\s\S]*teacherId/,'subject export includes teacher assignments');
+assert.match(css,/summary-matrix tbody th\[scope="row"\][\s\S]*text-transform:\s*none/,'summary matrix student row headers avoid column-heading typography');
+
+assert.match(html,/<dialog id="teacher-dialog"[\s\S]*id="teacher-form"[\s\S]*id="teacher-editing"[\s\S]*id="teacher-id"[\s\S]*id="teacher-username"[\s\S]*id="teacher-name"[\s\S]*id="teacher-mail"[\s\S]*id="teacher-password"[\s\S]*id="teacher-password-confirm"/,'teacher editing modal contains all editable profile fields');
+assert.match(source,/export-subject-teachers[\s\S]*teacherId/,'subject export includes teacher assignment data');
+assert.match(css,/summary-matrix tbody th\[scope="row"\][\s\S]*text-transform:\s*none/,'student names in summary matrices use readable row-header styling');
+assert.match(source,/teacher-dialog'\)\.showModal\(\)/,'editing a teacher opens the edit dialog');
