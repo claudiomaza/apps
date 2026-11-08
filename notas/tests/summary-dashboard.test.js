@@ -1,6 +1,26 @@
 'use strict';
 const assert=require('node:assert/strict');
 const Summary=require('../summary.js');
+const subjectStats=Summary.statisticsBySubject({
+ memberships:[{data:{studentId:'s1',schoolId:'a',subjectId:'math',courseId:'c1',divisionId:'d1'}},{data:{studentId:'s1',schoolId:'b',subjectId:'hist',courseId:'c2',divisionId:'d2'}}],
+ attendance:[{data:{studentId:'s1',schoolId:'a',subjectId:'math',courseId:'c1',divisionId:'d1',date:'2026-04-10',scheduleId:'m1',status:'present'}},{data:{studentId:'s1',schoolId:'b',subjectId:'hist',courseId:'c2',divisionId:'d2',date:'2026-04-10',scheduleId:'h1',status:'absent'}}],
+ grades:[{data:{studentId:'s1',assessmentId:'am',status:'graded',value:8}},{data:{studentId:'s1',assessmentId:'ah',status:'pending',value:''}}],
+ assessments:[{id:'am',data:{schoolId:'a',subjectId:'math',courseId:'c1',divisionId:'d1'}},{id:'ah',data:{schoolId:'b',subjectId:'hist',courseId:'c2',divisionId:'d2'}}],
+ subjects:[{id:'math',data:{name:'Matemática'}},{id:'hist',data:{name:'Historia'}}]
+});
+assert.deepEqual(subjectStats.map(x=>[x.subjectId,x.present,x.absent,x.attendanceRate,x.averageGrade,x.pending]).sort((a,b)=>a[0].localeCompare(b[0])),[['hist',0,1,0,null,1],['math',1,0,100,8,0]],'statistics stay separate by subject and exact group for a student with simultaneous attendance and absence');
+assert.equal(Summary.attendancePercent([{data:{status:'present'}},{data:{status:'absent'}},{data:{status:'pending'}}]),50,'attendance ratio counts only explicit present/absent marks');
+assert.equal(Summary.ageOn('2000-11-08',new Date('2026-11-07T12:00:00Z')),25,'age uses birthday, not a rounded 365-day divisor');
+assert.equal(Summary.ageOn('2000-11-07',new Date('2026-11-07T12:00:00Z')),26,'age advances on birthday');
+assert.equal(Summary.ageOn('2000-02-30',new Date('2026-11-07T12:00:00Z')),null,'invalid birth dates do not produce an age');
+const htmlBefore=require('node:fs').readFileSync(require('node:path').join(__dirname,'../index.html'),'utf8');
+assert.doesNotMatch(htmlBefore,/data-summary-tab="topics"|data-summary-panel="topics"/,'topic book must not appear in dashboard panorama');
+assert.match(htmlBefore,/summary-filters[\s\S]*data-summary-panel="statistics"[\s\S]*summary-kpis/,'global filters remain outside the selected Statistics panel');
+assert.match(htmlBefore,/summary-subject-statistics/,'Statistics includes a per-subject and group indicators table');
+assert.match(htmlBefore,/id="attendance-search"[\s\S]*id="attendance-status-filter"/,'attendance has explicit search and status filters');
+assert.match(htmlBefore,/id="grades-search"[\s\S]*id="grades-status-filter"/,'grade entry has explicit search and status filters');
+assert.match(htmlBefore,/Indicadores por materia[\s\S]*Presentes[\s\S]*Ausentes[\s\S]*Promedio[\s\S]*Pendientes[\s\S]*Eximidos/,'statistics table enumerates attendance and grade indicators for every subject');
+
 const students=[
  {type:'student',id:'s1',data:{studentId:'001',fullName:'Alma',cohortYear:'2024'}},
  {type:'student',id:'s2',data:{studentId:'002',fullName:'Beto',cohortYear:'2025'}},
@@ -64,9 +84,11 @@ assert.deepEqual(Summary.schoolYears('s1',[...all,{type:'course',id:'c1',data:{n
 assert.deepEqual(Summary.schoolYears('s1',[...all,{type:'course',id:'c1',data:{name:'2.º'}},{type:'course',id:'c2',data:{name:'3.º'}}],{school:'a'}),['2.º'],'school-year labels follow active summary filters');
 assert.deepEqual(Summary.attendanceByDay(all.filter(x=>x.type==='attendance')).map(x=>[x.weekday,x.present,x.absent]),[['viernes',1,0],['sábado',1,1]],'attendance charts group present/absent by weekday');
 assert.deepEqual(Summary.gradesByAssessment([{data:{assessmentId:'a',status:'graded',value:'8'}},{data:{assessmentId:'a',status:'exempt'}},{data:{assessmentId:'b',status:'pending'}}],[{id:'a',data:{name:'Evaluación 1',date:'2026-04-10',subjectId:'math'}},{id:'b',data:{name:'Evaluación 2',date:'2026-04-11',subjectId:'math'}}]).map(x=>[x.name,x.average,x.graded,x.exempt,x.pending]),[['Evaluación 1',8,1,1,0],['Evaluación 2',null,0,0,1]]);
+assert.match(app,/summary-instance-name/,'grade matrix has a separate instance-name line under date');assert.match(app,/Summary\.statisticsBySubject/,'summary computes indicators per subject and exact group');
+assert.match(app,/\$\('#summary-subject-statistics'\)\.innerHTML=subjectStatistics/,'subject summary table is populated from context-specific stats');assert.match(app,/label:`\$\{a\.data\.date\|\|'Sin fecha'\}\\n\$\{assessmentName\(a\.id\)\}`/,'assessment name is rendered under its date in grade matrix headers');
 assert.doesNotMatch(app,/Exentas|Eximidas/);assert.match(app,/Eximidos/);assert.match(app,/summary-attendance-matrix/);assert.match(app,/summary-grade-matrix/);assert.match(app,/attendanceSessions/);assert.match(app,/gradeMark/);
 assert(html.indexOf('aria-controls="configuration-menu"')<html.indexOf('data-tab="admin"')&&html.indexOf('data-tab="admin"')<html.indexOf('data-tab="trash"'),'Registros y Papelera están dentro de Configuración');
-assert.match(html,/app\.js\?v=20261107-nav-final/);assert.match(html,/summary\.js\?v=20261107-nav-final/);
+assert.match(html,/app\.js\?v=20261108-schedule-generator2/);assert.match(html,/summary\.js\?v=20261108-schedule-generator2/);
 
 const membership={schoolId:'a',subjectId:'math',courseId:'c1',divisionId:'d1',subgroupIds:['sub1']};
 assert.equal(Summary.sameGroup(membership,all.find(x=>x.type==='attendance').data),true,'extra membership fields must not hide attendance');assert.equal(Summary.sameGroup(membership,{...membership,subjectId:'hist'}),false,'different groups never mix');

@@ -1,0 +1,14 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs');
+const app=fs.readFileSync(require('node:path').join(__dirname,'../app.js'),'utf8'),lazy=fs.readFileSync(require('node:path').join(__dirname,'../xlsx-lazy.js'),'utf8'),html=fs.readFileSync(require('node:path').join(__dirname,'../index.html'),'utf8');
+const start=app.indexOf("$('#export-schedules').onclick="),end=app.indexOf("\n$('#export-xlsx').onclick",start),exportCode=app.slice(start,end);
+assert(start>=0&&end>start,'schedule export handler exists');
+assert.match(exportCode,/XLSX\.utils\.book_new\(\)/,'schedule export creates an Excel workbook');
+assert.match(exportCode,/\['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'\]/,'workbook has one column per weekday');
+assert.match(exportCode,/horarios-docentes\.xlsx/,'workbook has a useful filename');
+assert.match(exportCode,/owners=.*teacherId/,'workbook creates sheets grouped by teacher');
+assert.match(app,/teacherId===x\.data\.teacherId/,'teacher worksheet contains only its assigned sessions');
+assert.match(lazy,/#import-xlsx,#export-xlsx,#export-schedules,#export-schedules-shortcut/,'Excel library lazy-loader intercepts schedule export action');
+assert.match(lazy,/export-schedules-shortcut[\s\S]*document\.querySelector\('#export-schedules'\)/,'shortcut waits for lazy bundle before dispatching export');
+assert.match(html,/id="export-schedules"/,'admin schedule export action is available');
+console.log('Teacher schedule Excel export contract PASS');
