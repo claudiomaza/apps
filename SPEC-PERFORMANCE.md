@@ -111,7 +111,8 @@ Este contrato aplica a las apps internas que ofrezcan intercambio de planillas; 
 - Lecturas mensuales repetidas se sirven desde CacheService con clave versionada; crear, actualizar o eliminar incrementa `DATA_VERSION`.
 - En cache miss, la lectura escanea bloques de hasta 500 filas desde el principio y se detiene al reunir el límite de eventos activos del mes; no usa `getDataRange()` ni materializa toda la hoja. Conserva el orden original de filas, igual que la implementación anterior.
 - No interrumpir el recorrido por una fecha aparentemente antigua: las filas pueden cargarse fuera de orden cronológico. Con meses antiguos, pocos eventos recientes o muchos eliminados puede leer varios bloques; medir con hojas representativas antes de cambiar tamaño o semántica.
-- La grilla agrupa los eventos una vez por día en un `Map`, evitando filtrar la lista completa 42 veces por cada render. Mantener equivalencia visual y pruebas para eventos sin fecha válida, eliminados y días con más de tres eventos.
+- La grilla agrupa los eventos una vez por día en un `Map`, evitando filtrar la lista completa 42 veces por cada render. Mantener equivalencia visual y pruebas para eventos sin fecha válida y eliminados.
+- En la matriz mensual, mostrar los eventos como puntos de color y un conteo visible en cada día ocupado; permitir abrir desde teclado o toque un diálogo/modal del día con títulos y horarios de inicio/fin. Ordenar por hora, excluir eliminados, escapar títulos y conservar controles táctiles/foco en móvil.
 - Si mediciones futuras justifican más mejora, incorporar un índice mensual en Sheets o particionado, con pruebas de consistencia tras ediciones/eliminaciones y reconstrucción.
 
 ### Ambos proyectos
