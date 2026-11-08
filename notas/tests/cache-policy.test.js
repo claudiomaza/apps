@@ -10,7 +10,7 @@ assert.match(html,/caches\.keys\(\)/,'old app caches must be enumerated');
 assert.match(html,/startsWith\("notas-static-"\)/,'only Notes-owned caches may be deleted');
 assert.doesNotMatch(html,/serviceWorker\.register\(/,'Notes must not register a caching-capable worker');
 assert.match(html,/http-equiv="Cache-Control" content="no-store/,'document should request no-store behavior');
-assert.match(html,/app\.js\?v=20261108-schedule-generator2/,'app bundle must be cache-busted after local schedule generator changes');
+assert.match(html,/app\.js\?v=20261108-ctx-init1/,'app bundle must be cache-busted after local schedule generator changes');
 assert.match(html,/summary\.js\?v=20261108-schedule-generator2/,'summary bundle cache-buster remains versioned');
 assert.match(html,/styles\.css\?v=20261108-schedule-generator2/,'stylesheet cache-buster remains versioned');
 assert.match(app,/cache:'no-store'/,'API responses must bypass browser HTTP cache');

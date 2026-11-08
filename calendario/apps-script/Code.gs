@@ -12,7 +12,7 @@ const CONFIG = Object.freeze({
   SESSION_SECONDS: 8 * 60 * 60,
   MAX_PAGE_SIZE: 300,
   MAX_BATCH_SIZE: 100,
-  HEADERS: ['eventId','title','startAt','endAt','allDay','location','description','ownerEmail','status','version','createdAt','updatedAt','deletedAt','calendarEventId','calendarId','recurrence','reminderMinutes','reminderAt']
+  HEADERS: ['eventId','title','startAt','endAt','allDay','location','description','ownerEmail','status','version','createdAt','updatedAt','deletedAt','calendarEventId','calendarId','recurrence','reminderMinutes','reminderAt','groupId']
 });
 
 function doGet() {
@@ -24,7 +24,7 @@ function doPost(e) {
     const body = JSON.parse(e && e.postData && e.postData.contents || '{}');
     if (body.action === 'auth') {
       const result=authenticate_(String(body.user !== undefined ? body.user : (body.mail || '')),String(body.pass || ''));
-      result.calendarName=calendarDisplayName_();
+      result.calendarName=calendarDisplayName_();result.groups=listGroups_();
       if(body.includeInitialList===true){try{result.records=listEvents_({from:body.from,limit:body.limit}).records;}catch(err){result.initialListError=publicError_(err);}}
       return json_(result);
     }
@@ -32,6 +32,9 @@ function doPost(e) {
     if (body.action === 'list') {const result=listEvents_(body);result.calendarName=calendarDisplayName_();return json_(result);}
     if(body.action==='getEvent')return json_(getEventById_(body));
     if(body.action==='getOperation')return json_(getOperation_(body));
+    if(body.action==='listGroups')return json_({ok:true,groups:listGroups_()});
+    if(body.action==='saveGroup')return json_(saveGroup_(body));
+    if(body.action==='deleteGroup')return json_(deleteGroup_(body));
     if (body.action === 'exportEvents') {const result=exportEventsPage_(body);result.calendarName=calendarDisplayName_();return json_(result);}
     if (body.action === 'createBatch') throw new Error('SYNC_REQUIRED');
     if (!['create','update','delete'].includes(body.action)) throw new Error('INVALID_ACTION');
@@ -169,10 +172,10 @@ function mutateEvent_(action, body) {
     operation=beginOperation_(action,body);if(operation.done)return{ok:true,duplicate:true,record:operation.record};operation.action=action;
     let row;
     if (action === 'create') {
-      if(index>=0){const prior=rowObject_(sheet.getRange(index+2,1,1,CONFIG.HEADERS.length).getValues()[0].slice(0,CONFIG.HEADERS.length)),wanted=validateEvent_(body.changes||{}),same=['title','startAt','endAt','location','description','reminderMinutes','reminderAt'].every(k=>JSON.stringify(prior[k])===JSON.stringify(wanted[k]))&&JSON.stringify(prior.recurrence||{frequency:'none'})===JSON.stringify(wanted.recurrence||{frequency:'none'});if(!same)throw new Error('CONFLICT');finishOperation_(operation,'DONE',eventId,prior.version);return{ok:true,record:prior,duplicate:true};}
+      if(index>=0){const prior=rowObject_(sheet.getRange(index+2,1,1,CONFIG.HEADERS.length).getValues()[0].slice(0,CONFIG.HEADERS.length)),wanted=validateEvent_(body.changes||{}),same=['title','startAt','endAt','location','description','reminderMinutes','reminderAt','groupId'].every(k=>JSON.stringify(prior[k])===JSON.stringify(wanted[k]))&&JSON.stringify(prior.recurrence||{frequency:'none'})===JSON.stringify(wanted.recurrence||{frequency:'none'});if(!same)throw new Error('CONFLICT');finishOperation_(operation,'DONE',eventId,prior.version);return{ok:true,record:prior,duplicate:true};}
       const d = validateEvent_(body.changes || {});
       calendarSideEffect=true;const created = createCalendarEvent_(d);
-      row = [eventId,d.title,d.startAt,d.endAt,d.allDay,d.location,d.description,'','ACTIVE',1,now,now,'',created.event.getId(),created.calendarId,JSON.stringify(d.recurrence),d.reminderMinutes,d.reminderAt];
+      row = [eventId,d.title,d.startAt,d.endAt,d.allDay,d.location,d.description,'','ACTIVE',1,now,now,'',created.event.getId(),created.calendarId,JSON.stringify(d.recurrence),d.reminderMinutes,d.reminderAt,d.groupId];
       sheet.getRange(last+1,1,1,row.length).setValues([row]);
     } else {
       if (index < 0) throw new Error('NOT_FOUND');
@@ -187,10 +190,10 @@ function mutateEvent_(action, body) {
       } else {
         const merged=Object.assign(rowObject_(existing),body.changes||{});if(!(body.changes&&Object.prototype.hasOwnProperty.call(body.changes,'recurrence')))merged.recurrence=parseRecurrence_(existing[15]);
         const d=validateEvent_(merged);
-        calendarSideEffect=true;const calEvent = updateCalendarEvent_(String(existing[13] || ''),d,String(existing[14] || ''),parseRecurrence_(existing[15]));
+        calendarSideEffect=true;const calEvent = updateCalendarEvent_(String(existing[13] || ''),d,String(existing[14] || ''),parseRecurrence_(existing[15]),String(existing[18]||''));
         existing[1]=d.title; existing[2]=d.startAt; existing[3]=d.endAt; existing[4]=d.allDay;
         existing[5]=d.location; existing[6]=d.description; existing[9]=Number(existing[9])+1;
-        existing[11]=now; existing[13]=calEvent.event.getId(); existing[14]=calEvent.calendarId; existing[15]=JSON.stringify(d.recurrence); existing[16]=d.reminderMinutes; existing[17]=d.reminderAt;
+        existing[11]=now; existing[13]=calEvent.event.getId(); existing[14]=calEvent.calendarId; existing[15]=JSON.stringify(d.recurrence); existing[16]=d.reminderMinutes; existing[17]=d.reminderAt; existing[18]=d.groupId;
       }
       row=existing; sheet.getRange(rowNumber,1,1,row.length).setValues([row]);
     }
@@ -220,7 +223,7 @@ function createEventsBatch_(body) {
     const now=new Date().toISOString();
     const rows=fresh.map(({id,d})=>{
       const calEvent=createCalendarEvent_(d),recurring=d.recurrence&&d.recurrence.frequency!=='none';created.push({event:calEvent.event,calendarId:calEvent.calendarId,recurring});
-      return [id,d.title,d.startAt,d.endAt,d.allDay,d.location,d.description,'','ACTIVE',1,now,now,'',calEvent.event.getId(),calEvent.calendarId,JSON.stringify(d.recurrence),d.reminderMinutes,d.reminderAt];
+      return [id,d.title,d.startAt,d.endAt,d.allDay,d.location,d.description,'','ACTIVE',1,now,now,'',calEvent.event.getId(),calEvent.calendarId,JSON.stringify(d.recurrence),d.reminderMinutes,d.reminderAt,d.groupId];
     });
     sheet.getRange(last+1,1,rows.length,CONFIG.HEADERS.length).setValues(rows);
     SpreadsheetApp.flush(); incrementDataVersion_();
@@ -269,6 +272,7 @@ function createCalendarEvent_(d) {
   const calendar=getAppCalendar_(),start=new Date(d.startAt),end=new Date(d.endAt),options={location:d.location,description:d.description};
   const recurring=d.recurrence&&d.recurrence.frequency&&d.recurrence.frequency!=='none';
   const event=recurring?calendar.createEventSeries(d.title,start,end,recurrenceRule_(d.recurrence,start.toISOString()),options):calendar.createEvent(d.title,start,end,options);
+  applyEventGroupColor_(event,d.groupId);
   applyReminder_(event,d.reminderMinutes);
   return {event,calendarId:calendar.getId()};
 }
@@ -276,13 +280,13 @@ function applyReminder_(event,minutes){
   if(minutes===null||minutes===undefined){event.resetReminders();return;}
   event.removeAllReminders();event.addPopupReminder(Number(minutes));
 }
-function updateCalendarEvent_(id,d,calendarId,oldRecurrence) {
+function updateCalendarEvent_(id,d,calendarId,oldRecurrence,oldGroupId) {
   const calendar=calendarId?CalendarApp.getCalendarById(calendarId):CalendarApp.getDefaultCalendar();
   if(!calendar)throw new Error('CALENDAR_NOT_FOUND');const desired=configValue_('calendarName');if(desired&&calendar.getName()!==desired)calendar.setName(desired);
   const oldSeries=oldRecurrence&&oldRecurrence.frequency&&oldRecurrence.frequency!=='none',newSeries=d.recurrence&&d.recurrence.frequency&&d.recurrence.frequency!=='none';
   if(oldSeries&&newSeries){
     let series=calendar.getEventSeriesById(id);if(!series){const instance=calendar.getEvents(new Date(d.startAt),new Date(new Date(d.startAt).getTime()+86400000)).find(event=>event.isRecurringEvent()&&event.getEventSeries().getId()===id);series=instance&&instance.getEventSeries();}if(!series)throw new Error('NOT_FOUND');
-    series.setTitle(d.title);series.setDescription(d.description);series.setLocation(d.location);
+    series.setTitle(d.title);series.setDescription(d.description);series.setLocation(d.location);applyEventGroupColor_(series,d.groupId,Boolean(oldGroupId));
     series.setRecurrence(recurrenceRule_(d.recurrence,new Date(d.startAt).toISOString()),new Date(d.startAt),new Date(d.endAt));
     applyReminder_(series,d.reminderMinutes);
     return {event:series,calendarId:calendar.getId()};
@@ -298,7 +302,7 @@ function updateCalendarEvent_(id,d,calendarId,oldRecurrence) {
   const event=id?calendar.getEventById(id):null;
   if(!event)return createCalendarEvent_(d);
   event.setTitle(d.title);event.setTime(new Date(d.startAt),new Date(d.endAt));
-  event.setLocation(d.location);event.setDescription(d.description);applyReminder_(event,d.reminderMinutes);
+  event.setLocation(d.location);event.setDescription(d.description);applyEventGroupColor_(event,d.groupId,Boolean(oldGroupId));applyReminder_(event,d.reminderMinutes);
   return {event,calendarId:calendar.getId()};
 }
 function configValue_(key) {
@@ -340,7 +344,8 @@ function validateEvent_(d) {
   const reminderMinutes=d.reminderMinutes===''||d.reminderMinutes===null||d.reminderMinutes===undefined?null:Number(d.reminderMinutes),reminderAt=d.reminderAt?String(d.reminderAt):'';
   if(reminderMinutes!==null&&(!Number.isInteger(reminderMinutes)||reminderMinutes<5||reminderMinutes>40320))throw new Error('INVALID_REMINDER');
   if(reminderAt&&(isNaN(Date.parse(reminderAt))||!reminderMinutes||Math.abs((Date.parse(startAt)-Date.parse(reminderAt))/60000-reminderMinutes)>1))throw new Error('INVALID_REMINDER');
-  return {title,startAt,endAt,allDay:false,location:String(d.location||'').slice(0,160),description:String(d.description||'').slice(0,1000),recurrence,reminderMinutes,reminderAt};
+  const groupId=String(d.groupId||'').trim();if(groupId&&!/^[-\w]{1,80}$/.test(groupId))throw new Error('INVALID_GROUP');if(groupId&&!findGroup_(groupId))throw new Error('GROUP_NOT_FOUND');
+  return {title,startAt,endAt,allDay:false,location:String(d.location||'').slice(0,160),description:String(d.description||'').slice(0,1000),recurrence,reminderMinutes,reminderAt,groupId};
 }
 function dataSheet_() {
   const ss=SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
@@ -351,16 +356,26 @@ function dataSheet_() {
 }
 function ensureHeaders_(sheet) {
   if(sheet.getLastRow()===0){sheet.getRange(1,1,1,CONFIG.HEADERS.length).setValues([CONFIG.HEADERS]);return;}
-  const width=Math.min(CONFIG.HEADERS.length,Math.max(sheet.getLastColumn(),15));
-  const actual=sheet.getRange(1,1,1,width).getDisplayValues()[0];
-  for(let i=0;i<width;i++)if(actual[i]&&actual[i]!==CONFIG.HEADERS[i])throw new Error('HEADER_MISMATCH');
-  for(let i=0;i<CONFIG.HEADERS.length;i++)if(!actual[i])sheet.getRange(1,i+1).setValue(CONFIG.HEADERS[i]);
+  const oldHeaders=CONFIG.HEADERS.slice(0,18),actual=sheet.getRange(1,1,1,Math.min(18,Math.max(sheet.getLastColumn(),15))).getDisplayValues()[0];
+  for(let i=0;i<actual.length;i++)if(actual[i]&&actual[i]!==oldHeaders[i])throw new Error('HEADER_MISMATCH');
+  for(let i=0;i<oldHeaders.length;i++)if(!actual[i])sheet.getRange(1,i+1).setValue(oldHeaders[i]);
+  const groupHeader=sheet.getRange(1,19).getDisplayValue();if(groupHeader&&groupHeader!=='groupId')throw new Error('HEADER_MISMATCH');if(!groupHeader)sheet.getRange(1,19).setValue('groupId');
 }
+const GROUP_COLORS_={PALE_BLUE:'1',PALE_GREEN:'2',MAUVE:'3',PALE_RED:'4',YELLOW:'5',ORANGE:'6',CYAN:'7',GRAY:'8',BLUE:'9',GREEN:'10',RED:'11'};
+function groupsSheet_(){const ss=SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);let sh=ss.getSheetByName('Grupos');if(!sh){sh=ss.insertSheet('Grupos');sh.getRange(1,1,1,4).setValues([['groupId','name','color','updatedAt']]);}const h=sh.getRange(1,1,1,4).getDisplayValues()[0];if(h.some((x,i)=>x!==['groupId','name','color','updatedAt'][i]))throw new Error('GROUP_SHEET_INVALID');return sh;}
+function listGroups_(){const sh=groupsSheet_(),n=sh.getLastRow();if(n<=1)return[];const rows=sh.getRange(2,1,n-1,4).getDisplayValues().filter(r=>r[0]),ids=new Set(),names=new Set();return rows.map(r=>{const id=String(r[0]),name=String(r[1]||'').trim(),color=String(r[2]||''),key=name.toLocaleLowerCase();if(!/^[-\w]{1,80}$/.test(id)||!name||name.length>60||!Object.prototype.hasOwnProperty.call(GROUP_COLORS_,color)||ids.has(id)||names.has(key))throw new Error('GROUP_SHEET_INVALID');ids.add(id);names.add(key);return{groupId:id,name,color,updatedAt:r[3]};});}
+function findGroup_(id){return listGroups_().find(g=>g.groupId===id)||null;}
+function applyEventGroupColor_(event,groupId,clear=false){if(!groupId){if(clear)event.setColor('0');return;}const group=findGroup_(groupId);if(!group)throw new Error('GROUP_NOT_FOUND');event.setColor(CalendarApp.EventColor[group.color]);}
+function validateGroup_(b){const name=String(b.name||'').trim(),color=String(b.color||'');if(!name||name.length>60||/[\u0000-\u001f\u007f]/.test(name))throw new Error('INVALID_GROUP_NAME');if(!Object.prototype.hasOwnProperty.call(GROUP_COLORS_,color))throw new Error('INVALID_GROUP_COLOR');return{name,color};}
+function saveGroup_(b){const lock=LockService.getScriptLock();if(!lock.tryLock(5000))throw new Error('BUSY_RETRY');try{const {name,color}=validateGroup_(b),id=String(b.groupId||'').trim(),groups=listGroups_(),prior=id?groups.find(g=>g.groupId===id):null;if(id&&!prior)throw new Error('GROUP_NOT_FOUND');if(groups.some(g=>g.groupId!==id&&g.name.toLocaleLowerCase()===name.toLocaleLowerCase()))throw new Error('GROUP_NAME_TAKEN');const groupId=id||Utilities.getUuid(),now=new Date().toISOString(),sheet=groupsSheet_(),row=groups.findIndex(g=>g.groupId===groupId),targetRow=row>=0?row+2:sheet.getLastRow()+1,record={groupId,name,color,updatedAt:now},changed=prior&&prior.color!==color?applyGroupColorToExistingEvents_(groupId,color):[];let wroteGroup=false;try{sheet.getRange(targetRow,1,1,4).setValues([[groupId,name,color,now]]);wroteGroup=true;incrementDataVersion_();return{ok:true,group:record,groups:listGroups_()};}catch(err){let rollbackFailed=false;try{if(prior)sheet.getRange(targetRow,1,1,4).setValues([[prior.groupId,prior.name,prior.color,prior.updatedAt]]);else if(wroteGroup||sheet.getRange(targetRow,1).getDisplayValue()===groupId)sheet.deleteRow(targetRow);}catch(_){rollbackFailed=true;}try{restoreEventColors_(changed);}catch(_){rollbackFailed=true;}if(rollbackFailed)throw new Error('PARTIAL_GROUP_UPDATE');throw err;}}finally{lock.releaseLock();}}
+function restoreEventColors_(changed){let failed=false;for(let i=changed.length-1;i>=0;i--)try{changed[i].event.setColor(changed[i].color);}catch(_){failed=true;}if(failed)throw new Error('GROUP_COLOR_PARTIAL_FAILURE');}
+function applyGroupColorToExistingEvents_(groupId,color){const sheet=dataSheet_(),last=sheet.getLastRow(),events=last>1?sheet.getRange(2,1,last-1,CONFIG.HEADERS.length).getValues():[],targets=[];for(const r of events){if(r[8]!=='ACTIVE'||String(r[18]||'')!==groupId||!r[13])continue;const calendar=CalendarApp.getCalendarById(String(r[14]||''));if(!calendar)throw new Error('CALENDAR_NOT_FOUND');const recurrence=parseRecurrence_(r[15]),event=recurrence&&recurrence.frequency&&recurrence.frequency!=='none'?calendar.getEventSeriesById(String(r[13])):calendar.getEventById(String(r[13]));if(!event)throw new Error('NOT_FOUND');targets.push({event,color:event.getColor()});}const changed=[];try{for(const target of targets){changed.push(target);target.event.setColor(CalendarApp.EventColor[color]);}return changed;}catch(err){try{restoreEventColors_(changed);}catch(_){throw new Error('GROUP_COLOR_PARTIAL_FAILURE');}throw err;}}
+function deleteGroup_(b){const id=String(b.groupId||'');if(!/^[-\w]{1,80}$/.test(id))throw new Error('INVALID_GROUP');const lock=LockService.getScriptLock();if(!lock.tryLock(5000))throw new Error('BUSY_RETRY');try{const group=findGroup_(id);if(!group)throw new Error('GROUP_NOT_FOUND');const sheet=dataSheet_(),last=sheet.getLastRow(),events=last>1?sheet.getRange(2,1,last-1,CONFIG.HEADERS.length).getDisplayValues():[];if(events.some(r=>r[8]==='ACTIVE'&&r[18]===id))throw new Error('GROUP_IN_USE');const sh=groupsSheet_(),row=listGroups_().findIndex(g=>g.groupId===id);sh.deleteRow(row+2);incrementDataVersion_();return{ok:true,groups:listGroups_()};}finally{lock.releaseLock();}}
 function parseRecurrence_(value){if(!value)return {frequency:'none'};if(typeof value==='object')return value;try{return JSON.parse(value);}catch(_){return {frequency:'none'};}}
-function rowObject_(r) { const o={}; CONFIG.HEADERS.forEach((h,i)=>o[h]=r[i] instanceof Date?r[i].toISOString():r[i]);if(CONFIG.HEADERS.includes('recurrence'))o.recurrence=parseRecurrence_(o.recurrence);return o; }
+function rowObject_(r) { const o={}; CONFIG.HEADERS.forEach((h,i)=>o[h]=r[i] instanceof Date?r[i].toISOString():r[i]);if(CONFIG.HEADERS.includes('recurrence'))o.recurrence=parseRecurrence_(o.recurrence);o.groupId=String(o.groupId||'');return o; }
 function json_(value) { return ContentService.createTextOutput(JSON.stringify(value)).setMimeType(ContentService.MimeType.JSON); }
 function publicError_(err) {
-  const allowed=['INVALID_ACTION','SYNC_REQUIRED','INVALID_IDEMPOTENCY_KEY','IDEMPOTENCY_KEY_REUSED','OUTCOME_UNKNOWN','OPERATION_SHEET_INVALID','INVALID_FROM','INVALID_CURSOR','EXPORT_CHANGED','BUSY_RETRY','INVALID_RECURRENCE','INVALID_REMINDER','INVALID_EVENT_ID','INVALID_EVENT','INVALID_BATCH','NOT_FOUND','CONFLICT','SHEET_NOT_FOUND','CONFIG_SHEET_NOT_FOUND','CALENDAR_NOT_FOUND','USERS_SHEET_NOT_FOUND','USERS_SHEET_INVALID','INVALID_CREDENTIALS','UNAUTHORIZED','SESSION_EXPIRED'];
+  const allowed=['INVALID_ACTION','SYNC_REQUIRED','INVALID_IDEMPOTENCY_KEY','IDEMPOTENCY_KEY_REUSED','OUTCOME_UNKNOWN','OPERATION_SHEET_INVALID','INVALID_FROM','INVALID_CURSOR','EXPORT_CHANGED','BUSY_RETRY','INVALID_RECURRENCE','INVALID_REMINDER','INVALID_EVENT_ID','INVALID_EVENT','INVALID_GROUP','GROUP_NOT_FOUND','GROUP_IN_USE','INVALID_GROUP_NAME','INVALID_GROUP_COLOR','GROUP_NAME_TAKEN','GROUP_COLOR_PARTIAL_FAILURE','PARTIAL_GROUP_UPDATE','GROUP_SHEET_INVALID','INVALID_BATCH','NOT_FOUND','CONFLICT','SHEET_NOT_FOUND','CONFIG_SHEET_NOT_FOUND','CALENDAR_NOT_FOUND','USERS_SHEET_NOT_FOUND','USERS_SHEET_INVALID','INVALID_CREDENTIALS','UNAUTHORIZED','SESSION_EXPIRED'];
   return allowed.includes(err.message)?err.message:'INTERNAL_ERROR';
 }
 
