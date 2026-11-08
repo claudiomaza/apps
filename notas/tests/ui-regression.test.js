@@ -51,6 +51,8 @@ assert.match(html,/data-summary-tab="overview">Panorama[\s\S]*data-summary-tab="
 assert.match(html,/data-summary-panel="topics"[\s\S]*id="summary-topic-rows"/,'Panorama topic view has a separate read-only table');
 assert.match(html,/<section id="view-topic" class="tab-view" hidden>[\s\S]*id="new-topic"/,"editable topic register remains hidden until selected from Registrar");
 assert.match(html,/id="teacher-scopes"[\s\S]*class="teacher-availability"/,'assignment and availability are colocated');
+assert.match(html,/id="view-users"[\s\S]*<div class="users-layout">[\s\S]*id="teacher-list"[\s\S]*<\/div><\/section><section id="view-assessments"/,"existing teachers table stays inside Docentes y permisos");
+assert.match(html,/id="view-users"[\s\S]*Docentes existentes[\s\S]*id="teacher-list"[\s\S]*<\/section><section id="view-assessments"/,'existing teachers table remains inside the hidden users view');
 assert.match(html,/availability-teacher[\s\S]*availability-selected-name[\s\S]*availability-list/,'availability names its selected teacher');
 assert.match(source,/\$\('#availability-teacher'\)\.onchange[\s\S]*\$\('#scope-teacher'\)\.value/,'availability selection updates assigned teacher');
 assert.match(source,/\$\('#summary-topic-rows'\)\.innerHTML=topics/,'overview topic rows use current summary filters');
@@ -93,3 +95,5 @@ assert.match(source,/\$\('#summary-topic-rows'\)\.innerHTML=topics/,"read-only t
 assert.match(css,/\.users-layout\{grid-template-columns:minmax\(260px,\.9fr\) minmax\(300px,1fr\) minmax\(300px,1fr\)\}/,'assignment and availability have adjacent desktop columns');
 assert.match(css,/@media\(max-width:950px\)\{\.users-layout\{grid-template-columns:1fr\}/,'teacher cards stack on smaller screens');
 assert.match(css,/\.attendance-rows td:first-child\{min-width:190px\}/,'attendance student names have room per row');
+
+assert.match(html,/id="view-users"[\s\S]*<div class="users-layout"><div class="teacher-actions">[\s\S]*id="teacher-scopes"[\s\S]*<\/div><section class="teacher-availability">[\s\S]*<\/section><section><h3>Docentes existentes<\/h3>[\s\S]*id="teacher-list"[\s\S]*<\/section><\/div><\/section><section id="view-assessments"/,"assignment, availability and teacher table stay inside the hidden users view");
