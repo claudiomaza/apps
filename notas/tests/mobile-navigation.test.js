@@ -1,0 +1,15 @@
+'use strict';
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const root = process.env.NOTAS_ROOT || path.join(__dirname, '..');
+const css = fs.readFileSync(path.join(root, 'styles.css'), 'utf8');
+const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+assert.match(css, /@media\s*\(max-width:\s*560px\)[\s\S]*?\.dropdown-menu\s*\{[^}]*position:\s*fixed/i, 'mobile nav menus escape the clipped .panel via fixed positioning');
+assert.match(css, /\.dropdown-menu\s*\{[^}]*max-height:\s*min\(60dvh,\s*420px\)[^}]*overflow-y:\s*auto/i, 'long dropdowns fit the viewport and scroll');
+assert.match(css, /\.dropdown-item\s*\{[^}]*min-height:\s*44px[^}]*white-space:\s*normal/i, 'menu choices remain readable and tappable');
+assert.match(css, /\.users-layout[^}]*min-width:\s*0/i, 'teacher management children can shrink to mobile width');
+assert.match(html, /aria-controls="register-menu"[\s\S]*id="register-menu"[\s\S]*aria-controls="configuration-menu"[\s\S]*id="configuration-menu"/, 'both navigation dropdowns remain wired');
+assert.match(html, /styles\.css\?v=20261108-mobile-dropdowns1/, 'CSS cache key changes with the responsive fix');
+assert.match(html, /app\.js\?v=20261108-academic-workflows1/, 'application script cache key stays on the deployed bundle');
+console.log('Mobile navigation and teacher-view layout regression PASS');
