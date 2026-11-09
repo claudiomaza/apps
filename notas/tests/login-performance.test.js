@@ -1,0 +1,14 @@
+'use strict';
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const app = fs.readFileSync(path.join(__dirname, '../../notas/app.js'), 'utf8');
+const html = fs.readFileSync(path.join(__dirname, '../index.html'), 'utf8');
+const start = app.indexOf('async function authenticate(){');
+const end = app.indexOf('async function loadRemote(', start);
+const authenticate = app.slice(start, end);
+assert.match(authenticate, /stageOwner=await stageOwnerKey\(currentUsername\);sessionStorage\.setItem\('gradesSession',sessionToken\);await restoreStage\(\);await loadRemote\(\);/, 'restore drafts before the single remote fetch that merges them');
+assert.equal((authenticate.match(/await loadRemote\(\);/g) || []).length, 1, 'authentication must make one initial remote read');
+assert.match(app.slice(end, app.indexOf('\nfunction inputField', end)), /for\(const r of stagedRecords\.values\(\)\)/, 'remote load merges staged drafts into the loaded snapshot');
+assert.match(html, /app\.js\?v=20261108-single-login-read1/, 'fresh app cache key');
+console.log('Single-read login and staged-draft merge contract PASS');

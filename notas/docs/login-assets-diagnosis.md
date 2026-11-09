@@ -16,9 +16,3 @@ Se actualizarán las referencias de scripts del HTML a `../<archivo>.js`, y el c
 
 ## Límites de la prueba
 No se reintentará añadir docentes/estudiantes ni sincronizar Sheets hasta verificar que `app.js` cargó y que el formulario recibe respuesta de autenticación. Mantener datos ficticios y no alterar registros preexistentes.
-
-## Diagnóstico ampliado y estado
-
-La investigación posterior confirmó que `aacb451` usó como árbol base la carpeta `notas/` en lugar de la raíz del repositorio: reubicó sus archivos en la raíz, eliminó la portada y dejó `notas/` incompleto. El commit `02b5f0a` fue una solución provisional de rutas a la raíz; se observaron seis scripts con HTTP 200 y luego acceso autenticado como administrador con otra herramienta de navegador, sin modificar Sheets. No se demostró autenticación con Moli: la sesión de Moli no contiene la credencial segura de Notas.
-
-La reparación preparada en la rama `fix/apps-tree-layout-final` restaura la estructura de `66aaad8`, la portada anterior y sus documentos de seguridad, conserva el CSS móvil de `7e08a24`, la documentación del diagnóstico y todos los commits de Calendario vigentes. Notas vuelve a cargar scripts y vendor desde su carpeta `notas/`, no desde rutas parentales. La prueba `notas/tests/restore-layout.test.js` comprueba archivos/rutas y portada; suite de Notas ejecutada en VM1: PASS. No se desplegó ni modificó Apps Script. Verificar Pages y Moli antes de dar la restauración por operativa.

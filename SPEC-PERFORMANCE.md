@@ -171,3 +171,9 @@ No declarar mejora de capacidad por una microprueba aislada. Registrar datos, co
 - QA integral: clicks/teclado de cada tab; comprobar visibilidad real, accesibilidad y ausencia de métricas duplicadas; probar filtros vacíos/con resultados, vistas/calendarios/meses, carga/error/timeout y permisos con datos ficticios; viewport 390x844 y escritorio; revisar screenshots, consola y red (sin CDN no autorizado). Distinguir pruebas estáticas, HTTP, visual sin autenticar y QA autenticado. No mutar datos reales.
 
 - En formularios con opciones de color, los controles radio mantienen tamaño compacto (16 px), sin heredar `width:100%` ni padding de estilos genéricos de inputs. La etiqueta, muestra de color y nombre deben ser legibles, sin partir palabras por falta de espacio, tanto en desktop como en móvil; verificar con layout real y navegación accesible.
+
+
+## Notas — reducción de lecturas al iniciar sesión (2026-11-08)
+
+- El login valida credenciales con `auth`, restaura el stage local IndexedDB por el usuario devuelto por `auth` y después realiza una sola lectura `listRecords`; esa carga combina el snapshot remoto con los borradores locales y resuelve sus conflictos contra versiones remotas. La actualización manual sigue el mismo orden de restaurar stage y luego cargar una vez.
+- No llamar `loadRemote` de nuevo después de esa combinación: duplicaba íntegramente la lectura de Sheets y añadía latencia secuencial. No confundir este cambio con mejora cuantificada; para p50/p95 medir login frío/caliente y tiempo de `auth` vs. `listRecords` con el navegador autenticado y datos pequeños/típicos/grandes, y cotejar el Apps Script desplegado.

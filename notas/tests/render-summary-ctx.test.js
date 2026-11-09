@@ -22,5 +22,5 @@ vm.createContext(context);
 vm.runInContext(app.slice(start,end)+'\nglobalThis.runSummary=renderSummary;',context);
 assert.doesNotThrow(()=>context.runSummary(),'post-login render with a subject/group statistics row must not throw');
 assert.match($('#summary-subject-statistics').innerHTML,/Matemática/,'the affected group row renders after Sheets data loads');
-assert.match(fs.readFileSync(path.join(__dirname,'../index.html'),'utf8'),/app\.js\?v=20261108-academic-workflows1/,'the fixed frontend has a new cache-buster');
+assert.match(fs.readFileSync(path.join(__dirname,'../index.html'),'utf8'),/app\.js\?v=20261108-single-login-read1/,'the fixed frontend has a new cache-buster');
 console.log('Notes summary render context TDZ regression PASS');
