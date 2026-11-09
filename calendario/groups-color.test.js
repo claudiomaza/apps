@@ -18,7 +18,7 @@ let setterValue='';applyEventGroupColor_({setColor(c){setterValue=c}},'g1');asse
 setterValue='';applyEventGroupColor_({setColor(c){setterValue=c}},'');assert.equal(setterValue,'','legacy ungrouped events preserve their existing Calendar color');applyEventGroupColor_({setColor(c){setterValue=c}},'',true);assert.equal(setterValue,'0','removing an assigned group resets event to Google Calendar default color');
 const first={color:'BLUE',setColor(c){this.color=c}},second={color:'YELLOW',setColor(c){if(c==='GREEN')throw Error('simulated Calendar failure');this.color=c;},getColor(){return this.color;}},firstEvent={...first,getColor(){return this.color;}};
 context.dataSheet_=()=>({getLastRow:()=>3,getRange:()=>({getValues:()=>[[ 'a','','','','','','','','ACTIVE','','','','','one','cal','{\"frequency\":\"none\"}','','','g1'],['b','','','','','','','','ACTIVE','','','','','two','cal','{\"frequency\":\"none\"}','','','g1']]})});
-context.CalendarApp.getCalendarById=()=>({getEventById:id=>id==='one'?firstEvent:second});
+vm.runInContext("ACTIVE_GOOGLE_CALENDAR_='cal';ACTIVE_CALENDAR_ID_='test';",context);context.CalendarApp.getCalendarById=()=>({getEventById:id=>id==='one'?firstEvent:second});
 assert.throws(()=>applyGroupColorToExistingEvents_('g1','GREEN'),/simulated Calendar failure/);
 assert.equal(firstEvent.color,'BLUE','earlier event color is restored if a later Calendar write fails');
 assert.equal(second.color,'YELLOW','failing event retains original color');
