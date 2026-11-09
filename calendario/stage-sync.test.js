@@ -7,7 +7,7 @@ function harness(overrides={}){
   const calls=[],pending=new Map(),session={},elements={
     '#sync-button':{dataset:{},disabled:false,addEventListener(){},onclick:null},'#sync-state':{textContent:''},
     '#toast':{dataset:{},classList:{add(){},remove(){}},append(){},replaceChildren(){},style:{}},
-    '#events':{innerHTML:'',addEventListener(){}},'#connection':{textContent:'',className:''},'#login-panel':{hidden:false},'#app-content':{hidden:true},
+    '#events':{innerHTML:'',addEventListener(){}},'#connection':{textContent:'',className:''},'#login-panel':{hidden:false,addEventListener(){},reportValidity(){return true}},'#app-content':{hidden:true},
   };
   const fallback={textContent:'',dataset:{},classList:{add(){},remove(){}},append(){},replaceChildren(){},style:{},hidden:false,disabled:false,addEventListener(){},querySelector(){return this},querySelectorAll(){return[]},elements:{reminderMinutes:{addEventListener(){},value:'60'},repeat:{addEventListener(){},value:'none'},repeatUnit:{addEventListener(){}},repeatEnd:{addEventListener(){}},},reset(){},showModal(){},close(){},click(){},focus(){},setAttribute(){},removeAttribute(){},reportValidity(){return true}};
   const document={querySelector:s=>elements[s]||fallback,querySelectorAll:()=>[],addEventListener(){},createElement:()=>({classList:{add(){},remove(){}},setAttribute(){},append(){},style:{}}),body:{append(){}}};
