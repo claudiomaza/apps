@@ -48,11 +48,7 @@ function doPost(e) {
   const previousContext=[ACTIVE_GOOGLE_CALENDAR_,ACTIVE_CALENDAR_ID_,ACTIVE_CALENDAR_NAME_];ACTIVE_GOOGLE_CALENDAR_='';ACTIVE_CALENDAR_ID_='';ACTIVE_CALENDAR_NAME_='';
   try {
     const body=JSON.parse(e&&e.postData&&e.postData.contents||'{}');
-    if(body.action==='auth'){
-      const result=authenticate_(String(body.user!==undefined?body.user:(body.mail||'')),String(body.pass||''));ensureLegacyCalendar_(result.username);result.calendars=listCalendars_(result.username);const first=result.calendars[0];if(!first)throw new Error('CALENDAR_ACCESS_DENIED');setCalendarContext_({calendarId:first.calendarId},result.username,'list');result.calendarId=first.calendarId;result.calendarName=calendarDisplayName_();result.groups=listGroups_();
-      if(body.includeInitialList===true){try{result.records=listEvents_({from:body.from,limit:body.limit}).records;}catch(err){result.initialListError=publicError_(err);}}
-      return json_(result);
-    }
+    if(body.action==='auth')return json_(authenticate_(String(body.user!==undefined?body.user:(body.mail||'')),String(body.pass||'')));
     const session=requireSession_(body.sessionToken),user=session.sub,action=String(body.action||'');
     if(action==='listCalendars'){ensureLegacyCalendar_(user);return json_({ok:true,calendars:listCalendars_(user)});}
     if(action==='createCalendar'){ensureLegacyCalendar_(user);if(!listCalendars_(user).some(c=>c.role==='owner'))throw new Error('CALENDAR_ADMIN_REQUIRED');return json_(createCalendar_(body,user));}
