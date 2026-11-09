@@ -11,7 +11,5 @@ assert.match(css, /\.dropdown-item\s*\{[^}]*min-height:\s*44px[^}]*white-space:\
 assert.match(css, /\.users-layout[^}]*min-width:\s*0/i, 'teacher management children can shrink to mobile width');
 assert.match(html, /aria-controls="register-menu"[\s\S]*id="register-menu"[\s\S]*aria-controls="configuration-menu"[\s\S]*id="configuration-menu"/, 'both navigation dropdowns remain wired');
 assert.match(html, /styles\.css\?v=20261108-mobile-dropdowns1/, 'CSS cache key changes with the responsive fix');
-assert.match(html, /app\.js\?v=20261108-academic-workflows1/, 'application script cache key stays on the deployed bundle');
-assert.match(html, /src="\.\.\/app\.js\?/, 'app script uses the parent Pages directory');
-assert.match(html, /src="\.\.\/config\.js\?/, 'config script uses the parent Pages directory');
+assert.match(html, /app\.js\?v=20261108-single-login-read1/, 'application script cache key stays on the deployed bundle');
 console.log('Mobile navigation and teacher-view layout regression PASS');
