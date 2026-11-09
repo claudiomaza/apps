@@ -13,6 +13,8 @@ assert.match(html,/http-equiv="Cache-Control" content="no-store/,'document shoul
 assert.match(html,/app\.js\?v=20261108-academic-workflows1/,'app bundle must be cache-busted after local schedule generator changes');
 assert.match(html,/summary\.js\?v=20261108-schedule-generator2/,'summary bundle cache-buster remains versioned');
 assert.match(html,/styles\.css\?v=20261108-mobile-dropdowns1/,'stylesheet cache-buster remains versioned');
+for(const asset of ['config','gradebook','summary','stage-store','xlsx-lazy','app'])assert.match(html,new RegExp(`src="\\.\\./${asset}\\.js\\?`),`${asset} script resolves from parent Pages directory`);
+assert.match(fs.readFileSync(path.join(__dirname,'../xlsx-lazy.js'),'utf8'),/s\.src='\.\.\/vendor\/xlsx\.full\.min\.js'/,'lazy Excel bundle resolves from parent Pages directory');
 assert.match(app,/cache:'no-store'/,'API responses must bypass browser HTTP cache');
 assert.doesNotMatch(app,/headers:\{[^}]*Cache-Control/,'avoid custom request headers that can trigger Apps Script CORS preflight');
 console.log('Notes cache cleanup/no-store contract PASS');
