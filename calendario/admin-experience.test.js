@@ -5,7 +5,8 @@ const actions=html.match(/<details class="section-actions action-menu calendar-a
 assert.match(actions,/id="new-event"[^>]*>[^<]*Nuevo evento/,'Nuevo evento must live inside Acciones');
 assert.equal((html.match(/id="new-event"/g)||[]).length,1,'there must be one New event control, inside Actions');
 assert.match(html,/id="admin-summary-overview"/,'summary needs live event/group counts');
-assert.match(html,/El permiso se asigna a una cuenta existente[\s\S]*Creala en Usuarios/,'collaborator UI must explain where accounts are managed');
+assert.match(html,/El permiso de colaborador requiere una cuenta existente[\s\S]*invitar por correo/,'collaborator UI must distinguish app accounts from email invitations');
+assert.match(html,/id="calendar-invite-form"/);assert.match(html,/id="calendar-invites"/);assert.match(app,/data-remove-calendar-invite/);assert.match(app,/inviteCalendarEmail/);
 const manage=app.slice(app.indexOf('async function manageGroups()'),app.indexOf("$('#manage-groups').onclick"));
 assert.match(manage,/renderGroups\(\)[\s\S]*showModal/,'show cached groups before refreshing');
 assert.ok(manage.indexOf('showModal')<manage.lastIndexOf("api('listGroups')"),'group dialog should not wait for the network');
