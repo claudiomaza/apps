@@ -47,3 +47,9 @@
 - Cada fila distingue Pendiente, Enviando, Google confirmó el envío, ya tenía acceso y resultado no confirmado. Un timeout o rollback/estado parcial no puede reenviarse automáticamente: requiere comprobar el acceso antes de un intento manual. El resultado positivo de ACL indica que Google aceptó la operación, no garantiza entrega o aceptación humana del email.
 - Las invitaciones activas son ACL reader; se separan de la cola y se siguen revocando desde accesos compartidos. La cola desaparece si cambia de agenda; los borradores pertenecen a su calendarId y no persisten tras recargar/cerrar la sesión.
 - Las tablas de eventos, invitados y previsualización de importación ofrecen búsqueda por columna y orden A–Z/Z–A. En móvil conservan estructura tabular con scroll horizontal contenido, cabeceras visibles y objetivos táctiles amplios; probar 390×844 y escritorio con fixtures sintéticos, sin enviar invitaciones ni mutar datos reales.
+
+
+### Diagnóstico de invitaciones y selección masiva (2026-11-11)
+- La API `inviteCalendarEmail` debe inspeccionar las ACL existentes antes de insertar. Si la dirección ya tiene acceso a la agenda en Google (aunque no figure en CalendarMembers), devolver estado `alreadyInvited` sin mandar un segundo correo y reconciliar visualmente como acceso existente. Si una ACL `none` existe, elevarla a `reader` con notificación y rollback a su estado anterior ante fallo de Sheet.
+- Errores del servicio avanzado se convierten en códigos públicos sanitizados: API deshabilitada, permisos insuficientes, fallo al consultar ACL, acceso preexistente concurrente e invitación fallida. No exponer mensajes internos de Google; mantener el texto útil y pedir revisión de Apps Script Executions cuando corresponda.
+- La cola ofrece “Seleccionar todos” para invitaciones elegibles que están visibles bajo los filtros actuales (pending/error). Es un toggle local; no marca sent/existing/unknown/sending ni produce envío.
