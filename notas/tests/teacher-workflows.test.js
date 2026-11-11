@@ -10,7 +10,7 @@ assert.match(html,/id="view-topic"[\s\S]*id="topic-subject-filter"[\s\S]*id="exp
 assert(app.includes('data-student-action="libreta"')&&app.includes('data-student-action="attendance"')&&app.includes('data-student-action="observations"'),'student row has actions for academic records');
 assert.match(app,/scheduleLabel\([\s\S]*#grade-class-details/,'gradebook details show names and weekly slots');
 assert.match(app,/b\.dataset\.tab==='libreta'[\s\S]*renderGradebook\(\)/,'admin gradebook reloads teacher names before rendering');
-assert.match(app,/\$\('#export-xlsx'\)\.onclick=async\(\)=>\{if\(currentRole==='admin'\)\{try\{await loadTeachers\(\)/,'gradebook Excel loads teacher names first');
+assert.match(app,/\$\('#export-xlsx'\)\.onclick=async\(\)=>\{if\(currentRole==='admin'\)\{try\{await loadTeachers\(\)/,'group Excel export loads teacher names when available');assert.doesNotMatch(app,/if\(\(b\.dataset\.tab==='users'\|\|b\.dataset\.tab==='libreta'\)\&\&currentRole==='admin'\)loadTeachers/,'opening the read-only group gradebook does not fetch teacher data');
 assert.match(app,/export-topic-xlsx[\s\S]*Libro de tema/,'topic export exists');
 assert.match(app,/function openStudentGradebook[\s\S]*live\('membership'\)/,'individual gradebook aggregates memberships');
 assert.match(app,/data-save-schedule-assignment/,'schedule assignment requires explicit apply');

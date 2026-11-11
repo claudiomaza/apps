@@ -35,10 +35,14 @@ function attendanceByDay(attendance=[]) {
  for(const r of attendance){const d=r.data||{};if(!['present','absent'].includes(d.status)||!/^\d{4}-\d{2}-\d{2}$/.test(d.date||''))continue;const weekday=labels[new Date(`${d.date}T12:00:00`).getDay()];if(!groups.has(weekday))groups.set(weekday,{weekday,present:0,absent:0});groups.get(weekday)[d.status]++;}
  return [...groups.values()].sort((a,b)=>labels.indexOf(a.weekday)-labels.indexOf(b.weekday));
 }
+function attendanceByAssessment(attendance=[],assessments=[]) {
+ const rows=[];for(const a of assessments){const d=a.data||{},marks=attendance.filter(r=>{const x=r.data||{};return x.date===d.date&&x.schoolId===d.schoolId&&x.subjectId===d.subjectId&&x.courseId===d.courseId&&x.divisionId===d.divisionId&&['present','absent'].includes(x.status);});if(!marks.length)continue;const present=marks.filter(r=>r.data.status==='present').length,absent=marks.length-present;rows.push({id:a.id,name:d.name||a.id,date:d.date||'',subjectId:d.subjectId||'',present,absent,marked:marks.length,attendanceRate:Math.round(present*100/marks.length)});}
+ return rows.sort((a,b)=>a.date.localeCompare(b.date)||a.name.localeCompare(b.name,'es'));
+}
 function gradesByAssessment(grades=[],assessments=[]) {
  const by=new Map();for(const a of assessments)by.set(a.id,{id:a.id,name:a.data?.name||a.id,date:a.data?.date||'',subjectId:a.data?.subjectId||'',graded:0,pending:0,notSubmitted:0,absent:0,exempt:0,values:[]});
  for(const r of grades){const d=r.data||{};if(!by.has(d.assessmentId))by.set(d.assessmentId,{id:d.assessmentId,name:d.assessmentId||'Instancia sin nombre',date:d.gradeDate||'',subjectId:'',graded:0,pending:0,notSubmitted:0,absent:0,exempt:0,values:[]});const x=by.get(d.assessmentId);if(d.status==='graded'&&Number.isFinite(Number(d.value))){x.graded++;x.values.push(Number(d.value));}else if(d.status==='pending')x.pending++;else if(d.status==='not_submitted')x.notSubmitted++;else if(d.status==='absent')x.absent++;else if(d.status==='exempt')x.exempt++;}
  return [...by.values()].map(x=>({id:x.id,name:x.name,date:x.date,subjectId:x.subjectId,graded:x.graded,pending:x.pending,notSubmitted:x.notSubmitted,absent:x.absent,exempt:x.exempt,average:x.values.length?Math.round(x.values.reduce((a,b)=>a+b,0)*100/x.values.length)/100:null})).sort((a,b)=>a.date.localeCompare(b.date)||a.name.localeCompare(b.name));
 }
 
-const api={yearOf,ageOn,cohortOf,cohortLabel,filterRecords,stats,attendancePercent,statisticsBySubject,attendanceSessions,attendanceByDay,gradesByAssessment,sameGroup,schoolYears};if(typeof module!=='undefined'&&module.exports)module.exports=api;else globalThis.Summary=api;
+const api={yearOf,ageOn,cohortOf,cohortLabel,filterRecords,stats,attendancePercent,statisticsBySubject,attendanceSessions,attendanceByDay,attendanceByAssessment,gradesByAssessment,sameGroup,schoolYears};if(typeof module!=='undefined'&&module.exports)module.exports=api;else globalThis.Summary=api;

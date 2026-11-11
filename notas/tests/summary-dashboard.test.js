@@ -14,9 +14,9 @@ assert.equal(Summary.ageOn('2000-11-08',new Date('2026-11-07T12:00:00Z')),25,'ag
 assert.equal(Summary.ageOn('2000-11-07',new Date('2026-11-07T12:00:00Z')),26,'age advances on birthday');
 assert.equal(Summary.ageOn('2000-02-30',new Date('2026-11-07T12:00:00Z')),null,'invalid birth dates do not produce an age');
 const htmlBefore=require('node:fs').readFileSync(require('node:path').join(__dirname,'../index.html'),'utf8');
-assert.match(htmlBefore,/data-summary-tab="overview">Panorama[\s\S]*data-summary-tab="topics">Libro de tema/,'topic book appears as a separate overview tab');
+assert.match(htmlBefore,/data-summary-tab="overview">Panel inicial[\s\S]*data-summary-tab="topics">Libro de tema/,'topic book appears as a separate summary panel');
 assert.match(htmlBefore,/data-summary-panel="topics"[\s\S]*id="summary-topic-rows"/,'topic book has its own read-only panel');
-assert.match(htmlBefore,/summary-filters[\s\S]*data-summary-panel="statistics"[\s\S]*summary-kpis/,'global filters remain outside the selected Statistics panel');
+assert.match(htmlBefore,/summary-filters[\s\S]*data-summary-panel="overview"[\s\S]*summary-kpis/,'global filters remain outside the initial panel');
 assert.match(htmlBefore,/summary-subject-statistics/,'Statistics includes a per-subject and group indicators table');
 assert.match(htmlBefore,/id="attendance-search"[\s\S]*id="attendance-status-filter"/,'attendance has explicit search and status filters');
 assert.match(htmlBefore,/id="grades-search"[\s\S]*id="grades-status-filter"/,'grade entry has explicit search and status filters');
@@ -90,7 +90,49 @@ assert.match(app,/summary-instance-name/,'grade matrix has a separate instance-n
 assert.match(app,/\$\('#summary-subject-statistics'\)\.innerHTML=subjectStatistics/,'subject summary table is populated from context-specific stats');assert.match(app,/label:`\$\{a\.data\.date\|\|'Sin fecha'\}\\n\$\{assessmentName\(a\.id\)\}`/,'assessment name is rendered under its date in grade matrix headers');
 assert.doesNotMatch(app,/Exentas|Eximidas/);assert.match(app,/Eximidos/);assert.match(app,/summary-attendance-matrix/);assert.match(app,/summary-grade-matrix/);assert.match(app,/attendanceSessions/);assert.match(app,/gradeMark/);
 assert(html.indexOf('aria-controls="configuration-menu"')<html.indexOf('data-tab="admin"')&&html.indexOf('data-tab="admin"')<html.indexOf('data-tab="trash"'),'Registros y Papelera están dentro de Configuración');
-assert.match(html,/app\.js\?v=20261108-single-login-read1/);assert.match(html,/summary\.js\?v=20261108-schedule-generator2/);
+assert.match(html,/app\.js\?v=20261111-dashboard-gradebook1/);assert.match(html,/summary\.js\?v=20261111-attendance-assessments1/);
 
 const membership={schoolId:'a',subjectId:'math',courseId:'c1',divisionId:'d1',subgroupIds:['sub1']};
 assert.equal(Summary.sameGroup(membership,all.find(x=>x.type==='attendance').data),true,'extra membership fields must not hide attendance');assert.equal(Summary.sameGroup(membership,{...membership,subjectId:'hist'}),false,'different groups never mix');
+
+
+const rollupAttendance=[];
+const weekdayFixtures=[['lunes',4,94,10],['martes',4,95,9],['miércoles',4,95,9]];
+const startDate=new Date('2026-11-09T12:00:00');
+for(const [weekday,sessionCount,present,absent] of weekdayFixtures){
+  let presentLeft=present,absentLeft=absent;
+  for(let n=0;n<sessionCount;n++){
+    const date=new Date(startDate);date.setDate(startDate.getDate()+['lunes','martes','miércoles'].indexOf(weekday)+n*7);
+    const day=date.toISOString().slice(0,10),p=Math.min(26,presentLeft),a=Math.min(26-p,absentLeft);presentLeft-=p;absentLeft-=a;
+    for(let i=0;i<p+a;i++)rollupAttendance.push({data:{studentId:`${weekday}-${n}-${i}`,date:day,scheduleId:`${weekday}-${n}`,schoolId:'s',subjectId:'math',courseId:'year',divisionId:'A',status:i<p?'present':'absent'}});
+  }
+}
+assert.equal(typeof Summary.attendanceByAssessment,'function','assessment attendance helper is exported');
+const assessmentAttendance=Summary.attendanceByAssessment([
+ {data:{date:'2026-11-09',schoolId:'s',subjectId:'math',courseId:'year',divisionId:'A',studentId:'p1',status:'present'}},
+ {data:{date:'2026-11-09',schoolId:'s',subjectId:'math',courseId:'year',divisionId:'A',studentId:'p2',status:'absent'}},
+ {data:{date:'2026-11-09',schoolId:'s',subjectId:'math',courseId:'year',divisionId:'B',studentId:'other-division',status:'present'}},
+ {data:{date:'2026-11-09',schoolId:'s',subjectId:'history',courseId:'year',divisionId:'A',studentId:'other-subject',status:'present'}},
+ {data:{date:'2026-11-10',schoolId:'s',subjectId:'math',courseId:'year',divisionId:'A',studentId:'p3',status:'present'}},
+], [
+ {id:'exam-a',data:{name:'Evaluación A',date:'2026-11-09',schoolId:'s',subjectId:'math',courseId:'year',divisionId:'A'}},
+ {id:'exam-b',data:{name:'Evaluación B',date:'2026-11-10',schoolId:'s',subjectId:'math',courseId:'year',divisionId:'A'}},
+ {id:'exam-empty',data:{name:'Sin asistencia',date:'2026-11-11',schoolId:'s',subjectId:'math',courseId:'year',divisionId:'A'}},
+]);
+assert.deepEqual(assessmentAttendance.map(x=>[x.name,x.date,x.present,x.absent,x.marked,x.attendanceRate]),[['Evaluación A','2026-11-09',1,1,2,50],['Evaluación B','2026-11-10',1,0,1,100]],'date/context rollup excludes other groups and sessions without marks');
+const sessions=Summary.attendanceSessions(rollupAttendance),attendanceByDay=Summary.attendanceByDay(rollupAttendance),attendanceStats=Summary.stats({attendance:rollupAttendance});
+assert.equal(sessions.length,12,'dashboard counts one marked class per date/schedule/context');
+assert.deepEqual(attendanceByDay.map(x=>[x.weekday,x.present,x.absent]),[['lunes',94,10],['martes',95,9],['miércoles',95,9]],'weekly rollup aggregates all sessions by weekday');
+assert.deepEqual([attendanceStats.marked,attendanceStats.present,attendanceStats.absent,attendanceStats.attendanceRate],[312,284,28,91],'dashboard attendance counts use marked records, not session count');
+const assessmentSpecs=[['ZAPIA QA — Evaluación de prueba','2026-11-09',29,0,0,2,7.52],['ZAPIA QA — Evaluación de Historia (ficticia)','2026-11-10',27,0,0,4,8.04],['ZAPIA QA — Evaluación de Inglés (ficticia)','2026-11-11',27,0,0,4,6.63],['ZAPIA QA — Ciencias: evaluación 1 (ficticia)','2026-11-23',17,0,2,2,7.29],['ZAPIA QA — Historia: evaluación 1 (ficticia)','2026-11-24',16,1,2,2,7.19],['ZAPIA QA — Inglés: evaluación 1 (ficticia)','2026-11-25',17,1,1,2,6.82],['ZAPIA QA — Ciencias: evaluación 2 (ficticia)','2026-11-30',18,1,2,0,7.33],['ZAPIA QA — Historia: evaluación 2 (ficticia)','2026-12-01',18,1,2,0,7.33],['ZAPIA QA — Inglés: evaluación 2 (ficticia)','2026-12-02',18,1,2,0,6.89]];
+const qaAssessments=assessmentSpecs.map(([name,date],i)=>({id:`qa-${i}`,data:{name,date,subjectId:'math'}}));
+const qaGrades=assessmentSpecs.flatMap(([,date,graded,pending,notSubmitted,absent,average],i)=>[
+  ...Array.from({length:graded},(_,j)=>({data:{assessmentId:`qa-${i}`,gradeDate:date,status:'graded',value:average}})),
+  ...Array.from({length:pending},()=>({data:{assessmentId:`qa-${i}`,gradeDate:date,status:'pending'}})),
+  ...Array.from({length:notSubmitted},()=>({data:{assessmentId:`qa-${i}`,gradeDate:date,status:'not_submitted'}})),
+  ...Array.from({length:absent},()=>({data:{assessmentId:`qa-${i}`,gradeDate:date,status:'absent'}})),
+]);
+const qaGradeRollup=Summary.gradesByAssessment(qaGrades,qaAssessments),qaGradeStats=Summary.stats({grades:qaGrades});
+assert.deepEqual(qaGradeRollup.map(x=>[x.name,x.date,x.graded,x.pending,x.notSubmitted,x.absent,x.exempt,x.average]),assessmentSpecs.map(x=>[...x.slice(0,2),...x.slice(2,6),0,x[6]]),'grade dashboard reports every assessment with independent date, average and status counts');
+assert.deepEqual([qaGradeStats.graded,qaGradeStats.pending,qaGradeStats.notSubmitted,qaGradeStats.gradeAbsent,qaGradeStats.exempt,qaGradeStats.averageGrade],[187,5,11,16,0,7.26],'grade KPI rollup matches the shared dashboard example');
+console.log('PASS: dashboard attendance/grade rollups match supplied synthetic data.');

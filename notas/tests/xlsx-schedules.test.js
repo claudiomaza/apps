@@ -13,8 +13,8 @@ assert.match(app,/teacherId===x\.data\.teacherId/,'teacher worksheet contains on
 assert.match(lazy,/#import-xlsx,#export-xlsx,#export-schedules,#export-topic-xlsx/,'Excel loader covers active report export controls');
 assert.doesNotMatch(lazy,/export-schedules-shortcut/,'no teacher export shortcut remains in Libreta');
 assert.match(html,/id="view-users"[\s\S]*id="export-schedules"/,'DDJJ export action is in Docentes y permisos');
-assert.match(app,/Docente:teacherText[\s\S]*'Días y horarios':hours/,'group Libreta export contains teacher and class schedule data');
 assert.match(app,/export-topic-xlsx[\s\S]*libro-de-tema\.xlsx/,'topic book has an Excel export');
 const users=html.slice(html.indexOf('id=\"view-users\"'),html.indexOf('id=\"view-assessments\"'));assert.match(users,/id=\"export-subject-teachers\"/,'admin subjects/teachers export is in Docentes y permisos');
 
 console.log('Teacher DDJJ and subject-teacher Excel export contracts PASS');
+assert.match(app,/teacherText/,'group Libreta export contains teacher attribution when available');assert.match(app,/assessments=gradebookAssessmentsFor\(f\),wide=\[\['Estudiante','ID','Materia','Docente','Días y horarios',\.\.\.assessments\.map\(a=>a\.data\.name\)\],\['','','','','',\.\.\.assessments\.map\(a=>a\.data\.date\|\|'Sin fecha'\)\]/,'group Libreta Excel separates assessment names and dates');assert.match(app,/gradeFor\(student\.id,a\.id\)/,'group Libreta export includes per-student grades/statuses');
