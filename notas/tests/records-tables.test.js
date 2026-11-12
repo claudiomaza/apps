@@ -7,7 +7,10 @@ for(const [values,count] of [[{slotDay:['1','3'],slotStart:['09:00','11:00'],slo
 assert.throws(()=>context.normalizeScheduleSlots({slotDay:['1'],slotStart:['10:00'],slotEnd:['09:00']}),/franja horaria/);
 assert.match(html,/id="record-filter-type"/,'records need a type filter');
 for(const field of ['school','subject','course','division'])assert.match(html,new RegExp(`id="record-filter-${field}"`),`records need ${field} filter`);
-assert.match(app,/function renderTableTools\(/,'every table needs shared search/sort tools');assert.match(app,/function stableSortRows\(/,'table sorting must be stable for ties');assert.match(app,/document.querySelectorAll\('tbody\[id\]'\)/,'all data tables get the shared controls');
+assert.match(app,/function renderTableTools\(/,'every table needs shared search/sort tools');
+assert.match(app,/Buscar en columna<select data-table-search-column>/,'table search can target a selected column');
+assert.match(app,/function tableRowSearchMatches\(/,'column-specific table matching helper exists');
+assert.match(app,/function tableRowSearchMatches\(/,'column-specific table matching has a reusable helper');assert.match(app,/function stableSortRows\(/,'table sorting must be stable for ties');assert.match(app,/document.querySelectorAll\('tbody\[id\]'\)/,'all data tables get the shared controls');
 assert.match(app,/r\.type==='student'\)contexts=liveRecords\.filter\(x=>x\.type==='membership'/,'student filters account for every group membership');
 assert.match(app,/await saveRecords\(changes\);render\(\);return;/,'multiple schedules are prepared as drafts in one operation');
 assert.match(app,/observer.observe\(body/,'table controls track dynamic rows');
@@ -17,6 +20,9 @@ assert.match(app,/Buscar en esta tabla<input type="search"/,'table search has a 
 assert.match(app,/value="asc"/,'A-Z sort control');assert.match(app,/value="desc"/,'Z-A sort control');
 assert.match(app,/function normalizeScheduleSlots\(/,'multi-session schedule validator is missing');
 load('function tableSearchMatches(','function renderTableTools');
+assert.equal(context.tableRowSearchMatches({textContent:'Alice Math',cells:[{innerText:'Alice'},{innerText:'Math'}]},'math','1'),true);
+assert.equal(context.tableRowSearchMatches({textContent:'Alice Math',cells:[{innerText:'Alice'},{innerText:'Math'}]},'math','0'),false);
+assert.equal(context.tableRowSearchMatches({textContent:'Alice Math',cells:[{innerText:'Alice'},{innerText:'Math'}]},'math',''),true);
 assert.equal(context.tableSearchMatches('Estudiante Álvarez 12','álvarez 12'),true);
 assert.equal(context.tableSearchMatches('Estudiante A','no'),false);
 assert.ok(context.compareTableValues('9','10')<0,'sort compares numbers naturally');

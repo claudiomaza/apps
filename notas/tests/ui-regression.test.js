@@ -112,6 +112,8 @@ assert.match(html,/data-summary-tab="overview">Panel inicial[\s\S]*data-summary-
 
 assert.match(source,/function gradebookAssessmentsFor[\s\S]*data\.divisionId===f\.division/,'group gradebook scopes assessments to the selected school, subject, year, and division');assert.doesNotMatch(source.slice(source.indexOf('function gradebookAssessmentsFor'),source.indexOf('function renderGradebook')),/f\.cutoff/,'group gradebook includes all assessment cutoffs');assert.match(source,/class=\"grade-instance-date\">\$\{esc\(assessment\.data\.date/,'gradebook separates the date from the grade value in each student row');assert.match(source,/case'membership':return selectField\('schoolId','Escuela'[\s\S]*selectField\('courseId','Año \/ curso'[\s\S]*selectField\('divisionId','División'/,'student assignment explicitly captures course year and division');assert.match(html,/Año escolar · división/,'student roster labels the year/division assignment');
 
-assert(source.includes('Promedio por evaluación'),'initial attendance statistic includes assessment breakdown');
+assert(source.includes('Promedio de asistencia por evaluación'),'initial attendance statistic includes assessment breakdown');
 assert(source.includes('attendanceByAssessment'),'assessment attendance uses dedicated exact-context rollup');
 assert(source.includes('escSummary(x.date)'),'assessment date is escaped before insertion into summary HTML');
+
+assert.match(html,/access-details[\s\S]*id=\"logout-button\"/,'logout appears below the account name and access details');assert.match(source,/function signOut\(\)/,'sign out clears the active session');assert.match(source,/stagedRecords\.clear\(\)/,'only authentication failure paths clear staged data, not sign-out');assert.match(html,/sync-help/,'refresh and sync explain their distinct effects');
