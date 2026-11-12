@@ -6,11 +6,11 @@
   <meta name="theme-color" content="#203c35">
   <meta name="description" content="Calendario de eventos con importación y exportación Excel.">
   <title>Agenda — Apps</title>
-  <link rel="stylesheet" href="./styles.css?v=20261111-xlsx-path5">
+  <link rel="stylesheet" href="./styles.css?v=20261112-session-fast1">
   <link rel="manifest" href="./manifest.json">
 </head>
 <body>
-  <header class="topbar"><a class="brand" href="./">A / Agenda</a><span id="connection" class="connection">Conectando…</span><div class="topbar-tools"><button id="sync-button" type="button" class="primary-button sync-button" disabled hidden>Sincronizar</button><span id="sync-state" role="status" aria-live="polite" hidden></span><details id="settings-menu" class="action-menu settings-menu" hidden><summary class="action-menu-toggle" aria-label="Configurar agenda">Configurar <span aria-hidden="true">⌄</span></summary><div class="action-menu-panel"><button id="select-calendar" class="quiet-button" type="button">Seleccionar agenda</button><button id="rename-calendar" class="quiet-button" type="button" hidden>Cambiar nombre de la agenda</button><label class="setting-row">La semana empieza<select id="week-start"><option value="1">Lunes</option><option value="0">Domingo</option></select></label><button id="manage-groups" class="quiet-button" type="button">Grupos de eventos</button></div></details></div></header>
+  <header class="topbar"><a class="brand" href="./">A / Agenda</a><span id="connection" class="connection">Conectando…</span><div class="topbar-tools"><button id="sync-button" type="button" class="primary-button sync-button" disabled hidden>Sincronizar</button><span id="sync-state" role="status" aria-live="polite" hidden></span><div class="topbar-session-actions"><details id="settings-menu" class="action-menu settings-menu" hidden><summary class="action-menu-toggle" aria-label="Configurar agenda">Configurar <span aria-hidden="true">⌄</span></summary><div class="action-menu-panel"><button id="select-calendar" class="quiet-button" type="button">Seleccionar agenda</button><button id="rename-calendar" class="quiet-button" type="button" hidden>Cambiar nombre de la agenda</button><label class="setting-row">La semana empieza<select id="week-start"><option value="1">Lunes</option><option value="0">Domingo</option></select></label><button id="manage-groups" class="quiet-button" type="button">Grupos de eventos</button></div></details><button id="logout-button" type="button" class="quiet-button" hidden>Cerrar sesión</button></div></div></header>
   <main class="layout">
     <section id="login-panel" class="login-panel"><label>Usuario<input id="access-user" type="text" autocomplete="username" maxlength="254" placeholder="Ingresá tu usuario" required></label><label>Contraseña<input id="access-pass" type="password" autocomplete="current-password" minlength="1" maxlength="200" placeholder="Ingresá tu contraseña" required></label><button id="login-button" class="primary-button">Ingresar</button><p id="login-message" role="status"></p></section>
   <div id="app-content" hidden>
@@ -35,6 +35,6 @@
   </div>
   </main>
   <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
-  <script src="./config.js?v=20261105-lazy-xlsx"></script><script src="./stage-store.js?v=20261106-idb1"></script><script src="./app.js?v=20261111-xlsx-path5" defer></script>
+  <script src="./config.js?v=20261105-lazy-xlsx"></script><script src="./stage-store.js?v=20261106-idb1"></script><script src="./app.js?v=20261112-session-fast1" defer></script>
 </body>
 </html>

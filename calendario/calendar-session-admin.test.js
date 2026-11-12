@@ -1,0 +1,12 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const root=__dirname,html=fs.readFileSync(path.join(root,'index.html'),'utf8'),app=fs.readFileSync(path.join(root,'app.js'),'utf8'),css=fs.readFileSync(path.join(root,'styles.css'),'utf8');
+assert.match(html,/<div class="topbar-session-actions">[\s\S]*id="settings-menu"[\s\S]*id="logout-button"[\s\S]*<\/div>/,'logout must sit beside Configurar');
+assert.match(app,/function logout\(\)/);
+assert.match(app,/removeItem\('calendarSession'\)/);
+assert.match(app,/loadCalendarAdminData\(force=false\)/);
+assert.match(app,/adminDataPromise/);
+assert.doesNotMatch(app,/if\(name==='collaborators'\)loadCalendarAdminData\(\)/,'switching to collaborators should reuse loaded data');
+assert.match(app,/state\.collaborators\.push\(\{username:result\.username/,'adding a collaborator should update the already-loaded list without another read');
+assert.match(css,/topbar-session-actions/);
+console.log('Session logout and admin data reuse contracts PASS');
