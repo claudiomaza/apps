@@ -1,0 +1,13 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const root=path.join(__dirname,'..'),html=fs.readFileSync(path.join(root,'index.html'),'utf8'),app=fs.readFileSync(path.join(root,'app.js'),'utf8'),css=fs.readFileSync(path.join(root,'styles.css'),'utf8');
+const sidebar=html.slice(html.indexOf('<aside class="app-sidebar"'),html.indexOf('</aside>'));
+assert.doesNotMatch(sidebar,/<select id="filter-assignment"/,'class selector is not in the vertical menu');
+assert.match(html,/id="change-class-context"[\s\S]*class-context-menu[\s\S]*id="filter-assignment"/,'change class opens an in-content picker');
+assert.match(sidebar,/Apariencia[\s\S]*id="theme-toggle"/,'appearance is a vertical menu section');
+assert.match(html,/id="mobile-class-route"/,'mobile bar has a class route next to Menu');
+assert.match(app,/function renderClassContext\([\s\S]*mobile-class-route/,'active class route is updated from class context');
+assert.match(css,/\.app-main #sync-button,\.app-main #refresh\{min-width:142px;min-height:44px/,'sync and refresh controls have equal dimensions');
+assert.match(html,/id="sync-review-all"[^>]*>[\s\S]*Seleccionar todos \(opcional\)/,'sync review can select all changes optionally');
+assert.match(app,/data-sync-review-id/,'sync review presents individual changes');
+console.log('Class dropdown, appearance menu, mobile class route and selectable sync review PASS');
