@@ -110,3 +110,11 @@
 ## Menú de clase: cohortes legibles (2026-11-13)
 
 El selector combinado ya identifica la escuela, materia, curso y división. El resumen inmediatamente debajo no repite ese contexto: muestra una etiqueta «Cohortes» y chips compactos por año único derivado de estudiantes de esa clase, más «Pendiente» cuando corresponda. No incluir fechas día/mes en la lista del menú, para no repetir el año por cada estudiante. «Subgrupo · opcional» conserva su propia etiqueta y selector en una fila separada.
+
+## Legibilidad global y ritmo visual (2026-11-13)
+
+- Tipografía base 16px, interlineado cómodo y wrapping para el contenido principal; jerarquía de títulos y texto auxiliar sin microtexto.
+- Formularios, filtros y botones conservan ancho mínimo cero y altura táctil; en móvil las ayudas/filtros/acciones se apilan para no compartir espacio insuficiente.
+- Bloques, tarjetas y diálogos permiten texto largo sin desbordar; tablas y matrices permanecen en scroll local horizontal. Se conserva el comportamiento y los datos.
+- Cache key CSS `20261113-readable7`; contrato en `notas/tests/layout-readability.test.js`.
+- La captura visual responsive queda pendiente por indisponibilidad confirmada de navegador/Moli en el entorno.

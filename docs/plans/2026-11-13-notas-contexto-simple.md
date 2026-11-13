@@ -30,3 +30,11 @@ El indicador deja de ser un pseudo-elemento CSS junto al texto: pasa a un círcu
 ## Menú de clase y cohortes (2026-11-13)
 
 Mostrar cohortes bajo el selector combinado como chips con años únicos; reemplazar `unassigned` por «Pendiente». No concatenar de nuevo escuela/materia/curso/división ni fechas por estudiante. El selector de subgrupo conserva rótulo independiente debajo.
+
+## Legibilidad global y ritmo visual (2026-11-13)
+
+- Tipografía base 16px, interlineado cómodo y wrapping para el contenido principal; jerarquía de títulos y texto auxiliar sin microtexto.
+- Formularios, filtros y botones conservan ancho mínimo cero y altura táctil; en móvil las ayudas/filtros/acciones se apilan para no compartir espacio insuficiente.
+- Bloques, tarjetas y diálogos permiten texto largo sin desbordar; tablas y matrices permanecen en scroll local horizontal. Se conserva el comportamiento y los datos.
+- Cache key CSS `20261113-readable7`; contrato en `notas/tests/layout-readability.test.js`.
+- La captura visual responsive queda pendiente por indisponibilidad confirmada de navegador/Moli en el entorno.

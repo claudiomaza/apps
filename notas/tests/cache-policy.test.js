@@ -12,14 +12,14 @@ assert.doesNotMatch(html,/serviceWorker\.register\(/,'Notes must not register a 
 assert.doesNotMatch(app,/navigator\.serviceWorker\.register\(/,'Notes must not re-register a service worker after cleanup');
 assert.match(app,/navigator\.serviceWorker\.getRegistrations\(\)/,'the app removes existing service worker registrations');
 assert.match(html,/http-equiv="Cache-Control" content="no-store/,'document requests no-store from supporting caches; hosting HTTP headers still govern CDN caching');
-assert.match(html,/app\.js\?v=20261113-diagnose4/,'fresh app bundle has a new cache key');
-assert.match(html,/styles\.css\?v=20261113-diagnose4/,'fresh stylesheet has a new cache key');
+assert.match(html,/app\.js\?v=20261113-cohortchips5/,'fresh app bundle has a new cache key');
+assert.match(html,/styles\.css\?v=20261113-readable7/,'fresh stylesheet has a new cache key');
 assert.match(app,/navigator\.serviceWorker\.getRegistrations\(\)/,'the app removes any previous worker registration');
 assert.doesNotMatch(app,/navigator\.serviceWorker\.register\(/,'the app does not install another worker');
-assert.match(html,/app\.js\?v=20261113-diagnose4/,'app bundle must be cache-busted after class-context navigation changes');
-assert.match(html,/context\.js\?v=20261113-diagnose4/,'class context helper is versioned');
+assert.match(html,/app\.js\?v=20261113-cohortchips5/,'app bundle must be cache-busted after class-context navigation changes');
+assert.match(html,/context\.js\?v=20261113-cohortchips5/,'class context helper is versioned');
 assert.match(html,/summary\.js\?v=20261113-notas-sidebar1/,'summary bundle cache-buster remains versioned');
-assert.match(html,/styles\.css\?v=20261113-diagnose4/,'stylesheet cache-buster reflects class-context simplification');
+assert.match(html,/styles\.css\?v=20261113-readable7/,'stylesheet cache-buster reflects class-context simplification');
 
 assert.match(app,/cache:'no-store'/,'API responses must bypass browser HTTP cache');
 assert.doesNotMatch(app,/headers:\{[^}]*Cache-Control/,'avoid custom request headers that can trigger Apps Script CORS preflight');

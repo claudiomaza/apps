@@ -1,0 +1,13 @@
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const css=fs.readFileSync(path.join(__dirname,'../styles.css'),'utf8');
+assert.match(css,/body\{font-size:16px;line-height:1\.55/,'body uses readable base type and line height');
+assert.match(css,/\.app-main :where\(p,li,small,label,summary,button,a,th,td,h1,h2,h3,h4,legend\)\{overflow-wrap:anywhere;word-break:normal\}/,'text can wrap instead of overflowing');
+assert.match(css,/\.app-main :where\(input,select,textarea\)\{min-width:0;min-height:44px;font-size:1rem/,'form controls are readable and shrink within columns');
+assert.match(css,/@media\(max-width:560px\)\{[\s\S]*?\.app-main :where\(\.summary-filters,\.record-filters\)\{grid-template-columns:minmax\(0,1fr\)/,'filters use a single column on narrow phones');
+assert.match(css,/@media\(max-width:560px\)\{[\s\S]*?\.app-main :where\(\.toolbar-actions button,\.setup-actions button\)\{flex:1 1 100%/,'mobile actions do not crowd beside each other');
+assert.match(css,/\.app-main :where\(\.table-wrap,\.summary-matrix-wrap\)\{max-width:100%;overscroll-behavior-inline:contain\}/,'wide tables remain locally scrollable instead of stretching the page');
+assert(css.includes('.app-main :where(p.helper,.sync-help,.privacy-note,.summary-year-help,.summary-scope){font-size:.88rem;line-height:1.6}'),'helper copy has comfortable size and leading');
+console.log('Global layout readability contract PASS');
