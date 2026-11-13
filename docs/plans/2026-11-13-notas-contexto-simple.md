@@ -39,6 +39,10 @@ Mostrar cohortes bajo el selector combinado como chips con años únicos; reempl
 - Cache key CSS `20261113-reference8`; contrato en `notas/tests/layout-readability.test.js`.
 - La captura visual responsive queda pendiente por indisponibilidad confirmada de navegador/Moli en el entorno.
 
+## Debugging visual y caché opt-in (2026-11-13)
+
+Durante debugging, `ASSET_CACHE_ENABLED` y `SERVICE_WORKER_ENABLED` en `notas/config.js` son falsos. El loader de `index.html` limpia workers viejos y cachés propios en ese modo; app.js no limpia en paralelo. El login usa título compacto; el toast fuerza fondo oscuro y mantiene spinner separado también en dark mode. No activar cache ni SW hasta que Claudio confirme que se sale de debugging. Assets: `20261113-debugfix10`.
+
 ## Estilo de referencia de navegación (2026-11-13)
 
 Claudio indicó como referencia visual `https://zapia-notas-nav-claudio-20261113.netlify.app/`: fondo salvia pálido, tarjetas blancas redondeadas con sombra leve, verde bosque como acento, títulos con escala editorial y acciones compactas en tarjetas. Aplicar a la app real sin adoptar los datos ficticios ni reemplazar su flujo/navigation. Validar desktop y móvil con screenshots, no inferir aceptación visual del CSS. Cache key CSS `20261113-reference8`. La referencia inspeccionada usa fondo salvia/verde gris, tarjetas blancas, radio ~18px, sombra suave, verde bosque y acciones compactas; no son solo cambios de tamaño de fuente. La app real hereda ese tratamiento en paneles, tarjetas, botones, formularios y estados oscuros, conservando el DOM y flujos existentes.

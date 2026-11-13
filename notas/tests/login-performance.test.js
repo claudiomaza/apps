@@ -10,5 +10,5 @@ const authenticate = app.slice(start, end);
 assert.match(authenticate, /stageOwner=await stageOwnerKey\(currentUsername\);sessionStorage\.setItem\('gradesSession',sessionToken\);await restoreStage\(\);await loadRemote\(\);/, 'restore drafts before the single remote fetch that merges them');
 assert.equal((authenticate.match(/await loadRemote\(\);/g) || []).length, 1, 'authentication must make one initial remote read');
 assert.match(app.slice(end, app.indexOf('\nfunction inputField', end)), /for\(const r of stagedRecords\.values\(\)\)/, 'remote load merges staged drafts into the loaded snapshot');
-assert.match(html, /app\.js\?v=20261113-cohortchips5/, 'fresh app cache key');
+assert.match(html, /app\.js\?v=20261113-debugfix10/, 'fresh app cache key');
 console.log('Single-read login and staged-draft merge contract PASS');

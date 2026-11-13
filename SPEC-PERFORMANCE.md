@@ -119,6 +119,12 @@ El selector combinado ya identifica la escuela, materia, curso y división. El r
 - Cache key CSS `20261113-reference8`; contrato en `notas/tests/layout-readability.test.js`.
 - La captura visual responsive queda pendiente por indisponibilidad confirmada de navegador/Moli en el entorno.
 
+## Debugging visual y caché opt-in (2026-11-13)
+
+- Durante debugging, `ASSET_CACHE_ENABLED` y `SERVICE_WORKER_ENABLED` en `notas/config.js` quedan ambos en `false`. El loader de `index.html` desregistra workers de Notas y borra solo cachés `notas-static-*` en ese modo; el app.js ya no hace una limpieza paralela.
+- Activación deliberada preproducción: cambiar los flags en config y desplegar; SW se registra con `?cache=1` solo si se habilita explícitamente asset cache. Por ahora no activarlos: Claudio avisará cuando termine debugging.
+- Regression fix: login heading usa escala compacta clamp para no ocupar la vista; toast fija fondo oscuro explícito y spinner independiente, con overrides también en dark mode. Cache-buster `20261113-debugfix10`.
+
 ## Estilo de referencia de navegación (2026-11-13)
 
 Claudio indicó como referencia visual `https://zapia-notas-nav-claudio-20261113.netlify.app/`: fondo salvia pálido, tarjetas blancas redondeadas con sombra leve, verde bosque como acento, títulos con escala editorial y acciones compactas en tarjetas. Aplicar a la app real sin adoptar los datos ficticios ni reemplazar su flujo/navigation. Validar desktop y móvil con screenshots, no inferir aceptación visual del CSS. Cache key CSS `20261113-reference8`. La referencia inspeccionada usa fondo salvia/verde gris, tarjetas blancas, radio ~18px, sombra suave, verde bosque y acciones compactas; no son solo cambios de tamaño de fuente. La app real hereda ese tratamiento en paneles, tarjetas, botones, formularios y estados oscuros, conservando el DOM y flujos existentes.
