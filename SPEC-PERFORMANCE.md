@@ -89,3 +89,9 @@
 - En Inicio, priorizar tres accesos: asistencia, carga de notas y libro de tema. Mostrar clase actual y su contexto; los reportes y filtros globales quedan dentro de un `details` cerrado inicialmente. En el menú lateral cerrar inicialmente los grupos secundarios; mantener funciones existentes accesibles.
 - El botón de cambiar clase debe abrir el drawer en móvil o enfocar/abrir el selector en escritorio incluso con el lateral plegado. Una cuenta sin contexto asignado obtiene el estado vacío, no una combinación inventada.
 - Tests: prueba de unidad del helper asegura identidad de contexto y cohortes múltiples exactas; suite frontend completa y pruebas de selección contextual y cache versionado. QA visual/autenticado requiere navegador disponible y datos sintéticos; nunca Sheets real.
+
+## Notas — legibilidad de toast y accesos de Inicio (2026-11-13)
+
+- El toast debe ocupar un ancho legible responsivo en lugar de ajustarse solo al texto; permitir ajuste de palabras largas, límite de altura con scroll y safe area en móvil. Mensajes multilinea conservan separación y alineación izquierda.
+- En las tarjetas de acceso de Inicio, la columna de texto debe poder encogerse sin empujar icono ni flecha; aplicar `min-width:0`, `minmax(0,1fr)`, `overflow-wrap:anywhere` y line-height cómodo. No ocultar mensajes ni truncar acciones.
+- Validar la política con `notas/tests/toast-layout.test.js` y suite completa. Prueba visual responsive sigue requerida cuando el browser esté disponible.
