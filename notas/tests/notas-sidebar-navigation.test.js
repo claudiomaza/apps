@@ -2,14 +2,14 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const root=process.env.NOTAS_ROOT||path.join(__dirname,'..');
 const html=fs.readFileSync(path.join(root,'index.html'),'utf8'),css=fs.readFileSync(path.join(root,'styles.css'),'utf8'),app=fs.readFileSync(path.join(root,'app.js'),'utf8');
-for(const id of ['app-sidebar','sidebar-toggle','sidebar-desktop-toggle','sidebar-close','sidebar-backdrop','theme-toggle','sidebar-context','filter-school','filter-subject','filter-course','filter-division','filter-cutoff','filter-subgroup','access-profile','access-summary','access-details','logout-button']) assert.equal((html.match(new RegExp(`id="${id}"`,'g'))||[]).length,1,`${id} is unique and reused in the sidebar`);
+for(const id of ['app-sidebar','sidebar-toggle','sidebar-desktop-toggle','sidebar-close','sidebar-backdrop','theme-toggle','sidebar-context','filter-assignment','filter-school','filter-subject','filter-course','filter-division','filter-cutoff','filter-subgroup','access-profile','access-summary','access-details','logout-button']) assert.equal((html.match(new RegExp(`id="${id}"`,'g'))||[]).length,1,`${id} is unique and reused in the sidebar`);
 assert.match(html,/class="sidebar-link active" data-tab="summary"/);assert.match(html,/Trabajo docente[\s\S]*data-tab="students"/);assert.match(html,/sidebar-group sidebar-admin[\s\S]*Administración/);
 assert.match(css,/\.app-shell\{min-height:calc\(100dvh - 68px\);display:grid;grid-template-columns:252px/);
 assert.match(css,/\.app-shell\.sidebar-collapsed\.sidebar-popup-open/);
 assert.match(css,/@media\(max-width:850px\)\{\.app-shell\{display:block[\s\S]*\.app-shell\.sidebar-open \.app-sidebar\{transform:translateX\(0\)\}/);
 assert.match(css,/\.summary-kpis\{grid-template-columns:1fr!important\}/);assert.match(css,/body\.theme-dark\s*\{/);
 assert.match(app,/function applyTheme\(theme\)[\s\S]*localStorage\.setItem\('notasTheme'/);
-assert.match(app,/function closeAppSidebar\(\)[\s\S]*function applyTheme/);assert.match(app,/function renderAccessProfile\(\)[\s\S]*idKey/);
-assert.match(app,/function syncSidebarNavigation\(\)[\s\S]*currentRole!=='admin'/);assert.match(app,/data-table-search-column/);
-assert.match(html,/styles\.css\?v=20261113-notas-sidebar1/);assert.match(html,/app\.js\?v=20261113-notas-sidebar1/);
+assert.match(app,/function closeAppSidebar\(\)[\s\S]*function applyTheme/);assert.match(app,/function renderAccessProfile\(\)[\s\S]*idKey/);assert.match(app,/function signOut\(\)[\s\S]*remove\('app-authenticated'\)/);assert.match(app,/SESSION_EXPIRED[^}]*app-authenticated|app-authenticated[^}]*SESSION_EXPIRED/);
+assert.match(app,/function syncSidebarNavigation\(\)[\s\S]*currentRole!=='admin'/);assert.match(app,/data-table-search-column/);assert.match(css,/\.class-context-card/);assert.match(css,/\.global-summary/);
+assert.match(html,/styles\.css\?v=20261113-classcontext1/);assert.match(html,/app\.js\?v=20261113-classcontext1/);
 console.log('Sidebar navigation, context selector, theme, vertical KPI and existing table filters PASS');

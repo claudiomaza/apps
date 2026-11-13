@@ -90,7 +90,7 @@ assert.match(app,/summary-instance-name/,'grade matrix has a separate instance-n
 assert.match(app,/\$\('#summary-subject-statistics'\)\.innerHTML=subjectStatistics/,'subject summary table is populated from context-specific stats');assert.match(app,/label:`\$\{a\.data\.date\|\|'Sin fecha'\}\\n\$\{assessmentName\(a\.id\)\}`/,'assessment name is rendered under its date in grade matrix headers');
 assert.doesNotMatch(app,/Exentas|Eximidas/);assert.match(app,/Eximidos/);assert.match(app,/summary-attendance-matrix/);assert.match(app,/summary-grade-matrix/);assert.match(app,/attendanceSessions/);assert.match(app,/gradeMark/);
 assert(html.indexOf('aria-controls="configuration-menu"')<html.indexOf('data-tab="admin"')&&html.indexOf('data-tab="admin"')<html.indexOf('data-tab="trash"'),'Registros y Papelera están dentro de Configuración');
-assert.match(html,/app\.js\?v=20261112-notas-admin-ux1/);assert.match(html,/summary\.js\?v=20261112-notas-admin-ux1/);
+assert.match(html,/app\.js\?v=20261113-classcontext1/);assert.match(html,/summary\.js\?v=20261113-notas-sidebar1/);
 
 const membership={schoolId:'a',subjectId:'math',courseId:'c1',divisionId:'d1',subgroupIds:['sub1']};
 assert.equal(Summary.sameGroup(membership,all.find(x=>x.type==='attendance').data),true,'extra membership fields must not hide attendance');assert.equal(Summary.sameGroup(membership,{...membership,subjectId:'hist'}),false,'different groups never mix');
