@@ -16,3 +16,7 @@
 - Ajuste de ancho, altura, scroll, saltos de línea y safe area de toast en móvil/escritorio.
 - Columnas de texto de acciones y resumen con tamaño mínimo cero y wrapping explícito para que no se amontonen.
 - Versión de cache incrementada para CSS y JS.
+
+## Spinner explícito en «Verificando» (2026-11-13)
+
+El indicador deja de ser un pseudo-elemento CSS junto al texto: pasa a un círculo de carga en un `span` dedicado, separado del texto por flex-gap. El mensaje vive en otra columna flexible que envuelve sin colapsar. Cache key `20261113-toastlayout3`; test focal `toast-loading.test.js`.

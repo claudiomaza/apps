@@ -1,0 +1,13 @@
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const app=fs.readFileSync(path.join(__dirname,'../app.js'),'utf8');
+const css=fs.readFileSync(path.join(__dirname,'../styles.css'),'utf8');
+assert.match(app,/function toast\(message,type='success'\)[\s\S]*?toast-message/,'toast renders message in its own flex child');
+assert.match(app,/toast-spinner/,'loading spinner is a dedicated element, not a text pseudo-element');
+assert(css.includes('.toast{display:flex;align-items:flex-start;gap:12px;'),'toast separates spinner from message with layout gap');
+assert(css.includes('.toast-spinner{display:block;flex:0 0 18px;')&&css.includes('border-radius:50%;animation:toast-spin'),'spinner is an explicit round animated element');
+assert(css.includes('.toast-message{display:block;flex:1;min-width:0;')&&css.includes('overflow-wrap:anywhere'),'message wraps in its own shrinkable column');
+assert(css.includes('.toast[data-state=loading]:before{content:none;display:none}'),'loading pseudo-element is disabled');
+console.log('Loading toast structure and wrapping PASS');

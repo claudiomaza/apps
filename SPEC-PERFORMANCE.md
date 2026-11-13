@@ -94,4 +94,9 @@
 
 - El toast debe ocupar un ancho legible responsivo en lugar de ajustarse solo al texto; permitir ajuste de palabras largas, límite de altura con scroll y safe area en móvil. Mensajes multilinea conservan separación y alineación izquierda.
 - En las tarjetas de acceso de Inicio, la columna de texto debe poder encogerse sin empujar icono ni flecha; aplicar `min-width:0`, `minmax(0,1fr)`, `overflow-wrap:anywhere` y line-height cómodo. No ocultar mensajes ni truncar acciones.
-- Validar la política con `notas/tests/toast-layout.test.js` y suite completa. Prueba visual responsive sigue requerida cuando el browser esté disponible.
+- Validar la política con `notas/tests/toast-layout.test.js`, `notas/tests/toast-loading.test.js` y suite completa. Prueba visual responsive sigue requerida cuando el browser esté disponible.
+
+## Toast de carga y bloque de texto (2026-11-13)
+
+- «Verificando» usa un spinner circular como elemento DOM separado; el texto vive en un span flexible que envuelve frases y errores extensos. No reconstruir el spinner con pseudo-elementos de texto.
+- Cache key de `index.html` y tests alineados a `20261113-toastlayout3`.
