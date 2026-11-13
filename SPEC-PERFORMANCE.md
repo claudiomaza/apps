@@ -71,3 +71,12 @@
 
 - Debajo del gráfico de asistencia por día se agrega el apartado «Promedio por evaluación», en paralelo semántico a «Promedio por evaluación». Cada instancia muestra fecha, porcentaje presente, presentes, ausentes y total marcado. Solo cuenta marcas Presente/Ausente de la fecha exacta y del mismo contexto (escuela, materia, año/curso, división) que la instancia; no mezcla otras divisiones/materias ni sesiones sin marcas. Las evaluaciones sin marcas no se muestran.
 - La tasa es presentes / (presentes + ausentes), redondeada al entero. Continúa respetando el conjunto de asistencia y evaluaciones ya filtrado por ciclo/fechas y filtros globales del resumen.
+
+
+## Notas — navegación lateral móvil y panel de administración (2026-11-13)
+
+- Tras iniciar sesión, usar una navegación lateral permanente en escritorio, plegable con acceso de reapertura como popup; en celular abrirla como panel modal con fondo, cierre explícito y Escape. No duplicar los selectores existentes: reubicar Escuela, Materia, Año/curso, División, Corte y Subgrupo en el perfil inferior del lateral para conservar el contexto filtrado por permisos.
+- Separar accesos «Trabajo docente» y «Administración». Libro de tema, Libreta, Asistencia, Notas, Observaciones y Estudiantes siguen accesibles para el rol docente; Registros, Papelera, Docentes y permisos, e Instancias y pesos se muestran solo al admin conforme al rol existente. No reemplazar ni debilitar la autorización del backend.
+- Ubicar en el extremo inferior del lateral el perfil autenticado, detalles de alcance, Cerrar sesión, selector de tema claro/oscuro y contexto de curso. El tema se conserva localmente; no afecta sesión ni borradores. Ocultar el resumen duplicado del topbar luego de autenticar; mantenerlo para la pantalla de login.
+- En el panel inicial, indicadores de resumen se muestran en cajas apiladas verticalmente. Conservar filtros globales, operaciones explícitas y borradores IndexedDB. Los filtros por tabla ya existentes (búsqueda por tabla/columna y orden) deben seguir disponibles.
+- Verificación frontend: suite completa `notas/tests/*.test.js` 28/28 PASS con fixtures; el nuevo test de contrato comprueba IDs reutilizados, navegación/roles, drawer/popup, tema persistido, cajas verticales y mantenimiento de filtros. No autenticó a Sheets ni escribió/sincronizó datos. No afirmar QA visual o autenticado sin ejecutarlo.

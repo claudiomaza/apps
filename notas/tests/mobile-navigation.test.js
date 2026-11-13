@@ -9,7 +9,7 @@ assert.match(css, /@media\s*\(max-width:\s*560px\)[\s\S]*?\.dropdown-menu\s*\{[^
 assert.match(css, /\.dropdown-menu\s*\{[^}]*max-height:\s*min\(60dvh,\s*420px\)[^}]*overflow-y:\s*auto/i, 'long dropdowns fit the viewport and scroll');
 assert.match(css, /\.dropdown-item\s*\{[^}]*min-height:\s*44px[^}]*white-space:\s*normal/i, 'menu choices remain readable and tappable');
 assert.match(css, /\.users-layout[^}]*min-width:\s*0/i, 'teacher management children can shrink to mobile width');
-assert.match(html, /aria-controls="register-menu"[\s\S]*id="register-menu"[\s\S]*aria-controls="configuration-menu"[\s\S]*id="configuration-menu"/, 'both navigation dropdowns remain wired');
-assert.match(html, /styles\.css\?v=20261112-notas-admin-ux1/, 'CSS cache key changes with the responsive fix');
-assert.match(html, /app\.js\?v=20261112-notas-admin-ux1/, 'application script cache key stays on the deployed bundle');
+assert.match(html,/id="app-sidebar"[\s\S]*id="theme-toggle"/);assert.match(html,/id="sidebar-toggle"/);assert.match(html,/id="sidebar-desktop-toggle"/);
+assert.match(html, /styles\.css\?v=20261113-notas-sidebar1/, 'CSS cache key changes with sidebar navigation');
+assert.match(html, /app\.js\?v=20261113-notas-sidebar1/, 'application script cache key changes with sidebar navigation');
 console.log('Mobile navigation and teacher-view layout regression PASS');
