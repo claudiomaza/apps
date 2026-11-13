@@ -70,7 +70,7 @@ assert.deepEqual(Summary.schoolYears('s1',[...all,{type:'course',id:'c1',data:{n
 const html=require('node:fs').readFileSync(require('node:path').join(__dirname,'../index.html'),'utf8');
 assert.match(html,/Ciclo lectivo \(año cursado\)/,'cycle filter means year of course activity');
 assert.match(html,/Cohorte \(año de ingreso\)/,'cohort filter means year student started');
-assert.match(html,/La cohorte se identifica por el año.*día y mes de inicio/,'summary explains cohort year and its exact start day/month');
+assert.match(html,/Cohorte: año de ingreso\. Ciclo lectivo: año cursado\. Año escolar: curso actual\./,'summary briefly distinguishes cohort, cycle and school year');
 assert.match(app,/Fecha de inicio \(cohorte\)/,'student form distinguishes entry date from school year');
 assert.match(html,/<th>Cohorte de ingreso<\/th><th>Ciclo lectivo<\/th><th>Año escolar \(grupo\)<\/th><th>Materias y grupos<\/th>/,'student table displays entry year, academic year, and course level separately');
 assert.match(app,/Summary\.yearOf\(r,all\)/,'student cycle year is derived from dated records, never from cohort or school year');

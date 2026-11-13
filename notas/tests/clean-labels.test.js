@@ -1,0 +1,13 @@
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const html=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
+assert.match(html,/<summary><span aria-hidden="true">[^<]*<\/span>Trabajo diario<\/summary>/,'main daily work group uses short reference label');
+assert.match(html,/<summary><span aria-hidden="true">[^<]*<\/span>Mi grupo<\/summary>[\s\S]*?data-tab="students"/,'students are grouped separately as My group');
+assert.match(html,/id="home-actions"[\s\S]*?Tomar asistencia[\s\S]*?Cargar notas[\s\S]*?Registrar clase[\s\S]*?Ver estudiantes/,'home offers concise daily actions plus group access');
+assert.match(html,/Usá tu usuario de la planilla para consultar y guardar en Sheets\./,'login guidance is concise');
+assert.match(html,/Actualizar:<\/strong> lee Sheets; conserva borradores\.[\s\S]*Sincronizar:<\/strong> envía los cambios preparados\./,'sync help distinguishes actions in short labels');
+assert.match(html,/Marcá Presente o Ausente por estudiante\. Sin marcar: sin registro\./,'attendance help is concise and semantically clear');
+assert.match(html,/Los borradores quedan en este dispositivo; nada se envía sin <strong>Sincronizar<\/strong>\.[\s\S]*contraseñas del Sheet están en texto plano/,'privacy and sync safety remains visible');
+console.log('Clean reference labels and concise helper copy PASS');

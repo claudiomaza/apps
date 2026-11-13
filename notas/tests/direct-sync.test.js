@@ -6,7 +6,7 @@ const html=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
 const app=fs.readFileSync(path.join(__dirname,'../app.js'),'utf8');
 const sw=fs.readFileSync(path.join(__dirname,'../sw.js'),'utf8');
 assert.doesNotMatch(html,/local-draft|offline-store\.js|save-all|pending-count/iu);
-assert.match(html,/borradores quedan guardados en IndexedDB/);
+assert.match(html,/Nada se envía al editar/);assert.match(html,/conserva borradores/);
 assert.match(app,/StageStore\.replace\([\s\S]*stagedRecords\.values\(\)/);
 assert.match(app,/StageStore\.replace\(/);
 assert.match(app,/await loadRemote\(\);[\s\S]*for\(const r of stagedRecords\.values\(\)\)/);
@@ -14,7 +14,7 @@ assert.match(html,/<form id="login-form">[\s\S]*?<input id="access-user"[^>]*req
 assert.match(html,/id="app-content" hidden/);assert.match(html,/stage-store\.js/);
 assert.match(html,/id="sync-button"/);
 assert.match(html,/id="sync-state"/);
-assert.match(html,/styles\.css\?v=20261113-debugfix10/);
+assert.match(html,/styles\.css\?v=20261113-cleanlabels12/);
 assert.match(html,/app\.js\?v=20261113-debugfix10/);
 
 assert.match(sw,/notas-static-/);

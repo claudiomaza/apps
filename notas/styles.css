@@ -140,7 +140,15 @@ body{font-size:16px;line-height:1.5;text-rendering:optimizeLegibility;-webkit-te
 .summary-chart h3,.summary-panel h3{padding:15px 17px}
 .home-actions{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;padding:12px 18px 18px}
 .home-action{min-height:70px;grid-template-columns:36px minmax(0,1fr) 16px;gap:10px;padding:12px;border-radius:14px;background:#fff;box-shadow:0 5px 18px #26382c08}
-.home-action strong{font-size:.78rem;line-height:1.35}.home-action small{font-size:.68rem;line-height:1.4;color:var(--muted)}
+.home-action strong{display:block;font-size:.78rem;line-height:1.35}.home-action small{display:block;font-size:.68rem;line-height:1.4;color:var(--muted)}
+.home-action small [aria-hidden=true],.sync-help [aria-hidden=true]{display:inline-grid;place-items:center;width:18px;height:18px;margin-right:4px;border-radius:50%;background:var(--mint);color:var(--green);font-weight:800}
+.app-main .sync-help{padding:12px 16px;margin:0 18px 14px;border:1px solid var(--line);border-radius:13px;background:#f6f8f4;font-size:.78rem;line-height:1.5}
+.app-main .sync-help strong{color:var(--ink)}
+.app-main .privacy-note{margin:12px 18px;border:1px solid #eee8d8;border-radius:13px;background:#fbf8ef;color:#6f654f;font-size:.76rem;line-height:1.5}
+.app-main .helper{margin:8px 18px;padding:10px 13px;border-left:3px solid #c8ed77;border-radius:0 11px 11px 0;background:#f6f8f4;font-size:.78rem;line-height:1.5}
+.app-main .helper [aria-hidden=true],.app-main .privacy-note [aria-hidden=true]{margin-right:6px;color:var(--green)}
+.sidebar-group>summary{font-size:.79rem}
+@media(max-width:560px){.app-main .sync-help,.app-main .helper,.app-main .privacy-note{margin-inline:12px}.app-main .sync-help,.app-main .helper{font-size:.76rem}.home-action{gap:8px;padding:11px}.home-action small [aria-hidden=true]{width:17px;height:17px}}
 .home-action-icon{width:34px;height:34px;border-radius:11px;background:var(--mint);color:var(--green)}
 .class-context-card{background:#f5f8f3!important;border-radius:15px}
 .app-main .grade-session-toolbar,.app-main .summary-filters,.app-main .record-filters{background:#f6f8f4;border-color:var(--line)}

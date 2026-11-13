@@ -17,8 +17,8 @@ assert.match(html,/http-equiv="Cache-Control" content="no-store/,'document reque
 assert.match(config,/ASSET_CACHE_ENABLED:\s*false/,'asset cache defaults off in debugging');
 assert.match(config,/SERVICE_WORKER_ENABLED:\s*false/,'service worker defaults off in debugging');
 assert.match(html,/app\.js\?v=20261113-debugfix10/,'app script cache key is fresh');
-assert.match(html,/styles\.css\?v=20261113-debugfix10/,'stylesheet cache key is fresh');
-assert.match(html,/config\.js\?v=20261113-debugfix10/,'cache configuration is fresh');
+assert.match(html,/styles\.css\?v=20261113-cleanlabels12/,'stylesheet cache key is fresh');
+assert.match(html,/config\.js\?v=20261113-debugfix10/,'cache configuration is fresh');assert.match(html,/app\.js\?v=20261113-debugfix10/,'application script remains freshly versioned');
 assert.match(sw,/searchParams\.get\('cache'\)==='1'/,'service worker caches assets only with explicit cache=1 config');
 assert.match(sw,/fetch\(e\.request,\{cache:'no-store'\}\)/,'default worker path bypasses cache');
 assert.match(app,/cache:'no-store'/,'API responses bypass browser HTTP cache');

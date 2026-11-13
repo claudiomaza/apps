@@ -46,3 +46,10 @@ Durante debugging, `ASSET_CACHE_ENABLED` y `SERVICE_WORKER_ENABLED` en `notas/co
 ## Estilo de referencia de navegación (2026-11-13)
 
 Claudio indicó como referencia visual `https://zapia-notas-nav-claudio-20261113.netlify.app/`: fondo salvia pálido, tarjetas blancas redondeadas con sombra leve, verde bosque como acento, títulos con escala editorial y acciones compactas en tarjetas. Aplicar a la app real sin adoptar los datos ficticios ni reemplazar su flujo/navigation. Validar desktop y móvil con screenshots, no inferir aceptación visual del CSS. Cache key CSS `20261113-reference8`. La referencia inspeccionada usa fondo salvia/verde gris, tarjetas blancas, radio ~18px, sombra suave, verde bosque y acciones compactas; no son solo cambios de tamaño de fuente. La app real hereda ese tratamiento en paneles, tarjetas, botones, formularios y estados oscuros, conservando el DOM y flujos existentes.
+
+## Etiquetas limpias siguiendo la app de referencia (2026-11-13)
+
+- Navegación docente agrupada en «Trabajo diario» y «Mi grupo», manteniendo «Administración» aparte. El orden de trabajo refleja la referencia: Asistencia, Notas, Libro de tema, Libreta, Observaciones.
+- Inicio tiene cuatro acciones con títulos breves: Tomar asistencia, Cargar notas, Registrar clase y Ver estudiantes, con iconos y un apoyo contextual breve.
+- Recortadas ayudas repetidas en login, asistencia, clases, estudiantes, administración y datos; iconos solo complementan los rótulos, no reemplazan acciones esenciales. La diferencia entre Actualizar/Leer y Sincronizar/Enviar borradores sigue explícita, igual que la protección de datos.
+- Contratos en `notas/tests/clean-labels.test.js`; assets de CSS versionados con `20261113-cleanlabels12`.
