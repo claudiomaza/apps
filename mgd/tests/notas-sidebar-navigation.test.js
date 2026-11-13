@@ -15,5 +15,5 @@ assert.match(app,/function applyTheme\(theme\)[\s\S]*localStorage\.setItem\('not
 assert.match(app,/function closeAppSidebar\(\)[\s\S]*function applyTheme/);assert.match(app,/function renderAccessProfile\(\)[\s\S]*idKey/);assert.match(app,/function signOut\(\)[\s\S]*remove\('app-authenticated'\)/);assert.match(app,/SESSION_EXPIRED[^}]*app-authenticated|app-authenticated[^}]*SESSION_EXPIRED/);
 assert.match(app,/function syncSidebarNavigation\(\)[\s\S]*currentRole!=='admin'/);assert.match(app,/data-table-search-column/);assert.match(css,/\.class-context-card/);assert.match(css,/\.global-summary/);
 assert.match(html,/class-context-picker[\s\S]*id="filter-cohort"/,'cohort selector is in the class dropdown');
-assert.match(html,/styles\.css\?v=20261113-mgd2/);assert.match(html,/app\.js\?v=20261113-mgd2/);
+assert.match(html,/styles\.css\?v=20261113-mgd3/);assert.match(html,/app\.js\?v=20261113-mgd3/);
 console.log('Sidebar navigation, class dropdown, appearance, theme and context PASS');

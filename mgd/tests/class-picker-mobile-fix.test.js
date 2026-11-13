@@ -1,0 +1,10 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const root=path.join(__dirname,'..'),html=fs.readFileSync(path.join(root,'index.html'),'utf8'),app=fs.readFileSync(path.join(root,'app.js'),'utf8'),css=fs.readFileSync(path.join(root,'styles.css'),'utf8');
+assert.match(html,/<details class="class-context-picker"><summary id="change-class-context"/);
+const init=app.slice(app.indexOf('function initializeClassContextControls'),app.indexOf('\n',app.indexOf('function initializeClassContextControls')));
+assert.doesNotMatch(init,/change-class-context.*addEventListener\('click'/);
+assert.match(init,/filter-assignment.*addEventListener\('change'/);
+assert.match(css,/@media\(max-width:850px\)[\s\S]*\.app-main \.app-toolbar>\.toolbar-actions\{display:flex;flex-direction:column;align-items:stretch\}/);
+assert.match(css,/\.app-toolbar>\.toolbar-actions #sync-button,\.app-main \.app-toolbar>\.toolbar-actions #refresh\{display:block;flex:none;width:100%;min-width:0;min-height:48px\}/);
+console.log('Class dropdown no longer opens sidebar; mobile sync and refresh stack at equal full width PASS');
