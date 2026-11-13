@@ -15,8 +15,8 @@ assert.match(app,/sync-review-progress/,'the review panel has an inline synchron
 assert.match(app,/No pude comprobar Sheets[\s\S]*submit\.disabled=true/,'sync is gated when the server state cannot be checked');
 assert.match(app,/function loadSyncReviewSnapshot\([\s\S]*apiRequest\('listRecords'[\s\S]*SESSION_CHANGED/,'review checks server state without calling the session-clearing full reload');
 assert.match(app,/rows\.forEach\(x=>x\.disabled=!verified\)/,'review selections unlock only after the check succeeds');
-assert.match(app,/Verificando cambios y enviando selección/,'sync reports the preflight state inline');
-assert.match(app,/syncStagedChanges\(ids,false\)/,'sync repeats conflict checking before write');
+assert.match(app,/Enviando cambios seleccionados/,'sync reports the send state inline');
+assert.match(app,/syncStagedChanges\(ids,true\)/,'sync skips the redundant full-list read after the modal check');
 assert.match(app,/formatDateShort\(/,'dates have a short display formatter');
 assert.match(app,/function normalizeDni\(/,'DNI input is normalized to digits');
 assert.match(app,/formatDateShort\(/,'dates have an explicit short display formatter');
