@@ -26,3 +26,7 @@ El indicador deja de ser un pseudo-elemento CSS junto al texto: pasa a un círcu
 - Evidencia de publicación: Pages sirve el commit `6e5215d7b4fa08e6eaabeb449a66581beb1ea752`; HTML, CSS y JS con query nueva retornan HTTP 200 y contienen el spinner DOM separado. HTML de Pages reporta `Cache-Control: max-age=600`, por lo que la meta no-store no controla la caché CDN/navegador de entrada.
 - La inicialización de la app volvía a registrar `sw.js` tras el intento de limpieza en el HTML. Se elimina ese registro; arranque solo intenta desregistrar workers existentes del scope Notas. Las pruebas de contrato cubren ambas rutas.
 - Nueva cache key de CSS/JS/context y suites actualizadas para asegurar relectura de recursos tras Pages. QA visual requiere Moli/navegador; el navegador integrado está bloqueado por cuota y Moli cae al iniciar en `partition_address_space.cc(81)`.
+
+## Menú de clase y cohortes (2026-11-13)
+
+Mostrar cohortes bajo el selector combinado como chips con años únicos; reemplazar `unassigned` por «Pendiente». No concatenar de nuevo escuela/materia/curso/división ni fechas por estudiante. El selector de subgrupo conserva rótulo independiente debajo.
