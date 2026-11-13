@@ -21,7 +21,7 @@ assert.throws(()=>G.validateRecord({...schedule,data:{...schedule.data,startTime
 assert.equal(G.weekdayForDate('2026-11-05'),4);assert.equal(G.weekdayForDate('2026-11-11'),3);assert.equal(G.scheduleMatchesDate(schedule.data,'2026-11-11'),true);assert.equal(G.scheduleMatchesDate(schedule.data,'2026-11-12'),false);assert.equal(G.sameScheduleContext(schedule.data,{schoolId:'sch',subjectId:'sub',courseId:'course',divisionId:'div'}),true);assert.equal(G.sameScheduleContext(schedule.data,{schoolId:'sch',subjectId:'other',courseId:'course',divisionId:'div'}),false);assert.throws(()=>G.weekdayForDate('2026-02-30'),/INVALID_DATE/);
 
 const app=fs.readFileSync(path.join(root,'app.js'),'utf8');
-const backend=fs.readFileSync(path.join(root,'../notas/apps-script/Code.gs'),'utf8');
+const backend=fs.readFileSync(path.join(root,'../mgd/apps-script/Code.gs'),'utf8');
 assert.match(html,/data-tab="admin"/);
 assert.match(html,/id="admin-records"/);
 assert.match(html,/id="trash-records"/);

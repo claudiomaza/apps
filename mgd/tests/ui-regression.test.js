@@ -70,7 +70,7 @@ assert.match(source,/data-search=/,'student row carries searchable name and ID')
 assert.match(html,/id="sidebar-toggle"/);assert.match(html,/aria-controls="app-sidebar"/);assert.match(html,/id="sidebar-backdrop"/);
 assert(!/id="(?:grade-entry-list|attendance-list|observation-list|topic-list|student-cards|assessment-cards|admin-records|trash-records|teacher-list)" class="cards"/.test(html),'record collections use tables');
 assert.match(css,/\.dropdown-menu/);assert.match(css,/\.grade-session-toolbar/);
-assert.match(sw,/notas-static-/);
+assert.match(sw,/mgd-static-/);
 assert(source.includes("students.flatMap(st=>{const card=cards.find(x=>x.dataset.attendanceStudent===st.id);if(!card?.dataset.draft)return[];"),'attendance drafts remain aligned with student after sorting');
 
 // Verify the renderer rejects date/weekday mismatch rather than preserving a stale session option.

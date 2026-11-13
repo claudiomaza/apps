@@ -11,14 +11,14 @@ assert.match(html,/getRegistrations\(\)/,'existing worker registrations are dete
 assert.match(html,/\.unregister\(\)/,'worker can be disabled and unregistered');
 assert.match(html,/ASSET_CACHE_ENABLED===true/,'asset cache is opt-in');
 assert.match(html,/SERVICE_WORKER_ENABLED===true[\s\S]*?register\(/,'worker registration is opt-in');
-assert.match(html,/startsWith\('notas-static-'\)/,'cleanup is limited to Notes-owned caches');
+assert.match(html,/startsWith\('notas-static-'\)[\s\S]*startsWith\('mgd-static-'\)/,'cleanup removes legacy and MGD-owned caches');
 assert.doesNotMatch(app,/navigator\.serviceWorker\.(?:register|getRegistrations)\(/,'app logic cannot silently re-enable or reclean workers');
 assert.match(html,/http-equiv="Cache-Control" content="no-store/,'document requests no-store from supporting caches; hosting/CDN headers govern edge caching');
 assert.match(config,/ASSET_CACHE_ENABLED:\s*false/,'asset cache defaults off in debugging');
 assert.match(config,/SERVICE_WORKER_ENABLED:\s*false/,'service worker defaults off in debugging');
-assert.match(html,/app\.js\?v=20261113-trama16/,'app script cache key is fresh');
-assert.match(html,/styles\.css\?v=20261113-trama16/,'stylesheet cache key is fresh');
-assert.match(html,/config\.js\?v=20261113-debugfix10/,'cache configuration is fresh');assert.match(html,/app\.js\?v=20261113-trama16/,'application script remains freshly versioned');
+assert.match(html,/app\.js\?v=20261113-mgd1/,'app script cache key is fresh');
+assert.match(html,/styles\.css\?v=20261113-mgd1/,'stylesheet cache key is fresh');
+assert.match(html,/config\.js\?v=20261113-debugfix10/,'cache configuration is fresh');assert.match(html,/app\.js\?v=20261113-mgd1/,'application script remains freshly versioned');
 assert.match(sw,/searchParams\.get\('cache'\)==='1'/,'service worker caches assets only with explicit cache=1 config');
 assert.match(sw,/fetch\(e\.request,\{cache:'no-store'\}\)/,'default worker path bypasses cache');
 assert.match(app,/cache:'no-store'/,'API responses bypass browser HTTP cache');

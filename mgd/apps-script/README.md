@@ -1,11 +1,11 @@
-# Apps Script — Trama
+# Apps Script — MGD
 
 El código, el manifiesto y este manual viven en GitHub junto al frontend. La base operativa es el Sheet [notas](https://docs.google.com/spreadsheets/d/1d9yL3ZhjdQIxRQEFVXltRA_QtjIZc6UrcO_1NyT1oA4/edit).
 
 
 ## Configuración
 
-La aplicación usa el libro **notas**, con las pestañas `Registros`, `Config`, `Usuarios` e `Instrucciones`. El backend incluido apunta explícitamente a este ID y no al Sheet anterior `Registro de notas`.
+La aplicación usa el libro **notas**, con las pestañas `Registros`, `Config`, `Usuarios` e `Instrucciones`. El backend incluido apunta explícitamente a este ID y no al Sheet anterior `MGD`.
 
 `Config` usa `key` / `value`; `maxPageSize` admite 1–300 (default 300) y `maxBatchSize` 1–100 (default 100). `Usuarios` acepta los encabezados históricos `usuario`, `pass`, `rol`, `alcances`, `mail`, `nombre`; al guardar el primer docente, la app migra todas las filas preservadas y agrega `docenteId` como séptima columna. Una fila por cuenta, máximo 200. `mail` y `nombre` son obligatorios (máximo 254 y 200 caracteres, respectivamente). Solo `usuario` y `pass` se escriben en el formulario para entrar; `rol`, `alcances`, `mail` y `nombre` forman el perfil y autorizaciones de la cuenta. Ejemplo de perfil: Claudio Maza · cmaza@mendoza.edu.ar · Docente. `rol` es `admin` o `docente`. `alcances` es un JSON array (docente: 0–20 contextos exactos `{ "schoolId":"...", "subjectId":"...", "courseId":"...", "divisionId":"..." }`; admin: `[]`). Los identificadores deben ser IDs internos existentes, no nombres. Para cada docente, el perfil puede verse como nombre + mail + rol; `alcances` define los cursos/grupos asignados. Esos alcances se construyen con los IDs internos de los registros ya existentes, pero en la pantalla se muestran sus nombres, no hace falta que el usuario conozca ni escriba IDs. El único usuario que se configura manualmente en la hoja es el admin inicial. Las cuentas docentes y sus datos se crean desde «Usuarios y permisos», sin necesidad de asignarles grupos al crearlas; las asignaciones se guardan después desde el panel separado. Apps Script permite esas acciones solo a sesiones admin y valida que los cuatro IDs existan. Los usuarios se vuelven a leer en cada solicitud protegida, por lo que quitar alcances invalida el acceso al curso en la próxima solicitud. `pass` sigue en texto plano; limitar Drive a administradores confiables y no compartir la hoja con docentes.
 
@@ -46,7 +46,7 @@ En la configuración del proyecto Apps Script, activá **Mostrar el archivo de m
 5. Confirmá el endpoint con `/exec`; la respuesta esperada es `service: gradebook-normalized`. Después autenticá el admin y verificá que `auth` incluya `access.role`, `access.scopes` y `profile` antes de crear docentes.
 6. Dejá en `Usuarios` únicamente la cuenta admin inicial, con `rol=admin` y `alcances=[]`; completá `mail` y `nombre`. El admin crea docentes y después asigna cursos desde el panel separado de la app, sin editar directamente esas filas. Antes de actualizar encabezados, respaldá la pestaña y migrá la fila inicial; el backend migra el esquema histórico de seis columnas agregando `docenteId`, preservando las filas existentes; respaldá la pestaña antes de la primera alta de docente. No compartas el Sheet con docentes porque `pass` permanece en texto plano.
 
-El frontend está en [Trama](https://claudiomaza.github.io/apps/notas/) (ruta técnica heredada) y usa la URL `/exec` configurada en [`../config.js`](../config.js). Si cambia el deployment, actualizá ese archivo y publicá Pages por separado. El acceso a la app requiere sesión válida en el Sheet. No hay cuenta local; los cambios sincronizados se guardan en Sheets y los preparados se conservan como borrador local en el navegador hasta que se sincronicen o se descarten explícitamente.
+El frontend está en [MGD](https://claudiomaza.github.io/apps/mgd/) (ruta canónica) y usa la URL `/exec` configurada en [`../config.js`](../config.js). Si cambia el deployment, actualizá ese archivo y publicá Pages por separado. El acceso a la app requiere sesión válida en el Sheet. No hay cuenta local; los cambios sincronizados se guardan en Sheets y los preparados se conservan como borrador local en el navegador hasta que se sincronicen o se descarten explícitamente.
 
 ## Modelo y uso
 

@@ -1,5 +1,5 @@
 /**
- * Registro de notas — backend normalizado.
+ * MGD — backend normalizado.
  * Implementar en un proyecto Apps Script vinculado a notas.
  * Sheets es la fuente de verdad; cada request aplica rol y alcances vigentes desde Usuarios.
  */
