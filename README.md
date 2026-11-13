@@ -6,7 +6,7 @@ Repositorio público con las apps internas y sus contratos comunes. **GitHub es 
 
 - [`SPEC-PERFORMANCE.md`](./SPEC-PERFORMANCE.md): contratos comunes y reglas para futuras apps.
 - [`SETUP.md`](./SETUP.md): mapa operativo del repositorio, Sheets y despliegues separados.
-- [`notas/`](./notas/): frontend publicado de Registro de notas y [`apps-script/`](./notas/apps-script/) con backend, manifiesto e instalación.
+- [`notas/`](./notas/): frontend publicado de **Trama** y [`apps-script/`](./notas/apps-script/) con backend, manifiesto e instalación. `notas/` se conserva como nombre de carpeta y `/apps/notas/` como ruta pública heredada.
 - [`calendario/`](./calendario/): frontend publicado de Calendario y [`apps-script/`](./calendario/apps-script/) con backend, manifiesto e instalación.
 
 GitHub Pages conserva las rutas públicas `/apps/`, `/apps/notas/` y `/apps/calendario/`. Los cambios de HTML/JS/CSS modifican el sitio al publicarse desde `main`; Apps Script se copia/despliega aparte desde el `Code.gs` versionado en cada app.

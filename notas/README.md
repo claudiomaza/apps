@@ -1,6 +1,6 @@
-# Registro de notas
+# Trama — Tu aula, en un solo lugar
 
-Frontend en [GitHub Pages](https://claudiomaza.github.io/apps/notas/); la base de datos y usuarios viven en la planilla de Drive [notas](https://docs.google.com/spreadsheets/d/1d9yL3ZhjdQIxRQEFVXltRA_QtjIZc6UrcO_1NyT1oA4/edit).
+Frontend de **Trama** en [GitHub Pages](https://claudiomaza.github.io/apps/notas/) (ruta técnica heredada); la base de datos y los usuarios viven en la planilla operativa de Drive [notas](https://docs.google.com/spreadsheets/d/1d9yL3ZhjdQIxRQEFVXltRA_QtjIZc6UrcO_1NyT1oA4/edit). El nombre de la carpeta `notas/` y de la planilla se conserva por compatibilidad.
 
 - Frontend: archivos de esta carpeta; la configuración pública del backend está en [`config.js`](./config.js).
 - Backend: [`apps-script/Code.gs`](./apps-script/Code.gs), manifiesto [`apps-script/appsscript.json`](./apps-script/appsscript.json) e instalación/contrato en [`apps-script/README.md`](./apps-script/README.md).

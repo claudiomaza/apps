@@ -1,4 +1,4 @@
-# Apps Script — Registro de notas
+# Apps Script — Trama
 
 El código, el manifiesto y este manual viven en GitHub junto al frontend. La base operativa es el Sheet [notas](https://docs.google.com/spreadsheets/d/1d9yL3ZhjdQIxRQEFVXltRA_QtjIZc6UrcO_1NyT1oA4/edit).
 
@@ -46,7 +46,7 @@ En la configuración del proyecto Apps Script, activá **Mostrar el archivo de m
 5. Confirmá el endpoint con `/exec`; la respuesta esperada es `service: gradebook-normalized`. Después autenticá el admin y verificá que `auth` incluya `access.role`, `access.scopes` y `profile` antes de crear docentes.
 6. Dejá en `Usuarios` únicamente la cuenta admin inicial, con `rol=admin` y `alcances=[]`; completá `mail` y `nombre`. El admin crea docentes y después asigna cursos desde el panel separado de la app, sin editar directamente esas filas. Antes de actualizar encabezados, respaldá la pestaña y migrá la fila inicial; el backend migra el esquema histórico de seis columnas agregando `docenteId`, preservando las filas existentes; respaldá la pestaña antes de la primera alta de docente. No compartas el Sheet con docentes porque `pass` permanece en texto plano.
 
-El frontend está en [Registro de notas](https://claudiomaza.github.io/apps/notas/) y usa la URL `/exec` configurada en [`../config.js`](../config.js). Si cambia el deployment, actualizá ese archivo y publicá Pages por separado. El acceso a la app requiere sesión válida en el Sheet. No hay cuenta local; los cambios sincronizados se guardan en Sheets y los preparados se conservan como borrador local en el navegador hasta que se sincronicen o se descarten explícitamente.
+El frontend está en [Trama](https://claudiomaza.github.io/apps/notas/) (ruta técnica heredada) y usa la URL `/exec` configurada en [`../config.js`](../config.js). Si cambia el deployment, actualizá ese archivo y publicá Pages por separado. El acceso a la app requiere sesión válida en el Sheet. No hay cuenta local; los cambios sincronizados se guardan en Sheets y los preparados se conservan como borrador local en el navegador hasta que se sincronicen o se descarten explícitamente.
 
 ## Modelo y uso
 
