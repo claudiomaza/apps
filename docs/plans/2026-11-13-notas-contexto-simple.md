@@ -20,3 +20,9 @@
 ## Spinner explícito en «Verificando» (2026-11-13)
 
 El indicador deja de ser un pseudo-elemento CSS junto al texto: pasa a un círculo de carga en un `span` dedicado, separado del texto por flex-gap. El mensaje vive en otra columna flexible que envuelve sin colapsar. Cache key `20261113-toastlayout3`; test focal `toast-loading.test.js`.
+
+## Diagnóstico de caché Pages / service worker (2026-11-13)
+
+- Evidencia de publicación: Pages sirve el commit `6e5215d7b4fa08e6eaabeb449a66581beb1ea752`; HTML, CSS y JS con query nueva retornan HTTP 200 y contienen el spinner DOM separado. HTML de Pages reporta `Cache-Control: max-age=600`, por lo que la meta no-store no controla la caché CDN/navegador de entrada.
+- La inicialización de la app volvía a registrar `sw.js` tras el intento de limpieza en el HTML. Se elimina ese registro; arranque solo intenta desregistrar workers existentes del scope Notas. Las pruebas de contrato cubren ambas rutas.
+- Nueva cache key de CSS/JS/context y suites actualizadas para asegurar relectura de recursos tras Pages. QA visual requiere Moli/navegador; el navegador integrado está bloqueado por cuota y Moli cae al iniciar en `partition_address_space.cc(81)`.

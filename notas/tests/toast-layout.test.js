@@ -4,7 +4,7 @@ const fs=require('node:fs');
 const path=require('node:path');
 const css=fs.readFileSync(path.join(__dirname,'../styles.css'),'utf8');
 assert.match(css,/\.toast\{[^}]*width:min\(560px,calc\(100vw - 32px\)\)/,'toast uses a readable responsive line width');
-assert.match(css,/\.toast-message\{[^}]*overflow-wrap:anywhere/,'long words and unbroken errors wrap inside toast');
+assert.match(css,/\.toast\{[^}]*overflow-wrap:anywhere/,'long words and unbroken errors wrap inside toast');
 assert.match(css,/\.home-action\{[^}]*grid-template-columns:36px minmax\(0,1fr\) 16px/,'home cards reserve a shrinkable text column');
 assert.match(css,/\.home-action>\*\{min-width:0\}/,'card labels can shrink instead of overflowing');
 console.log('Toast and home card text wrapping contract PASS');
