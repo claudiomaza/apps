@@ -10,6 +10,6 @@ assert.match(css, /\.dropdown-menu\s*\{[^}]*max-height:\s*min\(60dvh,\s*420px\)[
 assert.match(css, /\.dropdown-item\s*\{[^}]*min-height:\s*44px[^}]*white-space:\s*normal/i, 'menu choices remain readable and tappable');
 assert.match(css, /\.users-layout[^}]*min-width:\s*0/i, 'teacher management children can shrink to mobile width');
 assert.match(html,/id="app-sidebar"[\s\S]*id="theme-toggle"/);assert.match(html,/id="sidebar-toggle"/);assert.match(html,/id="sidebar-desktop-toggle"/);
-assert.match(html, /styles\.css\?v=20261113-cleanlabels12/, 'CSS cache key changes with login and toast layout');
-assert.match(html, /app\.js\?v=20261113-debugfix10/, 'application script key changes with debug cache controls');
+assert.match(html, /styles\.css\?v=20261113-trama13/, 'CSS cache key changes with login and toast layout');
+assert.match(html, /app\.js\?v=20261113-trama13/, 'application script key changes with debug cache controls');
 console.log('Mobile navigation and teacher-view layout regression PASS');

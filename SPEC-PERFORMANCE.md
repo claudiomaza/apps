@@ -135,3 +135,12 @@ Claudio indicó como referencia visual `https://zapia-notas-nav-claudio-20261113
 - Inicio tiene cuatro acciones con títulos breves: Tomar asistencia, Cargar notas, Registrar clase y Ver estudiantes, con iconos y un apoyo contextual breve.
 - Recortadas ayudas repetidas en login, asistencia, clases, estudiantes, administración y datos; iconos solo complementan los rótulos, no reemplazan acciones esenciales. La diferencia entre Actualizar/Leer y Sincronizar/Enviar borradores sigue explícita, igual que la protección de datos.
 - Contratos en `notas/tests/clean-labels.test.js`; assets de CSS versionados con `20261113-cleanlabels12`.
+
+## Trama: revisión selectiva de sincronización y entrada inicial (2026-11-13)
+
+- Rebranding frontend: `Trama — Tu aula, en un solo lugar.` en title/login/topbar/sidebar y manifest. Apps Script/Sheets y datos no se modifican.
+- Login pide `includeInitialList:true` al endpoint de Apps Script existente y reutiliza la primera página autenticada; solo solicita páginas adicionales si el backend devuelve cursor. La vista de carga se muestra durante el proceso y el merge de IndexedDB conserva los borradores sin enviarlos.
+- «Sincronizar» abre revisión de borradores con selección individual y «seleccionar todos». La escritura conserva la ruta existente de `syncStagedChanges`; únicamente los IDs seleccionados se escriben, y los no seleccionados permanecen en IndexedDB. Conflictos aún pasan por su resolución específica.
+- Menú vertical expone clase, escuela, materia, año/curso, división y cohorte. Cohorte filtra estudiantes de sus pertenencias de la clase actual; la división y demás alcance siguen regidos por los scopes del backend. Cerrar sesión está estilizado.
+- Observaciones y actividad del Libro de tema muestran texto extenso contraído con `<details>`; tabla mantiene columna de acciones sticky y etiquetas por encabezado en filas para escaneo.
+- Contratos ejecutables: `notas/tests/trama-workflow.test.js`, `login-performance.test.js`, `class-context.test.js`, `clean-labels.test.js`; suites existentes conservan cobertura.

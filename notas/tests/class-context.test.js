@@ -12,7 +12,7 @@ assert.equal(Context.key(c),Context.key(same));assert.notEqual(Context.key(c),Co
 const memberships=[{data:{...c,studentId:'p1'}},{data:{...c,studentId:'p2'}},{data:{...c,studentId:'p3'}},{data:{...c,studentId:'p4'}},{data:{...other,studentId:'p5'}}],students=[{id:'p1'},{id:'p2'},{id:'p3'},{id:'p4'},{id:'p5'}],cohort=id=>({p1:'2024',p2:'2025',p3:'2025',p4:'unassigned',p5:'2022'}[id]);
 assert.deepEqual(Context.cohorts(c,memberships,students,cohort),['2024','2025','unassigned']);
 assert.match(html,/id="filter-assignment"/,'one combined class selector');
-assert.match(html,/class="legacy-context-controls" hidden[\s\S]*id="filter-school"/,'legacy filters stay available to existing flows but hidden');
+assert.match(html,/id="filter-school"[\s\S]*id="filter-subject"[\s\S]*id="filter-course"[\s\S]*id="filter-division"/,'class context selectors are visible in the vertical sidebar');assert.match(html,/class="legacy-context-controls" hidden[\s\S]*id="filter-cutoff"/,'cutoff remains internal as a compatibility control');
 assert.match(html,/id="filter-subgroup"/,'subgroup remains available as a secondary filter');
 assert.match(html,/id="home-class-detail"/,'current class details are shown');
 assert.match(html,/id="home-actions"[\s\S]*data-tab="attendance"[\s\S]*data-tab="grades"[\s\S]*data-tab="topic"/,'home prioritizes attendance, grades and lesson record');
