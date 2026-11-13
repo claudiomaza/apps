@@ -13,6 +13,8 @@ assert.match(html,/class="trama-tagline">Tu aula, en un solo lugar\./,'brand dis
 assert.match(html,/class="trama-tagline">Tu aula, en un solo lugar\./,'login uses approved tagline');
 assert.match(html,/id="sync-review-dialog"[\s\S]*id="sync-review-list"[\s\S]*id="sync-review-submit"/,'sync review dialog exists');
 assert.match(app,/function renderSyncReview\(/,'staged changes can be listed for review');
+assert.match(app,/function updateSyncReviewSelection\([\s\S]*all\.indeterminate=selected>0&&selected<rows\.length/,'selection count and select-all indeterminate state stay in sync');
+assert.match(app,/\$\('#sync-review-list'\)\.addEventListener\('change'[\s\S]*updateSyncReviewSelection\(\)/,'individual checkbox changes update the batch count');
 assert.match(app,/syncStagedChanges\(selectedIds/,'sync accepts a selected subset');
 assert.match(app,/selectedIds\.map\(id=>stagedRecords\.get\(id\)\)/,'sync batch only includes selected staged record IDs');
 assert.match(app,/data-sync-review-id/,'review UI renders individually selectable changes');

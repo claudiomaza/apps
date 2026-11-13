@@ -11,5 +11,5 @@ assert.match(css,/\.summary-kpis\{grid-template-columns:1fr!important\}/);assert
 assert.match(app,/function applyTheme\(theme\)[\s\S]*localStorage\.setItem\('notasTheme'/);
 assert.match(app,/function closeAppSidebar\(\)[\s\S]*function applyTheme/);assert.match(app,/function renderAccessProfile\(\)[\s\S]*idKey/);assert.match(app,/function signOut\(\)[\s\S]*remove\('app-authenticated'\)/);assert.match(app,/SESSION_EXPIRED[^}]*app-authenticated|app-authenticated[^}]*SESSION_EXPIRED/);
 assert.match(app,/function syncSidebarNavigation\(\)[\s\S]*currentRole!=='admin'/);assert.match(app,/data-table-search-column/);assert.match(css,/\.class-context-card/);assert.match(css,/\.global-summary/);
-assert.match(html,/styles\.css\?v=20261113-trama13/);assert.match(html,/app\.js\?v=20261113-trama13/);
+assert.match(html,/styles\.css\?v=20261113-trama13/);assert.match(html,/app\.js\?v=20261113-trama14/);
 console.log('Sidebar navigation, context selector, theme, vertical KPI and existing table filters PASS');
