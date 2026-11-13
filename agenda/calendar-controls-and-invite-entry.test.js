@@ -1,0 +1,17 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const html=fs.readFileSync(path.join(__dirname,'index.html'),'utf8');
+const css=fs.readFileSync(path.join(__dirname,'styles.css'),'utf8');
+const toolbarStart=html.indexOf('<section class="toolbar"');
+const toolbarEnd=html.indexOf('</section>',toolbarStart);
+const actionsAt=html.indexOf('<div class="calendar-action-row"',toolbarEnd);
+const todayAt=html.indexOf('id="today"',actionsAt);
+const menuAt=html.indexOf('calendar-actions',actionsAt);
+const viewsAt=html.indexOf('class="view-switch"',actionsAt);
+assert.ok(toolbarEnd>=0&&actionsAt>toolbarEnd&&todayAt>actionsAt&&menuAt>todayAt&&viewsAt>menuAt,'Today and Actions must sit in a separate row before Calendar/Table');
+assert.match(html,/id="select-all-invites"[^>]*class="primary-button invite-select-all"[^>]*>Seleccionar todos/);
+assert.match(html,/Administración → Colaboradores/);
+assert.match(html,/styles\.css\?v=20261113-agenda1/);
+assert.match(html,/app\.js\?v=20261113-agenda1/);
+assert.match(css,/\.calendar-action-row\{[^}]*display:flex/);
+console.log('Calendar controls order, invite-queue discovery and cache versioning PASS');

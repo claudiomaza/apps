@@ -1,0 +1,13 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const root=path.join(__dirname,'..'),home=fs.readFileSync(path.join(root,'index.html'),'utf8'),agenda=fs.readFileSync(path.join(root,'agenda/index.html'),'utf8'),manifest=JSON.parse(fs.readFileSync(path.join(root,'agenda/manifest.json'),'utf8')),legacy=fs.readFileSync(path.join(root,'calendario/index.html'),'utf8'),readme=fs.readFileSync(path.join(root,'README.md'),'utf8'),setup=fs.readFileSync(path.join(root,'SETUP.md'),'utf8');
+assert.match(home,/href="\.\/agenda\/"[\s\S]*?<h2>Agenda<\/h2>/);
+assert.doesNotMatch(home,/href="\.\/calendario\/"/);
+assert.match(agenda,/<title>Agenda/);
+assert.equal(manifest.name,'Agenda interna');
+assert.match(legacy,/\.\.\/agenda\//);
+assert.match(readme,/\.\/agenda\//);
+assert.match(setup,/\.\/agenda\//);
+assert.equal(fs.existsSync(path.join(root,'agenda/apps-script/Code.gs')),true);
+assert.match(fs.readFileSync(path.join(root,'agenda/app.js'),'utf8'),/StageStore\.(?:replace|list)\('calendario'/);
+console.log('Agenda brand, canonical route, compatibility redirect and legacy local drafts PASS');

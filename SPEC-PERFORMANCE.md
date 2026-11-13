@@ -10,8 +10,8 @@
 ## Calendario — menú Acciones móvil y prueba visual (2026-11-09)
 
 - Hallazgo reproducido con Moli en el frontend publicado autenticado: en viewport estrecho, el menú «Acciones» quedaba dentro de una columna de la barra y su panel desplegable abría fuera del borde izquierdo.
-- Corrección en `calendario/styles.css`: el menú pasa a una fila propia; el panel se ancla a la izquierda y se limita a `min(260px, 100vw - 28px)`. `calendario/index.html` versiona la URL del CSS para invalidar caché. Regresión en `calendario/mobile-actions-layout.test.js`.
-- Suite frontend local: 10/10 scripts `calendario/*.test.js` PASS, con el `Code.gs` rastreado resuelto temporalmente mediante la ruta versionada `calendario/apps-script/Code.gs`; no se modificó ese backend. `git diff --check` PASS.
+- Corrección en `agenda/styles.css`: el menú pasa a una fila propia; el panel se ancla a la izquierda y se limita a `min(260px, 100vw - 28px)`. `agenda/index.html` versiona la URL del CSS para invalidar caché. Regresión en `agenda/mobile-actions-layout.test.js`.
+- Suite frontend local: 10/10 scripts `agenda/*.test.js` PASS, con el `Code.gs` rastreado resuelto temporalmente mediante la ruta versionada `agenda/apps-script/Code.gs`; no se modificó ese backend. `git diff --check` PASS.
 - La sesión Moli/CDP de VM1 no logró conservar conexión autenticada al alternar viewports, así que no afirmar validación Moli móvil estable. Una medición aislada de layout mostró panel dentro de 320 px (left 14, right 274, ancho 260); sin estado conectado no cuenta como E2E visual aceptado. Repetir captura con Moli después de restablecer la conexión/viewport.
 - Cambio en rama aislada `fix/calendario-mobile-actions`; no integrado en `main` ni publicado en Pages. Sin escrituras en eventos, agendas o colaboradores.
 
@@ -21,7 +21,7 @@
 - El primer fetch autenticado usa `bootstrap` para cargar en un roundtrip agenda, eventos del mes y grupos. Durante la transición de Apps Script, si el backend devuelve `INVALID_ACTION`, el frontend usa el flujo previo de listas en paralelo; esto no activa `createAppUser` ni oculta errores distintos. La latencia real depende de Apps Script/Sheets/Calendar y debe medirse en E2E autenticado, no inferirse de tests estáticos.
 - «Grupos de eventos» muestra inmediatamente el estado en caché y abre el diálogo antes de refrescar la lista; el backend sigue siendo la fuente final. E2E de tiempo de respuesta de grupo queda pendiente.
 - Resumen muestra cantidad de eventos activos del mes visible, cuántos tienen/sin grupo y conteo por grupo; distingue mes vacío de falta de datos y no duplica las tarjetas de Estadísticas.
-- Colaboradores: explicar que la selección corresponde a cuentas registradas. `createAppUser` se autoriza en Apps Script solo para rol owner, valida username/password y duplicados bajo lock, invalida cache de usuarios y no devuelve la contraseña. El cliente oculta la acción en roles no owner. La hoja `Usuarios` sigue almacenando contraseñas conforme al backend existente; nunca registrar ni mostrar la contraseña en logs/mensajes. El usuario despliega manualmente `calendario/apps-script/Code.gs`; Pages por sí solo no habilita el endpoint nuevo.
+- Colaboradores: explicar que la selección corresponde a cuentas registradas. `createAppUser` se autoriza en Apps Script solo para rol owner, valida username/password y duplicados bajo lock, invalida cache de usuarios y no devuelve la contraseña. El cliente oculta la acción en roles no owner. La hoja `Usuarios` sigue almacenando contraseñas conforme al backend existente; nunca registrar ni mostrar la contraseña en logs/mensajes. El usuario despliega manualmente `agenda/apps-script/Code.gs`; Pages por sí solo no habilita el endpoint nuevo.
 - Verificación local: pruebas de Calendario y contrato de usuario pasan antes de integrar; no se crearon cuentas ni se mutaron eventos, grupos, agendas o permisos durante QA. Clasificar revisión visual/autenticada de Pages como pendiente si no se obtiene sesión Moli estable.
 
 ## Calendario — onboarding, menú de acciones y resumen (2026-11-10)
@@ -30,7 +30,7 @@
 - El primer fetch autenticado usa `bootstrap` para cargar en un roundtrip agenda, eventos del mes y grupos. Durante la transición de Apps Script, si el backend devuelve `INVALID_ACTION`, el frontend usa el flujo previo de listas en paralelo; esto no activa `createAppUser` ni oculta errores distintos. La latencia real depende de Apps Script/Sheets/Calendar y debe medirse en E2E autenticado, no inferirse de tests estáticos.
 - «Grupos de eventos» muestra inmediatamente el estado en caché y abre el diálogo antes de refrescar la lista; el backend sigue siendo la fuente final. E2E de tiempo de respuesta de grupo queda pendiente.
 - Resumen muestra cantidad de eventos activos del mes visible, cuántos tienen/sin grupo y conteo por grupo; distingue mes vacío de falta de datos y no duplica las tarjetas de Estadísticas.
-- Colaboradores: explicar que la selección corresponde a cuentas registradas. `createAppUser` se autoriza en Apps Script solo para rol owner, valida username/password y duplicados bajo lock, invalida cache de usuarios y no devuelve la contraseña. El cliente oculta la acción en roles no owner. La hoja `Usuarios` sigue almacenando contraseñas conforme al backend existente; nunca registrar ni mostrar la contraseña en logs/mensajes. El usuario despliega manualmente `calendario/apps-script/Code.gs`; Pages por sí solo no habilita el endpoint nuevo.
+- Colaboradores: explicar que la selección corresponde a cuentas registradas. `createAppUser` se autoriza en Apps Script solo para rol owner, valida username/password y duplicados bajo lock, invalida cache de usuarios y no devuelve la contraseña. El cliente oculta la acción en roles no owner. La hoja `Usuarios` sigue almacenando contraseñas conforme al backend existente; nunca registrar ni mostrar la contraseña en logs/mensajes. El usuario despliega manualmente `agenda/apps-script/Code.gs`; Pages por sí solo no habilita el endpoint nuevo.
 - Verificación local: pruebas de Calendario y contrato de usuario pasan antes de integrar; no se crearon cuentas ni se mutaron eventos, grupos, agendas o permisos durante QA. Clasificar revisión visual/autenticada de Pages como pendiente si no se obtiene sesión Moli estable.
 
 ## Calendario — invitaciones por correo a Google Calendar (2026-11-10)
@@ -144,3 +144,10 @@ Claudio indicó como referencia visual `https://zapia-notas-nav-claudio-20261113
 - Menú vertical expone clase, escuela, materia, año/curso, división y cohorte. Cohorte filtra estudiantes de sus pertenencias de la clase actual; la división y demás alcance siguen regidos por los scopes del backend. Cerrar sesión está estilizado.
 - Observaciones y actividad del Libro de tema muestran texto extenso contraído con `<details>`; tabla mantiene columna de acciones sticky y etiquetas por encabezado en filas para escaneo.
 - Contratos ejecutables: `notas/tests/trama-workflow.test.js`, `login-performance.test.js`, `class-context.test.js`, `clean-labels.test.js`; suites existentes conservan cobertura.
+
+
+
+## Agenda — cambio de nombre y ruta pública (2026-11-13)
+
+- La subapp `agenda/` reemplaza a `calendario/` y se publica en `/apps/agenda/`; `/apps/calendario/` queda como redirección compatible. El enlace de portada, README, SETUP, título y manifiesto usan «Agenda».
+- Se conserva el namespace IndexedDB `calendario`, `sessionStorage.calendarSession`, URLs/IDs del backend y manifiesto Apps Script para preservar sesiones, borradores locales, permisos y despliegue. No hay migración de Sheets ni despliegue de Apps Script.

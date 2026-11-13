@@ -1,0 +1,10 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const manifest=JSON.parse(fs.readFileSync(path.join(__dirname,'apps-script/appsscript.json'),'utf8'));
+assert.ok(manifest.oauthScopes.includes('https://www.googleapis.com/auth/calendar.acls.readonly'),'Calendar.Acl.list needs the dedicated readonly ACL OAuth scope');
+const source=fs.readFileSync(path.join(__dirname,'apps-script/Code.gs'),'utf8');
+assert.match(source,/function calendarAclHttpStatus_\(err\)/);
+assert.match(source,/event:'calendar_acl_lookup_failed'/);
+const app=fs.readFileSync(path.join(__dirname,'app.js'),'utf8');
+assert.match(app,/CALENDAR_AUTH_REQUIRED/);
+console.log('Calendar ACL read scope, HTTP status diagnostics and user guidance PASS');

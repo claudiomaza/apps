@@ -1,0 +1,13 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs');
+const html=fs.readFileSync(__dirname+'/index.html','utf8'),app=fs.readFileSync(__dirname+'/app.js','utf8');
+const start=html.indexOf('<details class="section-actions action-menu calendar-actions">'),end=html.indexOf('</details>',start),actions=html.slice(start,end);
+assert.ok(start>=0&&end>start);assert.match(actions,/id="new-event"[^>]*>[^<]*Nuevo evento/,'New event must live inside Actions');
+assert.ok(html.indexOf('id="new-event"')===html.indexOf('id="new-event"',start),'there must be one New event button inside Actions');
+assert.match(html,/id="admin-summary-overview"/);
+assert.match(html,/requiere una cuenta existente[\s\S]*invitar por correo/,'collaborator instructions distinguish app access from email invites');
+assert.match(html,/id="calendar-invite-form"/);assert.match(html,/id="calendar-invites"/);assert.match(app,/inviteCalendarEmail/);assert.match(app,/removeCalendarInvite/);
+const manage=app.slice(app.indexOf('async function manageGroups()'),app.indexOf("$('#manage-groups').onclick"));assert.match(manage,/renderGroups\(\)[\s\S]*showModal/);assert.ok(manage.indexOf('showModal')<manage.lastIndexOf("api('listGroups')"),'group dialog should open before refresh');
+assert.match(app,/function renderAdminSummary\(/);assert.match(app,/admin-summary-overview/);
+assert.match(app,/async function initializeAfterLogin\(month\)[\s\S]*?api\('bootstrap'/);assert.match(app,/createAppUser/);
+console.log('Calendar UX regression: actions, account guidance, useful summary, fast groups and single bootstrap PASS');

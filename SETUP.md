@@ -3,7 +3,7 @@
 ## Repositorio y publicación
 
 - Repo canónico: [`claudiomaza/apps`](https://github.com/claudiomaza/apps). Código, specs, manuales y decisiones viven acá.
-- GitHub Pages conserva las rutas: portada `/apps/`, Calendario `/apps/calendario/` y MGD (`/apps/mgd/`); `/apps/notas/` redirige por compatibilidad.
+- GitHub Pages conserva las rutas: portada `/apps/`, Agenda `/apps/agenda/` y MGD (`/apps/mgd/`); `/apps/notas/` redirige por compatibilidad.
 - Los cambios del frontend y los archivos que quedan debajo de las carpetas publicadas pueden actualizar Pages al integrarse a `main`. Mantener secretos, datos y configuración privada fuera del repo público.
 - Para iniciar una app nueva, crear su carpeta de frontend en la raíz y su subcarpeta `apps-script/` para `Code.gs`, `appsscript.json` e instrucciones. Aplicar [`SPEC-PERFORMANCE.md`](./SPEC-PERFORMANCE.md).
 
@@ -21,7 +21,7 @@ Los datos y la configuración operativa (`Config`, usuarios, calendario de desti
 Cada Sheet tiene un Apps Script vinculado propio. El código fuente de backend y el manifiesto se versionan junto a la app:
 
 - [MGD: instalación de Apps Script](./mgd/apps-script/README.md), [`Code.gs`](./mgd/apps-script/Code.gs), [`appsscript.json`](./mgd/apps-script/appsscript.json). La carpeta `mgd/` contiene la app MGD.
-- [Calendario: instalación](./calendario/apps-script/README.md), [`Code.gs`](./calendario/apps-script/Code.gs), [`appsscript.json`](./calendario/apps-script/appsscript.json).
+- [Calendario: instalación](./agenda/apps-script/README.md), [`Code.gs`](./agenda/apps-script/Code.gs), [`appsscript.json`](./agenda/apps-script/appsscript.json).
 
 Para cambiar el backend, comparar/copiar el archivo de GitHub al proyecto Apps Script vinculado, revisar scopes, autorizar lo que solicite Google, crear una nueva implementación y probarla. Pages requiere su propia publicación para cambios frontend/config. Un merge, una publicación de Pages y un deployment de Apps Script son estados separados; no declarar E2E hasta probar el backend y el frontend juntos.
 
