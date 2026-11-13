@@ -95,8 +95,98 @@ body.theme-dark dialog{background:var(--card);color:var(--ink);border-color:var(
 @media(max-width:420px){.home-action{gap:9px;padding:12px}.home-action strong{font-size:.76rem}.home-action small{font-size:.68rem}.toast{font-size:.86rem;padding:14px 16px}}
 @media(prefers-reduced-motion:reduce){.toast,.home-action{transition:none}}
 
-/* Global reading rhythm: clear hierarchy, comfortable line-height, no squeezed text. */
-body{font-size:16px;line-height:1.55;text-rendering:optimizeLegibility;-webkit-text-size-adjust:100%}
+/* Estilo de referencia: verde bosque, fondo salvia, tarjetas aireadas y tipografía en escala. */
+:root{--ink:#20342c;--muted:#748078;--line:#e1e6de;--paper:#f3f4ee;--card:#fff;--green:#225844;--mint:#e8f2eb;--surface-soft:#f6f8f4;--shadow:0 14px 38px #26382c10;font-family:Inter,"Avenir Next",Avenir,system-ui,sans-serif;color:var(--ink);background:var(--paper)}
+body{font-size:16px;line-height:1.5;text-rendering:optimizeLegibility;-webkit-text-size-adjust:100%;background:linear-gradient(145deg,#f5f6f0,#eef2ec 55%,#f5f2e9)}
+.app-shell{max-width:1320px;grid-template-columns:238px minmax(0,1fr)}
+.app-main{min-width:0;width:100%;padding:24px clamp(14px,3vw,35px) 56px}
+.app-main>.panel{max-width:960px;border-radius:18px;box-shadow:var(--shadow)}
+.app-sidebar{background:#fffefa;border-color:var(--line)}
+.sidebar-mark{background:var(--green);border-radius:12px}
+.sidebar-link:hover,.sidebar-group>summary:hover,.sidebar-link.active,.sidebar-group[open]>summary{background:var(--mint);color:var(--green)}
+.sidebar-group>summary{min-height:44px;font-size:.82rem}
+.sidebar-link{min-height:44px;font-size:.8rem}
+.sidebar-context #filter-assignment,.sidebar-context #filter-subgroup{min-height:44px;border-radius:11px;background:#fff;border-color:var(--line);font:inherit;font-size:.78rem}
+.class-context-summary{gap:7px;line-height:1.4}
+.cohort-chip{background:#f6f8f4;border-color:#e1e6de;border-radius:99px;font-size:.7rem}
+.app-main :where(p,li,small,label,summary,button,a,th,td,h1,h2,h3,h4,legend){overflow-wrap:anywhere;word-break:normal}
+.app-main :where(p,li){line-height:1.55}
+.app-main :where(.helper,.sync-help,.privacy-note,.summary-year-help,.summary-scope){font-size:.8rem;line-height:1.55}
+.app-main :where(.sync-help,.helper){color:var(--muted)}
+.app-main h1{line-height:1.08;letter-spacing:-.05em}
+.app-main h2,.app-main h3,.app-main h4,.dialog-head h2{line-height:1.25;letter-spacing:-.025em}
+.app-main :where(.section-heading,.subheading){gap:14px}
+.app-main :where(.section-heading h2,.subheading h2){max-width:100%;font-size:clamp(1.15rem,2vw,1.4rem)}
+.app-main :where(.section-heading,.subheading){padding:18px 20px}
+.app-main :where(button,.quiet-button,.primary-button,.sync-button,.tab,.mobile-appbar button){min-height:42px;line-height:1.35;white-space:normal}
+.app-main :where(input,select,textarea){min-width:0;min-height:44px;font-size:.9rem;line-height:1.4;border-radius:11px}
+.app-main :where(input,select,textarea):focus{border-color:#83af95;outline:3px solid #83af9533;outline-offset:1px}
+.app-main textarea{min-height:96px;overflow-wrap:anywhere}
+.app-main :where(.toolbar-actions,.setup-actions,.form-actions,.card-actions){gap:9px;min-width:0}
+.app-main :where(.toolbar-actions>*,.setup-actions>*,.form-actions>*,.card-actions>*){min-width:0;max-width:100%}
+.app-main :where(.panel,.data-card,.summary-chart,.summary-kpi,.class-context-card,.scope-assign-form,.teacher-availability,.teacher-scope-preview,.global-summary){min-width:0}
+.app-main :where(.data-card,.summary-chart,.summary-kpi,.class-context-card,.scope-assign-form,.teacher-availability,.teacher-scope-preview){border-radius:15px;background:#fff;box-shadow:0 8px 24px #26382c08}
+.app-main :where(.data-card h3,.data-card p,.class-context-card h3,.class-context-card p,.summary-chart h3,.summary-kpi span,.summary-kpi strong){line-height:1.45;overflow-wrap:anywhere}
+.app-main :where(.record-filters,.summary-filters,.grade-session-toolbar){gap:12px}
+.app-main :where(th,td){line-height:1.45;overflow-wrap:anywhere}
+.app-main :where(th){font-size:.68rem;letter-spacing:.04em;background:#f6f8f4}
+.app-main :where(td){font-size:.82rem}
+.app-main :where(.table-wrap,.summary-matrix-wrap){max-width:100%;overscroll-behavior-inline:contain}
+.summary-kpis{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))!important}
+.summary-kpi{display:block;padding:14px;border-radius:14px;background:#f6f8f4}
+.summary-kpi span{font-size:.72rem}
+.summary-kpi strong{margin-top:6px;font-size:1.45rem;white-space:normal}
+.summary-chart{padding:0;background:#fff}
+.summary-chart h3,.summary-panel h3{padding:15px 17px}
+.home-actions{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;padding:12px 18px 18px}
+.home-action{min-height:70px;grid-template-columns:36px minmax(0,1fr) 16px;gap:10px;padding:12px;border-radius:14px;background:#fff;box-shadow:0 5px 18px #26382c08}
+.home-action strong{font-size:.78rem;line-height:1.35}.home-action small{font-size:.68rem;line-height:1.4;color:var(--muted)}
+.home-action-icon{width:34px;height:34px;border-radius:11px;background:var(--mint);color:var(--green)}
+.class-context-card{background:#f5f8f3!important;border-radius:15px}
+.app-main .grade-session-toolbar,.app-main .summary-filters,.app-main .record-filters{background:#f6f8f4;border-color:var(--line)}
+.app-main .teacher-form,.app-main .scope-builder,.app-main .teacher-scope-preview{border-radius:14px;background:#f6f8f4;border-color:var(--line)}
+.app-main .teacher-availability,.app-main .scope-assign-form{background:#fff;border-color:var(--line)}
+.app-main .primary-button,.app-main .sync-button[data-sync-state=clean]{background:var(--green);border-color:var(--green)}
+.app-main .quiet-button,.app-main .tab,.app-main .config-toggle{border-radius:10px}
+.app-main .quiet-button:hover,.app-main .tab:hover{background:var(--mint);color:var(--green)}
+.app-main .tab.active{background:var(--mint);color:var(--green)}
+.app-main .toast{font-size:.88rem;line-height:1.55}
+.login-panel{padding:clamp(22px,5vw,34px);border-radius:20px;background:#fff;box-shadow:var(--shadow)}
+.login-panel :where(p,label){font-size:.88rem;line-height:1.55}
+.login-panel h1{line-height:1.08;letter-spacing:-.05em}
+.login-panel :where(input,button){min-height:46px;font-size:.95rem;border-radius:11px}
+.login-panel .privacy-note{border-radius:0 0 12px 12px;font-size:.76rem;line-height:1.5}
+dialog{border-radius:18px;box-shadow:0 24px 70px #20342c26}
+dialog :where(p,li,small,label,button,input,select,textarea,th,td){font-size:.9rem;line-height:1.5;overflow-wrap:anywhere}
+dialog form{gap:17px}
+dialog :where(.dialog-fields,.form-actions,.two-col){gap:12px}
+dialog :where(.helper,.privacy-note){padding-inline:0;font-size:.82rem;line-height:1.55}
+@media(max-width:850px){
+ .app-shell{grid-template-columns:minmax(0,1fr)}
+ .app-main{padding:0 12px 90px}
+ .app-main>.panel{border-radius:17px}
+ .app-main :where(.section-heading,.subheading){padding:16px 15px}
+ .home-actions{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;padding:12px}
+ .app-main .toolbar-actions{align-items:stretch}
+ .app-main .toolbar-actions>*{flex:1 1 auto}
+ .app-sidebar{padding:16px 14px max(16px,env(safe-area-inset-bottom))}
+}
+@media(max-width:560px){
+ body{font-size:16px}
+ .app-main{padding-inline:10px}
+ .app-main :where(.helper,.sync-help,.privacy-note,.summary-year-help,.summary-scope){padding-inline:14px;font-size:.82rem}
+ .app-main :where(.summary-filters,.record-filters){grid-template-columns:minmax(0,1fr);gap:11px}
+ .app-main :where(.summary-chart-grid){grid-template-columns:minmax(0,1fr)}
+ .app-main :where(.home-action,.data-card,.summary-kpi,.summary-chart){padding:13px}
+ .app-main :where(.toolbar-actions,.setup-actions){align-items:stretch}
+ .app-main :where(.toolbar-actions button,.setup-actions button){flex:1 1 100%;min-height:44px}
+ .app-main :where(.form-actions){justify-content:stretch}
+ .app-main .form-actions button{flex:1 1 100%}
+ .login-panel{padding:22px 18px}
+ .sidebar-account #access-details{white-space:normal;overflow-wrap:anywhere}
+}
+@media(max-width:380px){.home-actions{grid-template-columns:minmax(0,1fr)}.app-main{padding-inline:8px}.app-main :where(.section-heading,.subheading){padding-inline:12px}}
+@media(prefers-reduced-motion:reduce){.app-main .home-action,.app-main .toast{transition:none}}
 .app-main,.app-sidebar,.login-panel,dialog{min-width:0}
 .app-main :where(p,li,small,label,summary,button,a,th,td,h1,h2,h3,h4,legend){overflow-wrap:anywhere;word-break:normal}
 .app-main :where(p,li){line-height:1.55}

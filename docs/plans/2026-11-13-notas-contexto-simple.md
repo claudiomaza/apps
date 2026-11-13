@@ -36,5 +36,9 @@ Mostrar cohortes bajo el selector combinado como chips con años únicos; reempl
 - Tipografía base 16px, interlineado cómodo y wrapping para el contenido principal; jerarquía de títulos y texto auxiliar sin microtexto.
 - Formularios, filtros y botones conservan ancho mínimo cero y altura táctil; en móvil las ayudas/filtros/acciones se apilan para no compartir espacio insuficiente.
 - Bloques, tarjetas y diálogos permiten texto largo sin desbordar; tablas y matrices permanecen en scroll local horizontal. Se conserva el comportamiento y los datos.
-- Cache key CSS `20261113-readable7`; contrato en `notas/tests/layout-readability.test.js`.
+- Cache key CSS `20261113-reference8`; contrato en `notas/tests/layout-readability.test.js`.
 - La captura visual responsive queda pendiente por indisponibilidad confirmada de navegador/Moli en el entorno.
+
+## Estilo de referencia de navegación (2026-11-13)
+
+Claudio indicó como referencia visual `https://zapia-notas-nav-claudio-20261113.netlify.app/`: fondo salvia pálido, tarjetas blancas redondeadas con sombra leve, verde bosque como acento, títulos con escala editorial y acciones compactas en tarjetas. Aplicar a la app real sin adoptar los datos ficticios ni reemplazar su flujo/navigation. Validar desktop y móvil con screenshots, no inferir aceptación visual del CSS. Cache key CSS `20261113-reference8`. La referencia inspeccionada usa fondo salvia/verde gris, tarjetas blancas, radio ~18px, sombra suave, verde bosque y acciones compactas; no son solo cambios de tamaño de fuente. La app real hereda ese tratamiento en paneles, tarjetas, botones, formularios y estados oscuros, conservando el DOM y flujos existentes.
