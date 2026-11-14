@@ -1,7 +1,7 @@
 'use strict';
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const root=path.join(__dirname,'..'),html=fs.readFileSync(path.join(root,'index.html'),'utf8'),app=fs.readFileSync(path.join(root,'app.js'),'utf8'),css=fs.readFileSync(path.join(root,'styles.css'),'utf8');
-assert.match(html,/<details class="class-context-picker"><summary id="change-class-context"/);
+assert.match(html,/<details id="class-context-menu" class="class-context-picker class-context-more"><summary id="change-class-context" class="quiet-button"/);
 const init=app.slice(app.indexOf('function initializeClassContextControls'),app.indexOf('\n',app.indexOf('function initializeClassContextControls')));
 assert.doesNotMatch(init,/change-class-context.*addEventListener\('click'/);
 assert.match(init,/filter-assignment.*addEventListener\('change'/);
