@@ -10,8 +10,8 @@ assert.match(html,/<title>MGD - Tu aula en un solo lugar<\/title>/,'document tit
 assert.match(html,/class="brand login-module-title">Módulo de Gestión Docente/,'login top bar uses the module name without MGD');
 assert.match(html,/id="connection"[^>]*>Iniciá sesión para conectar con Sheets/,'login top bar keeps the Sheets connection prompt');
 assert.match(html,/class="sidebar-mark">MGD<\/span><span>MGD/,'vertical menu uses MGD identity');
-assert.match(html,/class="trama-tagline">Tu aula en un solo lugar/,'brand displays the approved tagline');
-assert.match(html,/class="trama-tagline">Tu aula en un solo lugar/,'login uses approved tagline');
+assert.match(html,/class="sidebar-mark">MGD[\s\S]*?Tu aula en un solo lugar/,'authenticated sidebar retains the MGD identity');
+assert.match(html,/<h1>Tu aula<\/h1><p class="trama-tagline">en un solo lugar/,'login box uses requested copy');assert.doesNotMatch(html,/<p class="eyebrow">TU ESPACIO ESCOLAR<\/p><h1>MGD<\/h1>/,'old login box identity is removed');
 assert.match(html,/id="sync-review-dialog"[\s\S]*id="sync-review-list"[\s\S]*id="sync-review-submit"/,'sync review dialog exists');
 assert.match(app,/function renderSyncReview\(/,'staged changes can be listed for review');
 assert.match(app,/function updateSyncReviewSelection\([\s\S]*all\.indeterminate=selected>0&&selected<rows\.length/,'selection count and select-all indeterminate state stay in sync');
