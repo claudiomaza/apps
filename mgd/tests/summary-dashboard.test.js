@@ -18,8 +18,8 @@ assert.match(htmlBefore,/data-summary-tab="overview">Panel inicial[\s\S]*data-su
 assert.match(htmlBefore,/data-summary-panel="topics"[\s\S]*id="summary-topic-rows"/,'topic book has its own read-only panel');
 assert.match(htmlBefore,/summary-filters[\s\S]*data-summary-panel="overview"[\s\S]*summary-kpis/,'global filters remain outside the initial panel');
 assert.match(htmlBefore,/summary-subject-statistics/,'Statistics includes a per-subject and group indicators table');
-assert.match(htmlBefore,/id="attendance-search"[\s\S]*id="attendance-status-filter"/,'attendance has explicit search and status filters');
-assert.match(htmlBefore,/id="grades-search"[\s\S]*id="grades-status-filter"/,'grade entry has explicit search and status filters');
+assert.match(htmlBefore,/id="attendance-status-filter"/,'attendance retains status filtering and uses the shared table search');
+assert.match(htmlBefore,/id="grades-status-filter"/,'grade entry retains status filtering and uses the shared table search');
 assert.match(htmlBefore,/Indicadores por materia[\s\S]*Presentes[\s\S]*Ausentes[\s\S]*Promedio[\s\S]*Pendientes[\s\S]*Eximidos/,'statistics table enumerates attendance and grade indicators for every subject');
 
 const students=[

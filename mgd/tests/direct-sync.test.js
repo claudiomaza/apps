@@ -14,8 +14,8 @@ assert.match(html,/<form id="login-form">[\s\S]*?<input id="access-user"[^>]*req
 assert.match(html,/id="app-content" hidden/);assert.match(html,/stage-store\.js/);
 assert.match(html,/id="sync-button"/);
 assert.match(html,/id="sync-state"/);
-assert.match(html,/styles\.css\?v=20261115-mobile-sym3/);
-assert.match(html,/app\.js\?v=20261115-mobile-sym3/);
+assert.match(html,/styles\.css\?v=20261115-home-tables2/);assert.match(html,/id="sync-nav-button"/);assert.match(html,/mobile-profile-name/);assert.equal((html.match(/id="sync-button"/g)||[]).length,1);
+assert.match(html,/app\.js\?v=20261115-mobile-sym3/);assert.match(html,/id="global-summary" class="global-summary" open/);assert.match(app,/if\(reports\)reports\.hidden=false/);
 
 assert.match(sw,/mgd-static-/);
 assert.match(sw,/fetch\(e\.request,\{cache:'no-store'\}\)/);

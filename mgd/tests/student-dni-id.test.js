@@ -1,0 +1,11 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const app=fs.readFileSync(path.join(__dirname,'../app.js'),'utf8'),html=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
+assert.match(app,/data\.studentId=normalizeDni\(values\.studentId\);data\.documentNumber=data\.studentId/,'student identity stores DNI in both identifier fields');
+assert.match(app,/r\.type==='student'&&\(normalizeDni\(r\.id\)!==normalizeDni\(r\.data\.studentId\)/,'validation enforces record ID equals DNI');
+assert.match(app,/ID debe ser el DNI/,'friendly Excel sheet rejects ID/DNI mismatch');
+assert.match(app,/normalizeDni\(data\.studentId\)!==id/,'canonical Registros sheet enforces DNI as ID');
+assert.match(app,/ID:normalizeDni\(x\.data\.documentNumber\|\|x\.data\.studentId\),DNI:normalizeDni/,'student exports use DNI in both ID and DNI columns');
+assert.match(app,/studentId:dni,documentNumber:dni/,'student import derives IDs from DNI');
+assert.match(html,/id="new-student" data-admin-only/,'student creation remains admin-only');
+console.log('Student DNI-as-ID across edits, exports and imports PASS');

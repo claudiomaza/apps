@@ -57,8 +57,8 @@ assert.match(source,/\$\('#summary-topic-rows'\)\.innerHTML=topics/,'overview to
 
 assert.match(html,/summary-filters[\s\S]*data-summary-panel="overview"/,'global filters live outside the initial dashboard');
 assert.match(html,/summary-subject-statistics/,'statistics expose per-subject indicators');
-assert.match(html,/id="attendance-search"[^\n]*id="attendance-status-filter"/,'attendance register has search and status filters');
-assert.match(html,/id="grades-search"[^\n]*id="grades-status-filter"/,'grade register has search and status filters');
+assert.match(html,/id="attendance-status-filter"/,'attendance register retains status filtering with shared table search');
+assert.match(html,/id="grades-status-filter"/,'grade register retains status filtering with shared table search');
 assert.match(css,/#attendance-list tr>td:not\(:last-child\)/,'attendance has visible dividers through interior columns');
 assert.match(html,/data-summary-panel="overview"[\s\S]*Indicadores por materia[\s\S]*summary-subject-statistics/,'initial dashboard lists per-subject indicators');
 assert.match(html,/summary-filters[\s\S]*data-summary-panel="overview"/,'global filters are not hidden from the initial dashboard');

@@ -13,7 +13,12 @@ assert.match(css,/@media\(max-width:850px\)\{\.app-shell\{display:block[\s\S]*\.
 assert.match(css,/\.summary-kpis\{grid-template-columns:1fr!important\}/);assert.match(css,/body\.theme-dark\s*\{/);
 assert.match(app,/function applyTheme\(theme\)[\s\S]*localStorage\.setItem\('notasTheme'/);
 assert.match(app,/function closeAppSidebar\(\)[\s\S]*function applyTheme/);assert.match(app,/function renderAccessProfile\(\)[\s\S]*idKey/);assert.match(app,/function signOut\(\)[\s\S]*remove\('app-authenticated'\)/);assert.match(app,/SESSION_EXPIRED[^}]*app-authenticated|app-authenticated[^}]*SESSION_EXPIRED/);
-assert.match(app,/function syncSidebarNavigation\(\)[\s\S]*currentRole!=='admin'/);assert.match(app,/data-table-search-column/);assert.match(css,/\.class-context-card/);assert.match(css,/\.global-summary/);
+assert.match(app,/function syncSidebarNavigation\(\)/,'all role-specific navigation state updates are retained');
+assert.match(app,/if\(group\)group\.hidden=!admin/,'administration navigation remains admin-only');
+assert.match(html,/id="mobile-admin-tab"/,'admin has a shortcut in the mobile navigation bar');
+assert.match(html,/mobile-profile-name/,'mobile navigation shows the signed-in profile');
+assert.match(html,/id="sync-nav-button"/,'sync notification is in the mobile navigation');
+assert.match(html,/id="global-summary" class="global-summary" open/,'home shows the role-independent summary');assert.match(app,/data-table-search-column/);assert.match(css,/\.class-context-card/);assert.match(css,/\.global-summary/);
 assert.match(html,/class-context-picker[\s\S]*id="filter-cohort"/,'cohort selector is in the class dropdown');
-assert.match(html,/styles\.css\?v=20261115-mobile-sym3/);assert.match(html,/app\.js\?v=20261115-mobile-sym3/);
+assert.match(html,/styles\.css\?v=20261115-home-tables2/);assert.match(html,/app\.js\?v=20261115-mobile-sym3/);
 console.log('Sidebar navigation, class dropdown, appearance, theme and context PASS');
