@@ -20,5 +20,5 @@ assert.match(html,/mobile-profile-name/,'mobile navigation shows the signed-in p
 assert.match(html,/id="sync-nav-button"/,'sync notification is in the mobile navigation');
 assert.match(html,/id="global-summary" class="global-summary" open/,'home shows the role-independent summary');assert.match(app,/data-table-search-column/);assert.match(css,/\.class-context-card/);assert.match(css,/\.global-summary/);
 assert.match(html,/class-context-picker[\s\S]*id="filter-cohort"/,'cohort selector is in the class dropdown');
-assert.match(html,/styles\.css\?v=20261115-home-tables2/);assert.match(html,/app\.js\?v=20261115-mobile-sym3/);
+assert.match(html,/styles\.css\?v=20261115-admin-consult4/);assert.match(html,/app\.js\?v=20261115-admin-consult4/);
 console.log('Sidebar navigation, class dropdown, appearance, theme and context PASS');

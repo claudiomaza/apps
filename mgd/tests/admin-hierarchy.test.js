@@ -1,0 +1,16 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const root=path.join(__dirname,'..'),app=fs.readFileSync(path.join(root,'app.js'),'utf8'),gas=fs.readFileSync(path.join(root,'apps-script','Code.gs'),'utf8'),html=fs.readFileSync(path.join(root,'index.html'),'utf8');
+assert.match(app,/case'course':[\s\S]*selectField\('schoolId','Escuela'/,'courses are created within a selected school');
+assert.match(app,/case'division':[\s\S]*selectField\('schoolId','Escuela'[\s\S]*selectField\('courseId','Curso \/ año'/,'divisions are created inside a school and course');
+assert.match(app,/case'subject':[\s\S]*selectField\('schoolId','Escuela'[\s\S]*selectField\('courseId','Curso \/ año'[\s\S]*selectField\('divisionId','División'/,'subjects are attached to their school and group');
+assert.match(gas,/INVALID_GROUP_HIERARCHY/,'mismatched group references are returned as a clear validation error');
+assert.match(gas,/validateSchoolGroupHierarchy_/,'server validates group references and consistency');
+assert.match(gas,/function validateRecord_\(x\)[\s\S]*INVALID_GROUP_HIERARCHY/,'group references have bounded server validation');
+assert.match(gas,/INVALID_GROUP_HIERARCHY/,'mismatched group references are returned as a clear validation error');
+assert.match(gas,/validateSchoolGroupHierarchy_\(x\.value\.type,d/,'server checks school, course and division parent consistency before writes');
+assert.match(gas,/school:\[\['course','schoolId'\]/,'deleting a school protects linked courses');
+assert.match(gas,/course:\[\['division','courseId'\]/,'deleting a course protects linked divisions');
+assert.match(gas,/division:\[\['subject','divisionId'\]/,'deleting a division protects linked subjects');
+assert.match(html,/class="admin-setup-steps"[\s\S]*Escuelas[\s\S]*Cursos y divisiones[\s\S]*Materias[\s\S]*Clases y docentes/,"admin order shows school hierarchy");
+console.log('School → course → division → subject hierarchy validation PASS');

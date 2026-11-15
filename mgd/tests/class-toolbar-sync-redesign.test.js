@@ -8,6 +8,8 @@ assert.match(sidebar,/Apariencia[\s\S]*id="theme-toggle"/,'appearance is a verti
 assert.match(html,/id="mobile-class-route"/,'mobile bar has a class route next to Menu');
 assert.match(app,/function renderClassContext\([\s\S]*mobile-class-route/,'active class route is updated from class context');
 assert.match(css,/\.app-main #sync-button,\.app-main #refresh\{min-width:142px;min-height:44px/,'sync and refresh controls have equal dimensions');
-assert.match(html,/id="sync-review-all"[^>]*>[\s\S]*Seleccionar todos \(opcional\)/,'sync review can select all changes optionally');
+assert.match(html,/id="sync-review-all" type="checkbox"[^>]*aria-label="Seleccionar todos los cambios"/,'sync review table can select all changes optionally');
+assert.match(html,/id="sync-refresh"[^>]*>[^<]*Actualizar/,'sync toolbar can refresh Sheets without sending drafts');
+assert.match(html,/id="sync-review-refresh"[^>]*>[^<]*Actualizar/,'review table can refresh Sheets before selection');
 assert.match(app,/data-sync-review-id/,'sync review presents individual changes');
 console.log('Class dropdown, appearance menu, mobile class route and selectable sync review PASS');

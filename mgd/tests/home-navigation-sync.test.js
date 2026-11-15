@@ -19,3 +19,11 @@ assert.doesNotMatch(html.slice(html.indexOf('id="view-summary"'),html.indexOf('i
 assert.match(app,/document\.querySelectorAll\('\.sidebar-link\[data-tab\]'\)/,'More menu maintains navigation links and open/close wiring');
 assert.match(css,/\.mobile-profile\{display:grid/,'profile is visible in mobile header');
 console.log('Home summary, profile, sync notification, admin tab and Más navigation PASS');
+
+assert.match(html,/id="home-record-consultation"[\s\S]*id="admin-records"/,'Home hosts filtered record consultation');
+assert.doesNotMatch(html.slice(html.indexOf('id="view-admin"'),html.indexOf('id="view-trash"')),/id="admin-records"|id="record-filter-type"/,'admin is workflow-oriented, not a generic record dump');
+assert.match(html,/id="sync-review-table"[\s\S]*id="sync-review-all"[\s\S]*id="sync-review-list"/,'review dialog is a selectable table');
+assert.match(html,/id="sync-review-refresh"[^>]*>[^<]*Actualizar/,'review offers refresh');
+assert.match(html,/id="view-students"[\s\S]*id="import-admin-xlsx"[^>]*data-admin-only[\s\S]*id="export-admin-xlsx"[^>]*data-admin-only/,'My group owns admin student Excel actions');
+assert.match(html,/class="toolbar-actions topic-actions"[\s\S]*id="new-topic"/,'topic actions occupy their own toolbar');
+assert.match(html,/class="admin-setup-steps"[\s\S]*data-new="school"[\s\S]*data-new="course"[\s\S]*data-new="division"[\s\S]*data-new="subject"[\s\S]*data-new="schedule"/,'school setup is presented in its intended sequence');

@@ -1,9 +1,10 @@
 'use strict';
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const root=path.join(__dirname,'..'),html=fs.readFileSync(path.join(root,'index.html'),'utf8'),app=fs.readFileSync(path.join(root,'app.js'),'utf8'),lazy=fs.readFileSync(path.join(root,'xlsx-lazy.js'),'utf8');
-const admin=html.slice(html.indexOf('id="view-admin"'),html.indexOf('id="view-trash"'));
-assert.match(admin,/id="import-admin-xlsx"[^>]*data-admin-only/,'admin can import configuration spreadsheet');
-assert.match(admin,/id="export-admin-xlsx"[^>]*data-admin-only/,'admin can export records and relations');
+const admin=html.slice(html.indexOf('id="view-admin"'),html.indexOf('id="view-trash"')),roster=html.slice(html.indexOf('id="view-students"'),html.indexOf('id="view-admin"'));
+assert.match(roster,/id="import-admin-xlsx"[^>]*data-admin-only/,'admin can import students from My group');
+assert.match(roster,/id="export-admin-xlsx"[^>]*data-admin-only/,'admin can export students and relations from My group');
+assert.doesNotMatch(admin,/id="import-admin-xlsx"|id="export-admin-xlsx"/,'student Excel actions are not duplicated in configuration');
 assert.match(app,/function exportAdminWorkbook\(book\)/,'exports the normalized entities as separate sheets');
 assert.match(app,/function exportAdminWorkbookOnly\(\)/,'admin export creates an entity-only workbook');
 assert.match(app,/if\(!items\.length\|\|book\.Sheets\[sheetName\]\)continue/,'dedicated export avoids duplicate sheet names');
