@@ -3,7 +3,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
 const root=path.join(__dirname,'..'),html=fs.readFileSync(path.join(root,'index.html'),'utf8'),app=fs.readFileSync(path.join(root,'app.js'),'utf8'),css=fs.readFileSync(path.join(root,'styles.css'),'utf8');
 const sidebar=html.slice(html.indexOf('<aside class="app-sidebar"'),html.indexOf('</aside>'));
 assert.doesNotMatch(sidebar,/<select id="filter-assignment"/,'class selector is not in the vertical menu');
-assert.match(html,/id="change-class-context"[\s\S]*class-context-menu[\s\S]*id="filter-assignment"/,'change class opens an in-content picker');
+assert.match(html,/id="class-context-menu" class="class-context-picker class-context-more"[\s\S]*id="change-class-context"[\s\S]*id="filter-assignment"/,'change class opens the teacher-home context picker');
 assert.match(sidebar,/Apariencia[\s\S]*id="theme-toggle"/,'appearance is a vertical menu section');
 assert.match(html,/id="mobile-class-route"/,'mobile bar has a class route next to Menu');
 assert.match(app,/function renderClassContext\([\s\S]*mobile-class-route/,'active class route is updated from class context');

@@ -164,3 +164,11 @@ Claudio indicó como referencia visual `https://zapia-notas-nav-claudio-20261113
 - Los despliegues son independientes: el cambio de frontend/ruta y Pages no publica Apps Script. Los cambios del backend ACL o nuevas acciones requieren que Claudio despliegue manualmente `agenda/apps-script/Code.gs`; un HTTP 200 genérico del endpoint no acredita qué revisión está activa ni el scope/autorización ACL.
 - Evidencia de esta revisión: tests de contrato de ruta/branding/redirección/borradores, asset Excel y suite frontend de Agenda pasaron en el worktree usado para la publicación; la ruta pública nueva, su JS, el asset Excel y la redirección anterior respondieron HTTP 200 después del workflow Pages exitoso. Esto no equivale a QA autenticado de permisos, eventos, Excel o revocación real; esos flujos siguen requiriendo verificación autorizada sin mutar datos reales.
 - Las entradas históricas de esta app tituladas «Calendario» documentan iteraciones previas de la misma subapp, no una segunda aplicación ni una ruta canónica adicional.
+
+
+## MGD — portadas diferenciadas por rol y contexto docente (2026-11-14)
+
+- Inicio docente pone en primer plano Escuela, Curso/Año, División y Materia, reutilizando los filtros y la asignación de clase existentes; «Clase actual» resume el contexto activo. Cohorte y subgrupo siguen como filtros opcionales, y el selector combinado de clase permanece accesible. La marca autenticada muestra «Módulo de gestión docente» / «Tu aula en un solo lugar» y el avatar de Perfil usa «C».
+- Inicio administrador ofrece accesos a Docentes y permisos, Registros, Instancias y pesos, y Papelera. Los destinos reutilizan las vistas actuales y conservan su visibilidad/validación por rol. El backend y el esquema de datos no cambian.
+- La vista inicial se selecciona tras establecer el rol de sesión; antes de autenticar, login y contenido permanecen intactos. El perfil y la salida continúan en el lateral compartido.
+- Verificación automatizada: `role-home-context.test.js`, contexto combinado y auto-selección con datos sintéticos, navegación móvil, y pruebas de rutas/autorización Apps Script. No implica QA visual autenticado ni despliegue de Apps Script; Pages frontend y `apps-script/Code.gs` son artefactos separados.
