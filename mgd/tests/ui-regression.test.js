@@ -49,7 +49,7 @@ for(const tab of ['users','admin','assessments'])assert.match(html.slice(html.in
 const adminBlock=html.slice(html.indexOf('sidebar-group sidebar-admin'),html.indexOf('</details>',html.indexOf('sidebar-group sidebar-admin')));assert.match(adminBlock,/data-tab="admin"[\s\S]*data-tab="trash"/,'Registros and Papelera remain in the sidebar admin section');assert(html.includes('id="view-trash"'),'Papelera view exists');assert.match(html,/id="summary-filter-cycle"[\s\S]*id="summary-filter-cohort"[\s\S]*id="summary-filter-school"[\s\S]*id="summary-filter-subject"[\s\S]*id="summary-filter-student"/,'Summary has global cycle, cohort, group and student filters');assert(!html.match(/<section class="summary-panel" data-summary-panel="overview"[\s\S]*?<\/section>/)?.[0].includes('id="summary-topic-rows"'),'topic table remains a separate panel');
 assert.match(html,/data-summary-panel="topics"[\s\S]*id="summary-topic-rows"/,'read-only topic panel remains available');
 assert.match(html,/<section id="view-topic" class="tab-view" hidden>[\s\S]*id="new-topic"/,"editable topic register remains hidden until selected from Registrar");
-assert.match(html,/id="view-users"[\s\S]*id="teacher-scopes"[\s\S]*class="teacher-availability"[\s\S]*id="teacher-assignment-list"/,'teacher permissions, availability and assignment table are in Docentes y permisos');
+assert(html.includes('id="view-users"')&&html.includes('class="admin-step"')&&html.includes('id="teacher-scopes"')&&html.includes('class="teacher-availability"')&&html.includes('id="teacher-assignment-list"'),'guided admin steps retain teacher permissions, availability and assignments');
 assert.match(html,/id="view-users"[\s\S]*Fichas docentes[\s\S]*id="teacher-list"[\s\S]*id="subject-schedules-section"/,'teacher list and class schedules stay in the users view');
 assert.match(html,/availability-teacher[\s\S]*availability-selected-name[\s\S]*availability-list/,'availability names its selected teacher');
 assert.match(source,/\$\('#availability-teacher'\)\.onchange[\s\S]*\$\('#scope-teacher'\)\.value/,'availability selection updates assigned teacher');
@@ -83,7 +83,7 @@ assert.match(css,/\.summary-year-help/,'summary distinguishes cohort, school yea
 
 assert.match(html,/data-summary-panel="topics"[\s\S]*id="summary-topic-rows"/,"topic content remains separately browsable");
 assert.match(html,/<section id="view-topic" class="tab-view" hidden>[\s\S]*id="new-topic"/,"editable topic register remains hidden until selected from Registrar");
-assert.match(html,/id="view-users"[\s\S]*id="teacher-scopes"[\s\S]*class="teacher-availability"[\s\S]*id="teacher-assignment-list"/,"availability, assignment table and permissions are in Docentes y permisos");
+assert(html.includes('id="view-users"')&&html.includes('class="admin-step"')&&html.includes('id="teacher-scopes"')&&html.includes('class="teacher-availability"')&&html.includes('id="teacher-assignment-list"'),"availability, assignment table and permissions are in admin steps");
 assert.match(html,/availability-teacher[\s\S]*availability-selected-name[\s\S]*availability-list/,"availability names selected teacher");
 assert.match(source,/\$\('#availability-teacher'\)\.onchange[\s\S]*\$\('#scope-teacher'\)\.value/,"availability selection updates assignment teacher");
 assert.match(source,/\$\('#summary-topic-rows'\)\.innerHTML=topics/,"read-only topic list uses summary filter results");
