@@ -7,7 +7,7 @@ assert.match(app,/if\(route\)route\.textContent=currentRole==='admin'\?'Administ
 for(const id of ['filter-school','filter-course','filter-division','filter-subject','filter-assignment','filter-cohort','filter-subgroup','filter-cutoff'])assert.equal((html.match(new RegExp(`id="${id}"`,'g'))||[]).length,1,`${id} se reutiliza sin duplicar IDs`);
 assert.match(home,/id="admin-home-panel"[^>]*hidden[\s\S]*Administración/,'panel admin empieza oculto hasta conocer el rol');
 for(const tab of ['users','admin','assessments','trash'])assert.match(home,new RegExp(`data-tab="${tab}"`),`Inicio admin ofrece destino ${tab}`);
-assert.match(app,/function syncHomeRoleView\(\)[\s\S]*currentRole==='admin'[\s\S]*teacher-home-context[\s\S]*admin-home-panel/,'inicio cambia según el rol autenticado');
+assert.match(app,/function syncHomeRoleView\(\)[\s\S]*currentRole==='admin'[\s\S]*teacher-home-context[\s\S]*admin-home-panel/,'inicio cambia según el rol autenticado');assert.match(app,/function syncSidebarNavigation\(\)[\s\S]*mobile-nav-item[\s\S]*activeTab/,'navegación inferior refleja la pantalla seleccionada');
 assert.match(app,/function render\(\)[\s\S]*syncHomeRoleView\(\)/,'el control de rol se actualiza al renderizar');
 assert.match(css,/\.home-context-fields\{display:grid/,'selectores docentes tienen layout explícito');
 assert.match(css,/\.home-context-fields select\{[^}]*min-height:46px/,'selectores tienen objetivos táctiles adecuados');

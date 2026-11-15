@@ -9,7 +9,7 @@ assert.match(css, /@media\s*\(max-width:\s*560px\)[\s\S]*?\.dropdown-menu\s*\{[^
 assert.match(css, /\.dropdown-menu\s*\{[^}]*max-height:\s*min\(60dvh,\s*420px\)[^}]*overflow-y:\s*auto/i, 'long dropdowns fit the viewport and scroll');
 assert.match(css, /\.dropdown-item\s*\{[^}]*min-height:\s*44px[^}]*white-space:\s*normal/i, 'menu choices remain readable and tappable');
 assert.match(css, /\.users-layout[^}]*min-width:\s*0/i, 'teacher management children can shrink to mobile width');
-assert.match(html,/id="app-sidebar"[\s\S]*id="theme-toggle"/);assert.match(html,/id="sidebar-toggle"/);assert.match(html,/id="sidebar-desktop-toggle"/);
-assert.match(html, /styles\.css\?v=20261114-rolehome1/, 'CSS cache key changes with login and toast layout');
-assert.match(html, /app\.js\?v=20261114-rolehome1/, 'application script key changes with debug cache controls');
+assert.match(html,/id="app-sidebar"[\s\S]*id="theme-toggle"/);assert.match(html,/id="sidebar-toggle"[\s\S]*>Más<\/span>/,'mobile secondary menu is labeled Más');assert.match(html,/class="mobile-bottom-nav"[\s\S]*data-tab="summary"[\s\S]*data-tab="attendance"[\s\S]*data-tab="grades"[\s\S]*data-tab="topic"[\s\S]*data-tab="students"/,'persistent mobile bottom navigation has the five approved destinations');assert.match(css,/\.mobile-bottom-nav\{position:fixed[\s\S]*env\(safe-area-inset-bottom\)/,'bottom navigation respects device safe area');assert.match(html,/id="sidebar-desktop-toggle"/);
+assert.match(html, /styles\.css\?v=20261114-mobilenav2/, 'CSS cache key changes with login and toast layout');
+assert.match(html, /app\.js\?v=20261114-mobilenav2/, 'application script key changes with debug cache controls');
 console.log('Mobile navigation and teacher-view layout regression PASS');
