@@ -2,11 +2,11 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const html=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8'),app=fs.readFileSync(path.join(__dirname,'../app.js'),'utf8');
 for(const x of ['id="change-password-button"','id="password-dialog"','name="currentPassword"','name="newPassword"','name="confirmPassword"'])assert.ok(html.includes(x),x);
-assert.match(html,/name="newPassword"[^>]*minlength="12"/);
+assert.match(html,/name="newPassword"[^>]*minlength="5"/);assert.match(html,/name="confirmPassword"[^>]*minlength="5"/);assert.match(html,/Usá al menos 5 caracteres/);
 assert.match(html,/name="newPassword"[^>]*required/);
 assert.match(html,/class="form-actions"[\s\S]*Cancelar[\s\S]*Guardar contraseña/,'password dialog has distinct cancel and primary save actions');
 const passwordDialog=html.match(/<dialog id="password-dialog"[\s\S]*?<\/dialog>/)?.[0]||'';
 for(const input of passwordDialog.match(/<input\b[^>]*name="(?:currentPassword|newPassword|confirmPassword)"[^>]*>/g)||[])assert.doesNotMatch(input,/maxlength=/,'password fields must not impose a character cap');
-assert.doesNotMatch(app,/newPassword\.length>200/,'change-password handler must not reject passwords over 200 characters');
-assert.doesNotMatch(html,/id="access-pass"[^>]*maxlength=/,'login password must not have a hidden character cap');assert.match(app,/newPassword!==f\.elements\.confirmPassword\.value/);assert.match(app,/apiRequest\('changePassword'/);assert.match(app,/change-password-button'\)\.hidden=!sessionToken/);
+assert.doesNotMatch(app,/newPassword\.length>200/,'change-password handler must not reject passwords over 200 characters');assert.match(app,/newPassword\.length<5/,'change-password handler accepts five-character passwords');
+assert.doesNotMatch(html,/id="access-pass"[^>]*maxlength=/,'login password must not have a hidden character cap');assert.match(app,/newPassword!==f\.elements\.confirmPassword\.value/);assert.match(app,/apiRequest\('changePassword'/);assert.match(fs.readFileSync(path.join(__dirname,'../apps-script/Code.gs'),'utf8'),/next\.length<5/,'backend allows five-character account-password changes');assert.match(app,/change-password-button'\)\.hidden=!sessionToken/);
 console.log('Password change dialog, validation, authenticated request and session-only visibility PASS');
