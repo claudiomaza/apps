@@ -7,8 +7,14 @@ assert.match(html,/class="mobile-bottom-nav mobile-primary-nav"[\s\S]*data-tab="
 assert.match(css,/\.mobile-appbar\{position:sticky;top:0/,'mobile header sticks to the top');
 assert.match(css,/\.mobile-primary-nav\{[^}]*position:relative/,'navigation is part of the header, not fixed to the bottom');
 assert.match(app,/window\.scrollTo\(0,0/,'switching sections returns to the beginning');
-console.log('Top mobile navigation and section scroll regression PASS');
-
 assert.match(app,/function applyMobileNavigation\(requestedMode\)/,'navigation applier accepts a directly selected mode');
-assert.match(app,/applyMobileNavigation\(mode\)/,'selector change applies its selected mode immediately');assert.match(app,/desktop\?'vertical':'horizontal'/,'default follows the viewport');assert.match(app,/sidebar-collapsed',desktop&&mode==='horizontal'/,'horizontal mode collapses desktop sidebar');assert.match(app,/addEventListener\('change',\(\)=>applyMobileNavigation\(\)\)/,'mode reapplies after viewport changes');assert.match(app,/desktop\?'vertical':'horizontal'/,'default follows the viewport');assert.match(app,/sidebar-collapsed',desktop&&mode==='horizontal'/,'horizontal mode collapses desktop sidebar');assert.match(app,/addEventListener\('change',\(\)=>applyMobileNavigation\(\)\)/,'mode reapplies after viewport changes');
-assert.match(css,/\.mobile-appbar #mobile-menu-button\[hidden\],\.mobile-appbar \.mobile-primary-nav\[hidden\]\{display:none!important\}/,'hidden menu controls stay hidden despite mobile appbar button styling');assert.match(css,/@media\(min-width:851px\)\{body\[data-mobile-nav=\"horizontal\"\] \.mobile-appbar/,'horizontal menu is visible on desktop');assert.match(css,/body\[data-mobile-nav=\"horizontal\"\] \.mobile-primary-nav\{display:flex/,'horizontal links lay out across desktop');assert.match(css,/@media\(min-width:851px\)\{body\[data-mobile-nav=\"horizontal\"\] \.mobile-appbar/,'horizontal menu is visible on desktop');assert.match(css,/body\[data-mobile-nav=\"horizontal\"\] \.mobile-primary-nav\{display:flex/,'horizontal links lay out across desktop');
+assert.match(app,/applyMobileNavigation\(mode\)/,'selector change applies its selected mode immediately');
+assert.match(app,/desktop\?'vertical':'horizontal'/,'default follows the viewport');
+assert.match(app,/sidebar-collapsed',desktop&&mode==='horizontal'/,'horizontal mode collapses desktop sidebar');
+assert.match(app,/addEventListener\('change',\(\)=>applyMobileNavigation\(\)\)/,'mode reapplies after viewport changes');
+assert.match(html,/id="desktop-navigation-mode"/,'desktop has a reachable selector in horizontal mode');
+assert.match(css,/body\[data-mobile-nav="horizontal"\] \.app-sidebar\{display:none\}/,'horizontal mode hides vertical sidebar on desktop');
+assert.match(css,/body\[data-mobile-nav="horizontal"\] \.mobile-appbar\{display:grid/,'horizontal mode shows the top navigation on desktop');
+assert.match(css,/body\[data-mobile-nav="horizontal"\] \.mobile-primary-nav\{display:flex/,'horizontal links lay out across desktop');
+assert.match(css,/\.mobile-appbar #mobile-menu-button\[hidden\],\.mobile-appbar \.mobile-primary-nav\[hidden\]\{display:none!important\}/,'hidden menu controls stay hidden despite mobile appbar button styling');
+console.log('Responsive navigation mode and immediate desktop/mobile selection PASS');
