@@ -16,13 +16,13 @@ assert.doesNotMatch(app,/navigator\.serviceWorker\.(?:register|getRegistrations)
 assert.match(html,/http-equiv="Cache-Control" content="no-store/,'document requests no-store from supporting caches; hosting/CDN headers govern edge caching');
 assert.match(config,/ASSET_CACHE_ENABLED:\s*false/,'asset cache defaults off in debugging');
 assert.match(config,/SERVICE_WORKER_ENABLED:\s*false/,'service worker defaults off in debugging');
-assert.match(html,/app\.js\?v=20261116-profile-menu-icons3/,'app script cache key is fresh');
-assert.match(html,/styles\.css\?v=20261116-profile-menu-icons3/,'stylesheet cache key is fresh');
+assert.match(html,/app\.js\?v=20261116-navigation-equivalence4/,'app script cache key is fresh');
+assert.match(html,/styles\.css\?v=20261116-navigation-equivalence4/,'stylesheet cache key is fresh');
 assert.match(html,/id="mobile-appbar"|class="mobile-appbar"/,'mobile header refreshes with its own layout updates');
 assert.match(html,/id="view-summary" class="tab-view summary-view"[\s\S]*id="sync-button"/,'only the role-independent Home view renders the sync panel');
 assert.equal((html.match(/id="sync-button"/g)||[]).length,1,'other tab panels do not repeat sync panel');
 assert.equal((html.match(/id="sync-state"/g)||[]).length,1,'home owns the single synchronization status label');
-assert.match(html,/config\.js\?v=20261116-api-endpoint2/,'cache configuration is fresh');assert.match(html,/app\.js\?v=20261116-profile-menu-icons3/,'application script remains freshly versioned');
+assert.match(html,/config\.js\?v=20261116-api-endpoint2/,'cache configuration is fresh');assert.match(html,/app\.js\?v=20261116-navigation-equivalence4/,'application script remains freshly versioned');
 assert.match(sw,/searchParams\.get\('cache'\)==='1'/,'service worker caches assets only with explicit cache=1 config');
 assert.match(sw,/fetch\(e\.request,\{cache:'no-store'\}\)/,'default worker path bypasses cache');
 assert.match(app,/cache:'no-store'/,'API responses bypass browser HTTP cache');

@@ -16,5 +16,5 @@ assert.match(html,/id="account-menu"[\s\S]*id="navigation-mode"/,'desktop select
 assert.match(css,/body\[data-mobile-nav="horizontal"\] \.app-sidebar\{display:none\}/,'horizontal mode hides vertical sidebar on desktop');
 assert.match(css,/body\[data-mobile-nav="horizontal"\] \.mobile-appbar\{display:grid/,'horizontal mode shows the top navigation on desktop');
 assert.match(css,/body\[data-mobile-nav="horizontal"\] \.mobile-primary-nav\{display:flex/,'horizontal links lay out across desktop');
-assert.match(css,/\.mobile-appbar #mobile-menu-button\[hidden\],\.mobile-appbar \.mobile-primary-nav\[hidden\]\{display:none!important\}/,'hidden menu controls stay hidden despite mobile appbar button styling');
+assert.match(css,/\.mobile-nav-item\[data-admin-only\]\[hidden\]\{display:none!important\}/,'admin-only navigation stays hidden for non-admin roles');
 console.log('Responsive navigation mode and immediate desktop/mobile selection PASS');

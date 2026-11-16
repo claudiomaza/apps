@@ -10,17 +10,19 @@ for(const field of ['school','subject','course','division'])assert.match(html,ne
 assert.match(app,/function renderTableTools\(/,'every table needs shared search/sort tools');
 assert.match(app,/Buscar en columna<select data-table-search-column>/,'table search can target a selected column');assert.doesNotMatch(html,/id="(?:attendance|grades|observations)-search"|id="filter-student"/,'each data table uses one shared search input');
 assert.match(app,/function tableRowSearchMatches\(/,'column-specific table matching helper exists');
-assert.match(app,/function tableRowSearchMatches\(/,'column-specific table matching has a reusable helper');assert.match(app,/function stableSortRows\(/,'table sorting must be stable for ties');assert.match(app,/document.querySelectorAll\('tbody\[id\]'\)/,'all data tables get the shared controls');
+assert.match(app,/function tableRowSearchMatches\(/,'column-specific table matching has a reusable helper');assert.match(app,/function stableSortRows\(/,'table sorting must be stable for ties');assert.match(app,/document.querySelectorAll\('tbody'\)/,'all data tables get the shared controls');
 assert.match(app,/r\.type==='student'\)contexts=liveRecords\.filter\(x=>x\.type==='membership'/,'student filters account for every group membership');
 assert.match(app,/await saveRecords\(changes\);render\(\);return;/,'multiple schedules are prepared as drafts in one operation');
 assert.match(app,/observer.observe\(body/,'table controls track dynamic rows');
 assert.match(app,/if\(table\.refreshTableTools\)\{table\.refreshTableTools\(\);return;\}/,'table tools re-render without duplicating controls');assert.match(app,/const observer=new MutationObserver\(\(\)=>\{const rows=\[\.\.\.body\.querySelectorAll/,'table observer tracks source-row additions/removals, not own reorderings');assert.match(app,/desired\.some\(\(row,i\)=>row!==visible\[i\]\)/,'sorting only moves visible rows and preserves the selected search');assert.match(app,/if\(rows\.length===sourceRows\.length&&rows\.every\(r=>sourceSet\.has\(r\)\)\)return/,'moving sorted rows never resets search or sort source state');
 
 assert.match(app,/Buscar en esta tabla<input type="search"/,'table search has a visible label');
-assert.match(app,/dataset\.tableSortDirection=direction/,'A-Z/Z-A arrow controls update table sorting');assert.match(app,/Ordenar \$\{title\}/,'sort direction controls remain attached to first-column header');
+assert.match(app,/header\.dataset\.tableSortable/,'whole header cell is sortable');assert.match(app,/header\.setAttribute\('aria-sort'/,'header exposes the active sort order');assert.match(app,/header\.addEventListener\('click',sort\)/,'clicking the header sorts its column');assert.match(app,/header\.addEventListener\('keydown'/,'header sorting is keyboard accessible');assert.doesNotMatch(app,/table-sort-controls|tableSortDirection/,'separate arrow controls are removed');
 assert.doesNotMatch(html,/id="(?:attendance|grades|observations)-search"|id="filter-student"/,'each data table uses one shared search input');
 assert.match(app,/function normalizeScheduleSlots\(/,'multi-session schedule validator is missing');
 load('function tableSearchMatches(','function renderTableTools');
+load('function nextTableSortDirection(','function renderTableTools');
+assert.equal(context.nextTableSortDirection('',-1,2),'asc','first header tap selects A–Z');assert.equal(context.nextTableSortDirection('asc',2,2),'desc','second tap on same header toggles Z–A');assert.equal(context.nextTableSortDirection('desc',2,3),'asc','switching columns starts A–Z');
 assert.equal(context.tableRowSearchMatches({textContent:'Alice Math',cells:[{innerText:'Alice'},{innerText:'Math'}]},'math','1'),true);
 assert.equal(context.tableRowSearchMatches({textContent:'Alice Math',cells:[{innerText:'Alice'},{innerText:'Math'}]},'math','0'),false);
 assert.equal(context.tableRowSearchMatches({textContent:'Alice Math',cells:[{innerText:'Alice'},{innerText:'Math'}]},'math',''),true);
