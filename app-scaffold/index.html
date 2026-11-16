@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#24483c">
+  <meta name="description" content="Plantilla inicial offline-first para una app interna.">
+  <title>App nueva · Plantilla</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script src="./config.js" defer></script>
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="./" aria-label="App nueva, inicio"><span class="brand-mark" aria-hidden="true">A</span><span>App nueva</span></a>
+    <span class="connection"><span class="connection-dot" aria-hidden="true"></span><span id="connection-label">Demo local · sin conexión a datos</span></span>
+  </header>
+  <main class="page-shell">
+    <section id="login-view" class="login-layout" aria-labelledby="login-title">
+      <div class="intro">
+        <p class="eyebrow">PLANTILLA DE INICIO</p>
+        <h1 id="login-title">Un lugar claro<br>para empezar.</h1>
+        <p class="intro-copy">Este acceso es una demostración local. La app todavía no tiene un propósito ni datos de negocio definidos.</p>
+        <div class="offline-note"><span class="offline-icon" aria-hidden="true">↗</span><span><strong>Lista para trabajar offline</strong><br>La demo no envía información a ningún servidor.</span></div>
+      </div>
+      <div class="login-card">
+        <div class="card-heading"><span class="card-kicker">ACCESO</span><span class="lock-mark" aria-hidden="true">✳</span></div>
+        <h2>Iniciá sesión</h2>
+        <p class="card-copy">Usá la cuenta de prueba para ver el circuito de entrada.</p>
+        <form id="login-form" novalidate>
+          <label for="username">Usuario</label>
+          <input id="username" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required aria-describedby="username-error">
+          <p class="field-error" id="username-error" hidden></p>
+          <label for="password">Contraseña</label>
+          <div class="password-wrap"><input id="password" name="password" type="password" autocomplete="current-password" required aria-describedby="password-error"><button class="visibility-button" id="toggle-password" type="button" aria-label="Mostrar contraseña" aria-pressed="false"><span aria-hidden="true">◉</span></button></div>
+          <p class="field-error" id="password-error" hidden></p>
+          <p id="login-error" class="form-error" role="alert" hidden></p>
+          <button id="login-submit" class="primary-button" type="submit"><span>Entrar a la demo</span><span aria-hidden="true">→</span></button>
+        </form>
+        <div class="demo-credentials"><span class="demo-label">CUENTA DE PRUEBA</span><p>Usuario <code>demo</code><span class="credential-divider">·</span> Clave <code>demo123</code></p></div>
+        <p class="privacy-note">Cuenta ficticia solo para probar la plantilla. No la uses en producción.</p>
+      </div>
+    </section>
+    <section id="home-view" class="home-view" aria-labelledby="home-title" hidden>
+      <div class="home-topline"><p class="eyebrow">ESPACIO DE TRABAJO · DEMO</p><button id="logout-button" class="quiet-button" type="button">Cerrar sesión <span aria-hidden="true">↗</span></button></div>
+      <div class="welcome-card"><div><p class="eyebrow">SESIÓN ACTIVA</p><h1 id="home-title">Hola, <span id="user-name">Demo</span>.</h1><p class="intro-copy">El circuito de acceso está funcionando. El contenido y las tareas de esta app se definirán después.</p></div><span class="welcome-stamp" aria-hidden="true">A</span></div>
+      <div class="empty-state"><span class="empty-mark" aria-hidden="true">＋</span><div><h2>Tu espacio empieza acá</h2><p>Cuando definamos el producto, acá aparecerán sus datos y acciones. Por ahora, la demo no guarda ni sincroniza nada.</p></div></div>
+      <p id="session-status" class="session-status" role="status" aria-live="polite">Sesión de demostración activa solo en esta pestaña.</p>
+    </section>
+  </main>
+  <footer class="footer"><span>Plantilla base · sin datos reales</span><span>Primero local, después sync</span></footer>
+</body>
+</html>

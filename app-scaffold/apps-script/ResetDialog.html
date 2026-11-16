@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <style>
+    body { color: #20352d; font: 15px/1.5 Arial, sans-serif; margin: 24px; }
+    h2 { margin: 0 0 8px; }
+    .warning { background: #fff0eb; border: 1px solid #d9a196; border-radius: 8px; padding: 12px; }
+    label { display: block; font-weight: 700; margin-top: 18px; }
+    input { box-sizing: border-box; font: inherit; margin-top: 6px; padding: 10px; width: 100%; }
+    button { background: #9f3526; border: 0; border-radius: 6px; color: white; cursor: pointer; font: inherit; margin-top: 18px; padding: 11px 16px; }
+    button:disabled { opacity: .55; }
+    #result { overflow-wrap: anywhere; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h2>RESET total e irreversible</h2>
+  <p class="warning">Se borrarán todas las hojas y filas de este libro y se crearán de nuevo las cuatro pestañas de la app. Hacé un respaldo manual antes de continuar. Esta acción no se puede deshacer.</p>
+  <form id="reset-form">
+    <label for="admin-email">Correo del administrador</label>
+    <input id="admin-email" name="email" type="email" required autocomplete="email">
+    <label for="confirmation">Escribí exactamente RESETEAR</label>
+    <input id="confirmation" name="confirmation" type="text" required autocomplete="off">
+    <button id="submit" type="submit">Borrar todas las hojas y crear la base</button>
+  </form>
+  <p id="result" role="status" aria-live="polite"></p>
+  <script>
+    const resetToken = <?!= JSON.stringify(resetToken) ?>;
+    document.querySelector('#reset-form').addEventListener('submit', (event) => {
+      event.preventDefault();
+      const email = document.querySelector('#admin-email').value;
+      const confirmation = document.querySelector('#confirmation').value;
+      const button = document.querySelector('#submit');
+      const result = document.querySelector('#result');
+      button.disabled = true;
+      result.textContent = 'Validando y reiniciando…';
+      google.script.run
+        .withSuccessHandler((response) => {
+          result.textContent = 'Reset completado. Guardá ahora esta contraseña temporal; se mostrará una sola vez: ' + response.temporaryPassword;
+          document.querySelector('#reset-form').remove();
+        })
+        .withFailureHandler((error) => {
+          result.textContent = error && error.message ? error.message : 'No se pudo completar el reset. No vuelvas a intentarlo sin verificar primero el estado del libro.';
+          button.disabled = false;
+        })
+        .resetDatabase(email, confirmation, resetToken);
+    });
+  </script>
+</body>
+</html>

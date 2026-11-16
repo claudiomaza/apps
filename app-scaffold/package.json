@@ -1,0 +1,7 @@
+{
+  "name": "app-scaffold-template",
+  "private": true,
+  "scripts": {
+    "test": "bun test ./tests"
+  }
+}
