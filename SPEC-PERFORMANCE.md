@@ -7,7 +7,7 @@
 - Bloqueado por backend visual del navegador: la herramienta browser integrada está en cuota agotada. Moli CLI puede inspeccionar/capturar HTML/DOM y desktop, pero no proporciona escritura segura de las credenciales en su formulario; no pegar secretos en eval/script/cookie/CLI. QA móvil sigue BLOCKED: CDP no aplicó emulación 390×844 y quedó en 1920×1080. Desktop sin autenticar quedó probado por screenshot anterior; no extrapolarlo a pantallas internas.
 - Próximo gate para completar la matriz solicitado el 2026-11-09 00:11 -03: restaurar browser interactivo autorizado y escribir en su formulario la credencial `notas-admin` mediante la referencia segura; comprobar que es el usuario admin esperado. Después recorrer lectura y navegación primero, usar solo fixtures ya existentes dentro de `ZAPIA QA`, y abstenerse de guardar, sincronizar, borrar o restaurar si no hay previsualización/consentimiento del usuario. Probar los roles docent/admin únicamente con identidades permitidas. Registrar cada caso por separado como UI, E2E autenticado o BLOCKED.
 
-## Calendario — menú Acciones móvil y prueba visual (2026-11-09)
+## Agenda — menú Acciones móvil y prueba visual (2026-11-09)
 
 - Hallazgo reproducido con Moli en el frontend publicado autenticado: en viewport estrecho, el menú «Acciones» quedaba dentro de una columna de la barra y su panel desplegable abría fuera del borde izquierdo.
 - Corrección en `agenda/styles.css`: el menú pasa a una fila propia; el panel se ancla a la izquierda y se limita a `min(260px, 100vw - 28px)`. `agenda/index.html` versiona la URL del CSS para invalidar caché. Regresión en `agenda/mobile-actions-layout.test.js`.
@@ -15,7 +15,7 @@
 - La sesión Moli/CDP de VM1 no logró conservar conexión autenticada al alternar viewports, así que no afirmar validación Moli móvil estable. Una medición aislada de layout mostró panel dentro de 320 px (left 14, right 274, ancho 260); sin estado conectado no cuenta como E2E visual aceptado. Repetir captura con Moli después de restablecer la conexión/viewport.
 - Cambio en rama aislada `fix/calendario-mobile-actions`; no integrado en `main` ni publicado en Pages. Sin escrituras en eventos, agendas o colaboradores.
 
-## Calendario — onboarding, menú de acciones y resumen (2026-11-10)
+## Agenda — onboarding, menú de acciones y resumen (2026-11-10)
 
 - «Nuevo evento» está dentro del menú «Acciones», sin duplicar el control. En pantallas estrechas el propio menú ocupa una fila completa y el panel mantiene el límite de ancho del viewport (regresión móvil previa).
 - El primer fetch autenticado usa `bootstrap` para cargar en un roundtrip agenda, eventos del mes y grupos. Durante la transición de Apps Script, si el backend devuelve `INVALID_ACTION`, el frontend usa el flujo previo de listas en paralelo; esto no activa `createAppUser` ni oculta errores distintos. La latencia real depende de Apps Script/Sheets/Calendar y debe medirse en E2E autenticado, no inferirse de tests estáticos.
@@ -24,7 +24,7 @@
 - Colaboradores: explicar que la selección corresponde a cuentas registradas. `createAppUser` se autoriza en Apps Script solo para rol owner, valida username/password y duplicados bajo lock, invalida cache de usuarios y no devuelve la contraseña. El cliente oculta la acción en roles no owner. La hoja `Usuarios` sigue almacenando contraseñas conforme al backend existente; nunca registrar ni mostrar la contraseña en logs/mensajes. El usuario despliega manualmente `agenda/apps-script/Code.gs`; Pages por sí solo no habilita el endpoint nuevo.
 - Verificación local: pruebas de Calendario y contrato de usuario pasan antes de integrar; no se crearon cuentas ni se mutaron eventos, grupos, agendas o permisos durante QA. Clasificar revisión visual/autenticada de Pages como pendiente si no se obtiene sesión Moli estable.
 
-## Calendario — onboarding, menú de acciones y resumen (2026-11-10)
+## Agenda — onboarding, menú de acciones y resumen (2026-11-10)
 
 - «Nuevo evento» está dentro del menú «Acciones», sin duplicar el control. En pantallas estrechas el propio menú ocupa una fila completa y el panel mantiene el límite de ancho del viewport (regresión móvil previa).
 - El primer fetch autenticado usa `bootstrap` para cargar en un roundtrip agenda, eventos del mes y grupos. Durante la transición de Apps Script, si el backend devuelve `INVALID_ACTION`, el frontend usa el flujo previo de listas en paralelo; esto no activa `createAppUser` ni oculta errores distintos. La latencia real depende de Apps Script/Sheets/Calendar y debe medirse en E2E autenticado, no inferirse de tests estáticos.
@@ -33,7 +33,7 @@
 - Colaboradores: explicar que la selección corresponde a cuentas registradas. `createAppUser` se autoriza en Apps Script solo para rol owner, valida username/password y duplicados bajo lock, invalida cache de usuarios y no devuelve la contraseña. El cliente oculta la acción en roles no owner. La hoja `Usuarios` sigue almacenando contraseñas conforme al backend existente; nunca registrar ni mostrar la contraseña en logs/mensajes. El usuario despliega manualmente `agenda/apps-script/Code.gs`; Pages por sí solo no habilita el endpoint nuevo.
 - Verificación local: pruebas de Calendario y contrato de usuario pasan antes de integrar; no se crearon cuentas ni se mutaron eventos, grupos, agendas o permisos durante QA. Clasificar revisión visual/autenticada de Pages como pendiente si no se obtiene sesión Moli estable.
 
-## Calendario — invitaciones por correo a Google Calendar (2026-11-10)
+## Agenda — invitaciones por correo a Google Calendar (2026-11-10)
 
 - En Administración → Colaboradores, separar cuentas internas de invitaciones a una dirección de correo. Una invitación no crea ni exige usuario en `Usuarios`.
 - Compartir como lector mediante Calendar API ACL `role=reader`, `scope.type=user`, `scope.value=email`, con `sendNotifications=true`; el servicio avanzado Calendar debe estar habilitado en `appsscript.json`. En el registro `CalendarMembers`, marcar el correo como activo para poder enumerar/revocar.
@@ -41,7 +41,7 @@
 - Google envía la invitación para abrir/agregar la agenda; avisos posteriores de eventos siguen las preferencias de Google Calendar de cada invitado, no son una garantía de notificación por correo. Debe comprobarse con una invitación de prueba autorizada tras el despliegue manual de Apps Script; no invitar contactos reales durante QA.
 
 
-## Calendario — cola de invitaciones y tablas adaptativas (2026-11-10)
+## Agenda — cola de invitaciones y tablas adaptativas (2026-11-10)
 
 - En Colaboradores se preparan invitaciones en una cola local por agenda. Agregar un correo no produce efectos externos; cada fila empieza desmarcada. La selección es explícita, se puede filtrar por correo y confirmación y ordenar A–Z/Z–A. El botón envía en serie solo las filas marcadas.
 - Cada fila distingue Pendiente, Enviando, Google confirmó el envío, ya tenía acceso y resultado no confirmado. Un timeout o rollback/estado parcial no puede reenviarse automáticamente: requiere comprobar el acceso antes de un intento manual. El resultado positivo de ACL indica que Google aceptó la operación, no garantiza entrega o aceptación humana del email.
@@ -149,12 +149,12 @@ Claudio indicó como referencia visual `https://zapia-notas-nav-claudio-20261113
 
 ## Agenda — cambio de nombre y ruta pública (2026-11-13)
 
-- La subapp `agenda/` reemplaza a `calendario/` y se publica en `/apps/agenda/`; `/apps/calendario/` queda como redirección compatible. El enlace de portada, README, SETUP, título y manifiesto usan «Agenda».
+- La subapp y carpeta canónicas son `agenda/` y `/apps/agenda/`, con marca «Agenda» en portada, README, SETUP, título y manifiesto. No se conserva una carpeta ni redirección `/apps/calendario/`; la ruta vieja devuelve 404.
 - Se conserva el namespace IndexedDB `calendario`, `sessionStorage.calendarSession`, URLs/IDs del backend y manifiesto Apps Script para preservar sesiones, borradores locales, permisos y despliegue. No hay migración de Sheets ni despliegue de Apps Script.
 
 ## Agenda — mejoras incluidas y contratos vigentes (2026-11-13)
 
-- La marca y ruta canónicas son Agenda en `/apps/agenda/`; `/apps/calendario/` redirige a la ruta nueva. La vista mensual, vista Tabla, creación y edición de eventos, grupos, Excel, recordatorios y recurrencia conservan el comportamiento existente. En portada y accesos de sesión se identifica como Agenda.
+- La marca y ruta canónicas son Agenda en `/apps/agenda/`; no se conserva `/apps/calendario/`. La vista mensual, vista Tabla, creación y edición de eventos, grupos, Excel, recordatorios y recurrencia conservan el comportamiento existente. En portada y accesos de sesión se identifica como Agenda.
 - La barra superior presenta «Configurar» y «Cerrar sesión» juntos. «Seleccionar agenda» precede a «Cambiar nombre de la agenda»; actualizar actúa sobre la agenda seleccionada. No cambiar nombres internos de sesión, IDs/URLs del backend, namespace IndexedDB `calendario` ni manifiesto de Apps Script al cambiar la ruta.
 - La vista Tabla ofrece filtros de texto independientes para fecha, hora, evento, grupo y lugar, además de orden por columna. Filtrar/ordenar los eventos ya cargados no dispara consultas al backend ni amplía permisos. Mantener el scroll horizontal dentro de las tablas en móvil.
 - «Administrar agendas» abre el diálogo con los datos disponibles sin esperar las consultas; en segundo plano refresca agendas y colaboradores, muestra el estado de carga y evita solicitudes repetidas para la misma agenda. El rol efectivo del backend sigue gobernando las acciones owner/editor; ocultar controles en el frontend no reemplaza autorización.
@@ -162,8 +162,8 @@ Claudio indicó como referencia visual `https://zapia-notas-nav-claudio-20261113
 - La cola de invitaciones a Google Calendar conserva el consentimiento explícito descrito arriba: preparar no envía, filas inicialmente desmarcadas, seleccionar destinatarios y pulsar «Enviar seleccionados». ACL reader y `sendNotifications=true`; nunca reenviar automáticamente resultados inciertos. El resultado positivo confirma que Google aceptó la operación, no la entrega ni aceptación humana.
 - Revocar una invitación elimina optimísticamente la fila de acceso al confirmar la solicitud; si Apps Script falla, se restaura la fila y se muestra el error. El backend debe buscar la regla ACL correspondiente y eliminarla usando `rule.id` (no el correo como ID); solo confirmar la revocación cuando la operación y la persistencia terminen correctamente. No revocar, invitar ni cambiar permisos en QA sin autorización concreta.
 - Los despliegues son independientes: el cambio de frontend/ruta y Pages no publica Apps Script. Los cambios del backend ACL o nuevas acciones requieren que Claudio despliegue manualmente `agenda/apps-script/Code.gs`; un HTTP 200 genérico del endpoint no acredita qué revisión está activa ni el scope/autorización ACL.
-- Evidencia de esta revisión: tests de contrato de ruta/branding/redirección/borradores, asset Excel y suite frontend de Agenda pasaron en el worktree usado para la publicación; la ruta pública nueva, su JS, el asset Excel y la redirección anterior respondieron HTTP 200 después del workflow Pages exitoso. Esto no equivale a QA autenticado de permisos, eventos, Excel o revocación real; esos flujos siguen requiriendo verificación autorizada sin mutar datos reales.
-- Las entradas históricas de esta app tituladas «Calendario» documentan iteraciones previas de la misma subapp, no una segunda aplicación ni una ruta canónica adicional.
+- Evidencia histórica de publicación: los tests de contrato de ruta/branding y borradores, asset Excel y suite frontend de Agenda pasaron en el worktree usado para la publicación; la ruta pública nueva, su JS y el asset Excel respondieron HTTP 200 después del workflow Pages exitoso. La antigua ruta compatible se elimina en un cambio posterior. Esto no equivale a QA autenticado de permisos, eventos, Excel o revocación real; esos flujos siguen requiriendo verificación autorizada sin mutar datos reales.
+- Los encabezados históricos de esta app con el nombre «Calendario» describen iteraciones anteriores de la misma app; no representan otra aplicación ni una ruta pública. Se elimina `calendario/` del repositorio y Pages; solo se conserva el namespace IndexedDB `calendario`, `sessionStorage.calendarSession` y la hoja/backend con sus identificadores existentes para no perder compatibilidad de datos y sesiones.
 
 
 ## MGD — portadas diferenciadas por rol y contexto docente (2026-11-14)
