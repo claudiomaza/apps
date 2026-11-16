@@ -16,3 +16,7 @@ GitHub Pages conserva las rutas públicas `/apps/`, `/apps/mgd/` y `/apps/agenda
 Los dos Google Sheets en Drive son las bases de datos operativas: [notas](https://docs.google.com/spreadsheets/d/1d9yL3ZhjdQIxRQEFVXltRA_QtjIZc6UrcO_1NyT1oA4/edit) y [Calendario](https://docs.google.com/spreadsheets/d/1OypDck9kNKtTPHOdNWPLCqU9Sjr591a9bL6S3YhjFH0/edit). Sus pestañas guardan datos/configuración; no guardan documentación del proyecto.
 
 El repositorio y GitHub Pages son públicos. No incluir claves, contraseñas, tokens, datos personales ni IDs/valores operativos que deban mantenerse privados. La autenticación/autorización siempre se valida del lado del backend.
+
+## Trayectoria académica
+
+La sección de Administración «Trayectoria académica» configura planes, materias obligatorias, correlaciones curso-div y equivalencias; ofrece inicio, permanencia, promoción individual/grupal y pases con informe imprimible/PDF. Cada tramo registra su cohorte como año cursado en ese curso-div, con fechas efectivas. El promedio final se calcula por materia con las instancias ponderadas del régimen (admin); aprueba con ≥7. La decisión es explícita, y el admin puede promover aunque queden pendientes. Los cambios son borradores locales y requieren sincronización explícita. Los tipos nuevos están en la hoja histórica `Registros`; no se migra ningún dato antiguo ni se despliega Apps Script automáticamente. Ver `agente/agent.md` para reconstrucción y operación desde cero.
