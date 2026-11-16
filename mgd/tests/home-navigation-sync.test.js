@@ -16,7 +16,7 @@ assert.match(app,/if\(home\?\.hidden\)[\s\S]*\$\('#sync-button'\)\.click\(\)/,'s
 assert.match(html,/id="view-statistics"[\s\S]*id="global-summary" class="global-summary"/,'statistics have a separate view');
 assert.match(html,/id="sync-state"[^>]*>[\s\S]*<button id="sync-button"/,'home contains the sync panel and no other tab has it');
 assert.doesNotMatch(html.slice(html.indexOf('id="view-summary"'),html.indexOf('id="view-libreta"')),/<h2>MGD<\/h2>/,'home toolbar does not repeat the MGD heading');
-assert.match(app,/document\.querySelectorAll\('\.sidebar-link\[data-tab\]'\)/,'sidebar links close the drawer after navigation');
+assert(app.includes("document.querySelectorAll('.sidebar-link[data-tab],.mobile-primary-nav [data-tab]')"),'both navigation layouts close the drawer after section changes');
 assert.match(css,/\.account-menu\[open\] \.nav-chevron/,'profile dropdown open state is visible');
 console.log('Home filters, profile, sync notification, admin tab and Más navigation PASS');
 

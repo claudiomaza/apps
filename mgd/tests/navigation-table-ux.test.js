@@ -1,0 +1,10 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const root=path.join(__dirname,'..'),html=fs.readFileSync(path.join(root,'index.html'),'utf8'),app=fs.readFileSync(path.join(root,'app.js'),'utf8'),css=fs.readFileSync(path.join(root,'styles.css'),'utf8');
+const sidebar=html.slice(html.indexOf('<nav class="sidebar-nav"'),html.indexOf('</nav>',html.indexOf('<nav class="sidebar-nav"'))),horizontal=html.slice(html.indexOf('<nav class="mobile-bottom-nav mobile-primary-nav"'),html.indexOf('</nav>',html.indexOf('<nav class="mobile-bottom-nav mobile-primary-nav"')));
+const expected=['summary','attendance','grades','assessments','topic','observations','students','statistics','libreta','admin','users','trajectory','trash'];
+for(const tab of expected){assert(sidebar.includes(`data-tab="${tab}"`),`vertical navigation includes ${tab}`);assert(horizontal.includes(`data-tab="${tab}"`),`horizontal navigation includes ${tab}`);}
+assert(sidebar.includes('id="sync-nav-button"')||sidebar.includes('id="sync-sidebar-button"'),'vertical navigation exposes synchronization');assert(horizontal.includes('id="sync-nav-button"'),'horizontal navigation exposes synchronization');assert(html.includes('id="theme-toggle"'),'theme action remains available');
+for(const tab of ['users','trajectory','trash'])assert.match(html,new RegExp('data-tab="'+tab+'"[^>]*data-admin-only|data-admin-only[^>]*data-tab="'+tab+'"'),'administrator destination '+tab+' retains role gate');
+assert.match(app,/tableSortable/,'sortable header cells get an interactive target');assert.match(app,/aria-sort/,'sort direction is exposed accessibly');assert.match(app,/keydown/,'header sorting supports the keyboard');assert.doesNotMatch(app,/table-sort-controls|tableSortDirection/,'arrow controls are removed');assert.match(css,/th\[data-table-sortable\]/,'the whole header cell is visibly interactive');assert.match(css,/account-trigger-copy/,'profile name and role stay in one aligned text block');
+console.log('Navigation parity, shared actions, clickable header sorting and profile alignment contract PASS');
