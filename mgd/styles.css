@@ -301,3 +301,14 @@ body.theme-dark .toast[data-state=error]{background:#8f3028!important;color:#fff
 
 .trajectory-structure,.trajectory-workflow{margin:1.25rem 0;padding:1rem;border:1px solid var(--line,#d6dfd9);border-radius:1rem;background:var(--surface,#fff)}.trajectory-structure h3,.trajectory-workflow h3{margin-top:0}.trajectory-structure .record-filters,.trajectory-workflow .record-filters{display:flex;flex-wrap:wrap;align-items:end;gap:.75rem}.trajectory-structure label,.trajectory-workflow label,#view-trajectory label{min-width:10rem;flex:1}#journey-students td{vertical-align:top}#journey-students td:last-child{min-width:15rem}#journey-students button{margin:.2rem}.trajectory-workflow li{margin:.35rem 0}@media(max-width:700px){.trajectory-structure,.trajectory-workflow{padding:.75rem}.trajectory-structure .record-filters,.trajectory-workflow .record-filters{display:grid;grid-template-columns:1fr 1fr}.trajectory-structure .record-filters button,.trajectory-workflow .record-filters button{grid-column:1/-1}#journey-students td:last-child{min-width:12rem}}
 @media(max-width:700px){.trajectory-structure .record-filters label,.trajectory-workflow .record-filters label,#view-trajectory label{min-width:0;max-width:100%;width:auto;flex:1 1 auto}.trajectory-structure .record-filters input,.trajectory-structure .record-filters select,.trajectory-workflow .record-filters input,.trajectory-workflow .record-filters select{box-sizing:border-box;width:100%;min-width:0;max-width:100%}}
+
+/* MGD follow-up: keep mobile navigation mode and account actions visibly distinct. */
+@media(max-width:850px){.mobile-appbar #mobile-menu-button[hidden],.mobile-appbar .mobile-primary-nav[hidden]{display:none!important}body[data-mobile-nav=vertical] .mobile-appbar #mobile-menu-button:not([hidden]){display:flex;grid-column:1/-1;grid-row:3;justify-self:start}}
+#change-password-button{grid-column:1/-1;justify-self:stretch;display:flex;align-items:center;gap:9px;width:100%;min-height:42px;margin:5px 0 0;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface-soft);color:var(--ink);font-size:.75rem;font-weight:700;text-align:left}
+#change-password-button:hover{border-color:#b7cbbd;background:var(--mint);color:var(--green)}
+#change-password-button[hidden]{display:none!important}
+#password-dialog form{gap:15px}
+#password-dialog .dialog-head{align-items:center;padding-bottom:5px;border-bottom:1px solid var(--line)}
+#password-dialog .form-actions{padding-top:8px;border-top:1px solid var(--line)}
+#password-dialog .form-actions button{min-width:132px;min-height:44px}
+@media(max-width:560px){#password-dialog form{padding:18px}#password-dialog .form-actions{display:grid;grid-template-columns:1fr 1fr}#password-dialog .form-actions button{width:100%;min-width:0}}
