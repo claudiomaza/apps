@@ -1,11 +1,10 @@
 'use strict';
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
-const root=path.resolve(__dirname,'../..'),app=path.join(root,'mgd'),html=fs.readFileSync(path.join(app,'index.html'),'utf8'),manifest=JSON.parse(fs.readFileSync(path.join(app,'manifest.json'),'utf8')),home=fs.readFileSync(path.join(root,'index.html'),'utf8'),legacy=fs.readFileSync(path.join(root,'notas/index.html'),'utf8'),legacySw=fs.readFileSync(path.join(root,'notas/sw.js'),'utf8');
+const root=path.resolve(__dirname,'../..'),app=path.join(root,'mgd'),html=fs.readFileSync(path.join(app,'index.html'),'utf8'),manifest=JSON.parse(fs.readFileSync(path.join(app,'manifest.json'),'utf8')),home=fs.readFileSync(path.join(root,'index.html'),'utf8');
 assert.match(html,/<title>MGD - Tu aula en un solo lugar<\/title>/);assert.match(html,/Tu espacio escolar/);
 assert.equal(manifest.name,'MGD - Tu aula en un solo lugar');assert.equal(manifest.short_name,'MGD');
 assert.match(home,/href="\.\/mgd\/"[\s\S]*<h2>Módulo de Gestión Docente<\/h2>[\s\S]*Tu aula en un solo lugar\./);
-assert(legacy.includes('content="0; url=../mgd/"'));assert(legacy.includes("location.replace('../mgd/'"));
-assert.match(legacySw,/notas-static-/);assert.match(legacySw,/registration.unregister/);
+assert.equal(fs.existsSync(path.join(root,'notas')),false,'legacy notas directory is retired; MGD lives only under mgd/');
 for(const [,asset] of html.matchAll(/(?:src|href)="\.\/([^"?#]+)/g))if(!asset.endsWith('/'))assert.ok(fs.existsSync(path.join(app,asset)),`relative asset resolves under mgd/: ${asset}`);
 assert.ok(fs.existsSync(path.join(app,'vendor/xlsx.full.min.js')));assert.match(fs.readFileSync(path.join(app,'sw.js'),'utf8'),/mgd-static-/);
-console.log('MGD route, brand, PWA metadata, relative assets and legacy redirect PASS');
+console.log('MGD route, brand, PWA metadata, relative assets and retired notas directory PASS');

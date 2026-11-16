@@ -3,7 +3,7 @@
 ## Repositorio y publicación
 
 - Repo canónico: [`claudiomaza/apps`](https://github.com/claudiomaza/apps). Código, specs, manuales y decisiones viven acá.
-- GitHub Pages conserva las rutas: portada `/apps/`, Agenda `/apps/agenda/` y MGD (`/apps/mgd/`); `/apps/notas/` redirige por compatibilidad.
+- GitHub Pages conserva las rutas: portada `/apps/`, Agenda `/apps/agenda/` y MGD (`/apps/mgd/`). La antigua ruta `/apps/notas/` fue retirada.
 - Los cambios del frontend y los archivos que quedan debajo de las carpetas publicadas pueden actualizar Pages al integrarse a `main`. Mantener secretos, datos y configuración privada fuera del repo público.
 - Para iniciar una app nueva, crear su carpeta de frontend en la raíz y su subcarpeta `apps-script/` para `Code.gs`, `appsscript.json` e instrucciones. Aplicar [`SPEC-PERFORMANCE.md`](./SPEC-PERFORMANCE.md).
 
