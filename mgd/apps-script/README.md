@@ -34,7 +34,8 @@ En la configuración del proyecto Apps Script, activá **Mostrar el archivo de m
   "exceptionLogging": "STACKDRIVER",
   "runtimeVersion": "V8",
   "oauthScopes": [
-    "https://www.googleapis.com/auth/spreadsheets"
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/script.container.ui"
   ],
   "webapp": {
     "executeAs": "USER_DEPLOYING",
@@ -47,7 +48,7 @@ En la configuración del proyecto Apps Script, activá **Mostrar el archivo de m
 
 1. Abrí el Sheet enlazado arriba → **Extensiones → Apps Script**.
 2. Copiá el contenido de [`Code.gs`](./Code.gs) en el archivo `Code.gs` del proyecto Apps Script vinculado. Reemplazá el código anterior por completo; Apps Script comparte el espacio global y no deben quedar definiciones duplicadas.
-3. Pegá el manifiesto anterior, guardá y autorizá el scope de Sheets cuando Google lo solicite.
+3. Pegá el manifiesto anterior y guardá. El scope `script.container.ui` es necesario para el menú y el diálogo de reset (`SpreadsheetApp.getUi()` / `showModalDialog`). Reautorizá el proyecto con una cuenta editora confiable cuando Google lo solicite; no ejecutes `resetDatabase` desde el editor, porque requiere los datos de confirmación enviados por el diálogo.
 4. Desplegá como aplicación web: **Ejecutar como: yo** y **Quién tiene acceso: cualquiera**. Esto corresponde a `USER_DEPLOYING` y `ANYONE_ANONYMOUS` del manifiesto.
 5. Confirmá el endpoint con `/exec`; la respuesta esperada es `service: gradebook-normalized`. Después autenticá el admin y verificá que `auth` incluya `access.role`, `access.scopes` y `profile` antes de crear docentes.
 6. Dejá en `Usuarios` únicamente la cuenta admin inicial, con `rol=admin` y `alcances=[]`; completá `mail` y `nombre`. El admin crea docentes y después asigna cursos desde el panel separado de la app, sin editar directamente esas filas. Antes de actualizar encabezados, respaldá la pestaña y migrá la fila inicial; el backend migra el esquema histórico de seis columnas agregando `docenteId`, preservando las filas existentes; respaldá la pestaña antes de la primera alta de docente. No compartas el Sheet con docentes porque `pass` permanece en texto plano.
