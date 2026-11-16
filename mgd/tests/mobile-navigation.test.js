@@ -8,3 +8,7 @@ assert.match(css,/\.mobile-appbar\{position:sticky;top:0/,'mobile header sticks 
 assert.match(css,/\.mobile-primary-nav\{[^}]*position:relative/,'navigation is part of the header, not fixed to the bottom');
 assert.match(app,/window\.scrollTo\(0,0/,'switching sections returns to the beginning');
 console.log('Top mobile navigation and section scroll regression PASS');
+
+assert.match(app,/function applyMobileNavigation\(requestedMode\)/,'navigation applier accepts a directly selected mode');
+assert.match(app,/applyMobileNavigation\(mode\)/,'selector change applies its selected mode immediately');
+assert.match(css,/\.mobile-appbar #mobile-menu-button\[hidden\],\.mobile-appbar \.mobile-primary-nav\[hidden\]\{display:none!important\}/,'hidden menu controls stay hidden despite mobile appbar button styling');
