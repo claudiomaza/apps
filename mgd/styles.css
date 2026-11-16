@@ -312,3 +312,12 @@ body.theme-dark .toast[data-state=error]{background:#8f3028!important;color:#fff
 #password-dialog .form-actions{padding-top:8px;border-top:1px solid var(--line)}
 #password-dialog .form-actions button{min-width:132px;min-height:44px}
 @media(max-width:560px){#password-dialog form{padding:18px}#password-dialog .form-actions{display:grid;grid-template-columns:1fr 1fr}#password-dialog .form-actions button{width:100%;min-width:0}}
+
+/* MGD assessment workflow and scoped admin UI. */
+.assessment-template-controls{align-items:end}.assessment-template-controls label{min-width:220px;flex:1}.assessment-template-controls .helper{flex-basis:100%;margin:0;padding:8px 0}.admin-setup-steps>section:nth-child(5){align-items:flex-start;flex-wrap:wrap}.admin-setup-steps>section:nth-child(5)>div{flex-basis:100%}#view-assessments .weight-input{width:112px;min-width:96px}#view-assessments [data-assessment-title]{min-width:185px}#view-assessments [data-assessment-date]{min-width:145px}
+@media(max-width:850px){.assessment-template-controls{display:grid;grid-template-columns:1fr 1fr}.assessment-template-controls .helper{grid-column:1/-1}}
+
+#assessment-template-controls[hidden]{display:none!important}
+
+/* Hide secondary mode controls reliably across nested admin panels. */
+[hidden]{display:none!important}

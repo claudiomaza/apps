@@ -2,7 +2,14 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const root=path.join(__dirname,'..');
 const html=fs.readFileSync(path.join(root,'index.html'),'utf8'),app=fs.readFileSync(path.join(root,'app.js'),'utf8');
-assert.match(html,/id="view-users"[\s\S]*1 · DOCENTES Y DISPONIBILIDAD[\s\S]*Disponibilidad horaria/,'teacher and availability block has explicit label');
+assert.match(html,/id="view-users"[\s\S]*DISPONIBILIDAD DOCENTE[\s\S]*Disponibilidad horaria/,'teacher availability has one clear label');
+assert.match(html,/tbody id="assessment-cards"/,'assessment table exists');
+assert.match(app,/data-assessment-title/);assert.match(app,/data-assessment-date/);assert.match(app,/data-weight=/);
+assert.match(html,/id="generate-assessment-templates"/);
+assert.doesNotMatch(html,/id="view-users"[\s\S]*<ol class="admin-steps"[\s\S]*<ol class="admin-steps"/,'duplicate step numbering was removed');
+assert.match(html,/sidebar-group-info[\s\S]*sidebar-group-admin/,'Information follows My Group and precedes Administration');
+assert.match(html,/data-tab="admin"/,'institutional administration is available to teachers and admins');
+assert.match(html,/data-new="subgroup"[\s\S]*data-new="cutoff"[\s\S]*data-new="scale"/,'complements are available from institutional administration');
 assert.match(html,/id="subject-schedules-section"[\s\S]*id="class-schedule-list"[\s\S]*ASIGNACIÓN DOCENTE ↔ CLASE/,'schedule and assignment blocks are explicit');
 const libreta=html.slice(html.indexOf('id="view-libreta"'),html.indexOf('</section>',html.indexOf('id="view-libreta"')));assert.match(libreta,/export-xlsx/,'group gradebook keeps Excel export');assert.match(libreta,/grade-class-details/,'group gradebook displays class detail');
 assert.doesNotMatch(libreta,/export-subject-teachers/,'administrator subject export is not in Libreta');
