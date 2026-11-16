@@ -1,0 +1,18 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const root=path.join(__dirname,'..'),html=fs.readFileSync(path.join(root,'index.html'),'utf8'),app=fs.readFileSync(path.join(root,'app.js'),'utf8'),css=fs.readFileSync(path.join(root,'styles.css'),'utf8');
+const home=html.slice(html.indexOf('id="view-summary"'),html.indexOf('id="view-statistics"'));
+assert(home.indexOf('id="teacher-home-context"')<home.indexOf('id="home-record-consultation"'));
+assert.doesNotMatch(home,/id="home-actions"|class="home-action"/);
+assert.match(app,/if\(teacher\)teacher\.hidden=false/);
+assert.match(html,/data-tab="students">Estudiantes[\s\S]*data-admin-only data-tab="admin"[\s\S]*Administración institucional/);
+assert.match(html,/id="view-statistics"[\s\S]*id="global-summary"/);
+assert.match(html,/id="navigation-mode"[\s\S]*value="horizontal"[\s\S]*value="vertical"/);
+assert.match(app,/function navigationModeKey\(\)[\s\S]*localStorage\.setItem\(navigationModeKey\(\)/);
+assert.match(html,/Estudiante · ID[\s\S]*Fecha de inicio[\s\S]*<tbody id="student-cards"/);
+assert(app.includes('started=s.data.cohortStartDate')&&app.includes('<small class="student-id">ID ${esc(dni)}</small>'));
+assert.match(app,/data-student-action="topic"/);
+assert.match(app,/data-edit-topic/);
+assert.doesNotMatch(app,/data-delete-topic|data-trash-topic/);
+assert(app.includes('Cohorte · año cursado en este curso-div'));assert(app.includes('Cohorte es el año en que el estudiante cursó este curso y división'));
+console.log('MGD follow-up UX contract PASS');

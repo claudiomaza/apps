@@ -1,0 +1,12 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const root=path.join(__dirname,'..'),app=fs.readFileSync(path.join(root,'app.js'),'utf8'),html=fs.readFileSync(path.join(root,'index.html'),'utf8');
+const start=app.slice(app.lastIndexOf("$('#connection').textContent='Iniciá sesión para conectar con Sheets'"));
+assert(start.indexOf('stageOwner=await stageOwnerKey(currentUsername)')>=0&&start.indexOf('stageOwner=await stageOwnerKey(currentUsername)')<start.indexOf('restoreStage()')&&start.indexOf('restoreStage()')<start.indexOf('loadRemote()'),'startup restaura borradores antes de depender de Sheets');
+assert.match(app,/else if\(sessionToken&&currentUsername\)[\s\S]*stagedRecords\.values\(\)[\s\S]*render\(\)/,'una falla de red conserva sesión y muestra borradores locales');
+const online=app.slice(app.indexOf("window.addEventListener('online'"),app.indexOf("window.addEventListener('offline'"));
+assert.match(online,/restoreStage\(\)/,'al reconectar recupera borradores');
+assert.doesNotMatch(online,/syncStagedChanges|saveBatch/,'la reconexión no envía cambios automáticamente');
+assert.match(app,/window\.addEventListener\('offline',[\s\S]*updateSyncUI\(\)/,'estado visual cuando se pierde conexión');
+assert.match(html,/id="sync-state"[^>]*role="status"/,'estado accesible');
+console.log('Offline recovery/status behavior contract PASS');

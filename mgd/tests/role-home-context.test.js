@@ -5,13 +5,13 @@ const home=html.slice(html.indexOf('id="view-summary"'),html.indexOf('id="view-l
 assert.match(home,/id="teacher-home-context"[\s\S]*id="filter-school"[\s\S]*id="filter-subject"[\s\S]*id="filter-course"[\s\S]*id="filter-division"/,'Inicio docente presenta escuela, materia, curso y división en orden dependiente');
 assert.match(app,/if\(route\)route\.textContent=currentRole==='admin'\?'Administración':\[classContextNames\(\)\.school\(c\.school\)/,'la barra móvil conserva el contexto correcto según el rol incluso al renderizar');assert.match(home,/id="class-context-menu"[\s\S]*id="filter-assignment"/,'Inicio mantiene acceso al selector combinado autorizado');
 for(const id of ['filter-school','filter-course','filter-division','filter-subject','filter-assignment','filter-cohort','filter-subgroup','filter-cutoff'])assert.equal((html.match(new RegExp(`id="${id}"`,'g'))||[]).length,1,`${id} se reutiliza sin duplicar IDs`);
-assert.match(home,/id="admin-home-panel"[^>]*hidden[\s\S]*Administración/,'panel admin empieza oculto hasta conocer el rol');
-for(const tab of ['users','admin','assessments','trash'])assert.match(home,new RegExp(`data-tab="${tab}"`),`Inicio admin ofrece destino ${tab}`);
-assert.match(app,/function syncHomeRoleView\(\)[\s\S]*currentRole==='admin'[\s\S]*teacher-home-context[\s\S]*admin-home-panel/,'inicio cambia según el rol autenticado');assert.match(app,/function syncSidebarNavigation\(\)[\s\S]*mobile-nav-item[\s\S]*activeTab/,'el encabezado móvil refleja la pantalla seleccionada');
+assert.match(html,/id="view-admin"[^>]*hidden[\s\S]*Configuración institucional/,'configuración institucional sigue fuera del inicio y oculta hasta abrirse');
+for(const tab of ['users','admin','assessments','trash'])assert.match(html,new RegExp(`data-tab="${tab}"`),`la navegación ofrece destino ${tab}`);
+assert.match(app,/function syncHomeRoleView\(\)[\s\S]*teacher-home-context[\s\S]*applyMobileNavigation\(\)/,'inicio y filtros se mantienen para ambos roles');assert.match(app,/function syncSidebarNavigation\(\)[\s\S]*mobile-nav-item[\s\S]*activeTab/,'el encabezado móvil refleja la pantalla seleccionada');
 assert.match(app,/function render\(\)[\s\S]*syncHomeRoleView\(\)/,'el control de rol se actualiza al renderizar');
 assert.match(css,/\.home-context-fields\{display:grid/,'selectores docentes tienen layout explícito');
 assert.match(css,/\.home-context-fields select\{[^}]*min-height:46px/,'selectores tienen objetivos táctiles adecuados');
-assert.match(home,/data-tab="users"[\s\S]*data-tab="admin"[\s\S]*data-tab="assessments"[\s\S]*data-tab="trash"/,'destinos administrativos existentes se conservan');
+assert.match(html,/data-tab="users"[\s\S]*data-tab="assessments"[\s\S]*data-tab="trash"/,'destinos administrativos existentes se conservan');
 assert.match(html,/class="sidebar-brand-copy">Módulo de gestión docente[\s\S]*Tu aula en un solo lugar/,'marca MGD aprobada');assert.match(html,/class="sidebar-avatar" aria-hidden="true">C<\/span>/,'avatar C aprobado');
 assert(backend.length>0,'la app conserva su backend Apps Script existente');
 console.log('Role-specific MGD home contract PASS');

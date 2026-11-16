@@ -4,21 +4,21 @@ const root=path.join(__dirname,'..'),html=fs.readFileSync(path.join(root,'index.
 const nav=html.slice(html.indexOf('<nav class="mobile-bottom-nav mobile-primary-nav"'),html.indexOf('</nav>',html.indexOf('<nav class="mobile-bottom-nav mobile-primary-nav"')));
 assert(nav.includes('id="sidebar-toggle"')&&app.includes("$('#sidebar-toggle')?.addEventListener('click'"),'Más has an interactive handler');
 assert.match(app,/if\(b\.id==='sidebar-toggle'\)return/,'shared nav close handler does not immediately swallow Más');
-assert(nav.includes('id="mobile-admin-tab"')&&app.includes('if(group)group.hidden=!admin'),'admin navigation is available only to admin accounts');
-assert.match(app,/if\(reports\)reports\.hidden=false/,'all roles can see the home summary');
+assert.match(html,/data-admin-only data-tab="admin"[\s\S]*Administración institucional/,'institutional admin destination is in My group');assert(app.includes('if(group)group.hidden=!admin'),'admin group remains role gated');
+assert.match(app,/if\(reports\)reports\.hidden=true/,'stats are no longer expanded in Inicio');
 assert.match(app,/name\.textContent=currentProfile\.name\|\|currentUsername/,'logged-in profile name appears in header');
-assert.match(html,/TU ESPACIO ESCOLAR<\/p><h2>Resumen/,'main toolbar does not repeat MGD below heading');
+assert.match(html,/TU ESPACIO ESCOLAR<\/p><h2>Resumen/,'legacy toolbar heading retained for compatibility');
 assert.equal((html.match(/id="sync-button"/g)||[]).length,1,'only one full sync panel/button exists, on home');
 assert.match(html,/id="sync-nav-button"/,'nav has one sync entry');
 assert.match(app,/count\.hidden=!dirty&&!conflict/,'pending sync badge appears only for pending changes/conflicts');
 assert.match(app,/sync-nav-button[^\n]*click/,'nav sync opens the same explicit review flow');
 assert.match(app,/if\(home\?\.hidden\)[\s\S]*\$\('#sync-button'\)\.click\(\)/,'sync shortcut from another tab returns to Home and opens review when drafts exist');
-assert.match(html,/id="global-summary" class="global-summary" open/,'role-independent home summary starts open');
+assert.match(html,/id="view-statistics"[\s\S]*id="global-summary" class="global-summary"/,'statistics have a separate view');
 assert.match(html,/id="sync-state"[^>]*>[\s\S]*<button id="sync-button"/,'home contains the sync panel and no other tab has it');
 assert.doesNotMatch(html.slice(html.indexOf('id="view-summary"'),html.indexOf('id="view-libreta"')),/<h2>MGD<\/h2>/,'home toolbar does not repeat the MGD heading');
 assert.match(app,/document\.querySelectorAll\('\.sidebar-link\[data-tab\]'\)/,'More menu maintains navigation links and open/close wiring');
 assert.match(css,/\.mobile-profile\{display:grid/,'profile is visible in mobile header');
-console.log('Home summary, profile, sync notification, admin tab and Más navigation PASS');
+console.log('Home filters, profile, sync notification, admin tab and Más navigation PASS');
 
 assert.match(html,/id="home-record-consultation"[\s\S]*id="admin-records"/,'Home hosts filtered record consultation');
 assert.doesNotMatch(html.slice(html.indexOf('id="view-admin"'),html.indexOf('id="view-trash"')),/id="admin-records"|id="record-filter-type"/,'admin is workflow-oriented, not a generic record dump');

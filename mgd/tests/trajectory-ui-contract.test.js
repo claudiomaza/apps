@@ -1,0 +1,10 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const app=fs.readFileSync('app.js','utf8'),html=fs.readFileSync('index.html','utf8');
+const start=app.indexOf('function trajectoryContexts('),end=app.indexOf('\nfunction renderTrajectory()',start);assert(start>=0&&end>start,'trajectory course-div option builder exists');
+const ctx={live:type=>({school:[{id:'s1',data:{name:'Origen'}},{id:'s2',data:{name:'Destino'}}],course:[{id:'c1',data:{schoolId:'s1'}},{id:'c2',data:{schoolId:'s2'}}],division:[{id:'d1',data:{schoolId:'s1',courseId:'c1'}},{id:'d2',data:{schoolId:'s2',courseId:'c2'}}]}[type]||[])};vm.runInNewContext(app.slice(start,end),ctx);
+assert.deepEqual(JSON.parse(JSON.stringify(ctx.trajectoryContexts('s1'))),[{schoolId:'s1',courseId:'c1',divisionId:'d1'}]);assert.deepEqual(JSON.parse(JSON.stringify(ctx.trajectoryContexts('s2'))),[{schoolId:'s2',courseId:'c2',divisionId:'d2'}]);
+const ids=[...html.matchAll(/\bid="([^"]+)"/g)].map(x=>x[1]);assert.equal(new Set(ids).size,ids.length,'HTML has no duplicate IDs');
+for(const id of ['journey-source-plan','journey-destination-school','journey-destination-plan','journey-target','journey-source'])assert(html.includes(`id="${id}"`),`${id} provided in UI`);
+assert.match(app,/target=\['remain','start'\]\.includes\(action\)\?source/,'starting a trajectory uses the source course-div, no destination required');assert.match(app,/rawSource=JSON\.parse\(\$\('#journey-source'\)\.value\|\|'null'\),source=rawSource\?\{\.\.\.rawSource,planId:\$\('#journey-source-plan'\)\.value\|\|''\}/,'group action uses selected source plan');
+console.log('Trajectory UI destination-school scope, unique IDs, start and group-plan tests PASS');

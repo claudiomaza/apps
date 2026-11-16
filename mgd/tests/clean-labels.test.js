@@ -5,7 +5,7 @@ const path=require('node:path');
 const html=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
 assert.match(html,/<summary><span aria-hidden="true">[^<]*<\/span>Trabajo diario<\/summary>/,'main daily work group uses short reference label');
 assert.match(html,/<summary><span aria-hidden="true">[^<]*<\/span>Mi grupo<\/summary>[\s\S]*?data-tab="students"/,'students are grouped separately as My group');
-assert.match(html,/id="home-actions"[\s\S]*?Tomar asistencia[\s\S]*?Cargar notas[\s\S]*?Registrar clase[\s\S]*?Mi grupo/,'home offers daily tasks and a shortcut to the roster');
+assert.doesNotMatch(html.slice(html.indexOf('id="view-summary"'),html.indexOf('id="view-statistics"')),/id="home-actions"|class="home-action"/,'home does not duplicate task navigation');
 assert.match(html,/Ingresá para ver tus clases y preparar cambios\./,'login guidance is concise');
 assert.match(html,/Nada se envía al editar\./,'sync safety remains visible');
 console.log('Clean reference labels and concise helper copy PASS');
