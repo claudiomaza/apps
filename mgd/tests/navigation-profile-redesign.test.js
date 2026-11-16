@@ -1,0 +1,13 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const root=path.join(__dirname,'..'),html=fs.readFileSync(path.join(root,'index.html'),'utf8'),app=fs.readFileSync(path.join(root,'app.js'),'utf8'),css=fs.readFileSync(path.join(root,'styles.css'),'utf8');
+const sidebar=html.slice(html.indexOf('<nav class="sidebar-nav"'),html.indexOf('</nav>',html.indexOf('<nav class="sidebar-nav"')));
+const links=[...sidebar.matchAll(/<button\b[^>]*class="sidebar-link[^>]*data-tab="([^"]+)"[^>]*>([\s\S]*?)<\/button>/g)];assert.equal(links.length,13);for(const [,tab,body]of links)assert.match(body,/class="nav-icon"[^>]*aria-hidden="true"/,`${tab} has vector icon`);
+assert([...sidebar.matchAll(/<summary>([\s\S]*?)<\/summary>/g)].every(([,x])=>x.includes('class="nav-icon"')),'each section heading has icon');
+const mobile=html.slice(html.indexOf('<nav class="mobile-bottom-nav mobile-primary-nav"'),html.indexOf('</nav>',html.indexOf('<nav class="mobile-bottom-nav mobile-primary-nav"')));assert([...mobile.matchAll(/<button\b[^>]*data-tab="([^"]+)"[^>]*>([\s\S]*?)<\/button>/g)].every(([,tab,x])=>x.includes('class="nav-icon"')), 'each mobile destination has icon');
+assert.equal((html.match(/id="sidebar-menu-button"/g)||[]).length,1);assert.doesNotMatch(html,/id="sidebar-toggle"|id="mobile-menu-button"|id="sidebar-desktop-toggle"/);
+for(const id of ['account-menu','account-mail','account-username','account-role','account-scope','navigation-mode','change-password-button','logout-button'])assert.equal((html.match(new RegExp(`id="${id}"`,'g'))||[]).length,1);
+assert.match(html,/id="account-menu"[\s\S]*id="account-mail"[\s\S]*id="navigation-mode"[\s\S]*id="change-password-button"[\s\S]*id="logout-button"/);
+assert.match(app,/account-trigger-name'\)\.textContent=currentProfile\.name/);assert.match(app,/account-trigger-role'\)\.textContent=currentRole==='admin'\?'Admin':'Docente'/);assert.match(app,/account-mail'\)\.textContent=currentProfile\.mail/);
+assert.match(app,/accountMenu\?\.addEventListener\('click'/);assert(app.includes('localStorage.setItem(navigationModeKey(),mode)'));
+assert.match(css,/\.sidebar-link \.nav-icon/);assert.match(css,/\.account-popover\{/);assert.match(css,/\.account-signout\{/);console.log('Navigation/profile redesign PASS: 13 sidebar links, every mobile/section entry has aligned SVG icon; single menu; profile options co-located.');

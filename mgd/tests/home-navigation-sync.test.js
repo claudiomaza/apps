@@ -2,11 +2,11 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const root=path.join(__dirname,'..'),html=fs.readFileSync(path.join(root,'index.html'),'utf8'),app=fs.readFileSync(path.join(root,'app.js'),'utf8'),css=fs.readFileSync(path.join(root,'styles.css'),'utf8');
 const nav=html.slice(html.indexOf('<nav class="mobile-bottom-nav mobile-primary-nav"'),html.indexOf('</nav>',html.indexOf('<nav class="mobile-bottom-nav mobile-primary-nav"')));
-assert(nav.includes('id="sidebar-toggle"')&&app.includes("$('#sidebar-toggle')?.addEventListener('click'"),'Más has an interactive handler');
-assert.match(app,/if\(b\.id==='sidebar-toggle'\)return/,'shared nav close handler does not immediately swallow Más');
-assert.match(html,/data-admin-only data-tab="admin"[\s\S]*Administración institucional/,'institutional admin destination is in My group');assert(app.includes('if(group)group.hidden=!admin'),'admin group remains role gated');
+assert(html.includes('id="sidebar-menu-button"')&&app.includes("$('#sidebar-menu-button')?.addEventListener('click'"),'single menu button has an interactive handler');assert.doesNotMatch(html,/id="sidebar-toggle"|id="mobile-menu-button"|id="sidebar-desktop-toggle"/,'duplicate menu controls removed');
+assert.match(app,/function syncSidebarNavigation\(\)/,'sidebar open/close state remains synchronized');
+assert.match(html,/data-tab="admin">[\s\S]*Administración institucional/,'institutional admin destination remains in Administration');assert.match(app,/\$\$\('\[data-admin-only\]'\)\.forEach\(x=>x\.hidden=currentRole!==\x27admin\x27\)/,'admin-only links remain role gated');
 assert.match(app,/if\(reports\)reports\.hidden=true/,'stats are no longer expanded in Inicio');
-assert.match(app,/name\.textContent=currentProfile\.name\|\|currentUsername/,'logged-in profile name appears in header');
+assert.match(app,/account-trigger-name'\)\.textContent=currentProfile\.name\|\|currentUsername/,'logged-in profile name appears in account dropdown');assert.match(html,/id="account-menu"[\s\S]*id="account-mail"[\s\S]*id="account-role"/,'profile details appear in the dropdown');
 assert.match(html,/TU ESPACIO ESCOLAR<\/p><h2>Resumen/,'legacy toolbar heading retained for compatibility');
 assert.equal((html.match(/id="sync-button"/g)||[]).length,1,'only one full sync panel/button exists, on home');
 assert.match(html,/id="sync-nav-button"/,'nav has one sync entry');
@@ -16,8 +16,8 @@ assert.match(app,/if\(home\?\.hidden\)[\s\S]*\$\('#sync-button'\)\.click\(\)/,'s
 assert.match(html,/id="view-statistics"[\s\S]*id="global-summary" class="global-summary"/,'statistics have a separate view');
 assert.match(html,/id="sync-state"[^>]*>[\s\S]*<button id="sync-button"/,'home contains the sync panel and no other tab has it');
 assert.doesNotMatch(html.slice(html.indexOf('id="view-summary"'),html.indexOf('id="view-libreta"')),/<h2>MGD<\/h2>/,'home toolbar does not repeat the MGD heading');
-assert.match(app,/document\.querySelectorAll\('\.sidebar-link\[data-tab\]'\)/,'More menu maintains navigation links and open/close wiring');
-assert.match(css,/\.mobile-profile\{display:grid/,'profile is visible in mobile header');
+assert.match(app,/document\.querySelectorAll\('\.sidebar-link\[data-tab\]'\)/,'sidebar links close the drawer after navigation');
+assert.match(css,/\.account-menu\[open\] \.nav-chevron/,'profile dropdown open state is visible');
 console.log('Home filters, profile, sync notification, admin tab and Más navigation PASS');
 
 assert.match(html,/id="home-record-consultation"[\s\S]*id="admin-records"/,'Home hosts filtered record consultation');
