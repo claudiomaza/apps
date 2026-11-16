@@ -1,0 +1,14 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
+const backend=fs.readFileSync(path.join(__dirname,'../apps-script/Code.gs'),'utf8'),start=backend.indexOf('function changePassword_(b,access)'),end=backend.indexOf('\nfunction users_()',start);
+assert(start>=0&&end>start,'changePassword_ exists');
+const app=fs.readFileSync(path.join(__dirname,'../app.js'),'utf8'),html=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
+assert.match(html,/id="change-password-button"/);assert.match(html,/id="password-form"/);assert.match(app,/apiRequest\('changePassword',\{currentPassword,newPassword\}\)/);
+const rows=[['usuario','pass','rol','alcances','mail','nombre','docenteId'],['admin','old-temporary-password','admin','[]','admin@example.test','Administrador','']];
+const sheet={getDataRange:()=>({getDisplayValues:()=>rows}),getRange:(r,c)=>({setNumberFormat:()=>({setValue:v=>{rows[r-1][c-1]=v;}}),setValue:v=>{rows[r-1][c-1]=v;}})};let released=0;
+const context={CONFIG:{USERS_SHEET:'Usuarios'},String,Error,JSON,Date,LockService:{getScriptLock:()=>({tryLock:()=>true,releaseLock:()=>released++})},SpreadsheetApp:{flush(){}},book_:()=>({getSheetByName:()=>sheet}),users_:()=>[{username:rows[1][0],password:rows[1][1]}],constantEqual_:(a,b)=>String(a)===String(b),authenticate_:(u,p)=>({username:u,sessionToken:'renewed'})};
+vm.createContext(context);vm.runInContext(backend.slice(start,end)+'\nglobalThis.changePassword_=changePassword_;',context);
+assert.throws(()=>context.changePassword_({currentPassword:'wrong',newPassword:'a-new-password-123'},{username:'admin'}),e=>e.message==='INVALID_CREDENTIALS');assert.equal(rows[1][1],'old-temporary-password');
+assert.throws(()=>context.changePassword_({currentPassword:'old-temporary-password',newPassword:'short'},{username:'admin'}),e=>e.message==='WEAK_PASSWORD');
+const result=context.changePassword_({currentPassword:'old-temporary-password',newPassword:'a-new-password-123'},{username:'admin'});assert.equal(rows[1][1],'a-new-password-123');assert.equal(result.sessionToken,'renewed');assert.equal(released,2);
+console.log('Password update validates current password, enforces length, persists new password, returns new session; UI contract PASS');
