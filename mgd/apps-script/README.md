@@ -5,7 +5,7 @@ El código, el manifiesto y este manual viven en GitHub junto al frontend. La ba
 
 ## Configuración
 
-La aplicación usa el libro **notas**. La base operativa tiene solo cuatro pestañas: `Registros` (fuente canónica), `Config`, `Usuarios` y `Disponibilidad docente`; no mantiene pestañas de vista ni copias de registros.
+La aplicación usa el libro **notas**. Las pestañas canónicas son `Registros`, `Config`, `Usuarios` y `Disponibilidad docente`; las tablas legibles por entidad son vistas derivadas que se reconstruyen desde esas fuentes y no son copias editables independientes.
 
 En el menú de la planilla, `MGD · Base de datos → Crear / reparar estructura (conservar datos)` agrega las pestañas/encabezados faltantes sin borrar filas. La opción `RESET total…` es destructiva: borra todas las pestañas y los datos del libro y crea el esquema vacío más una cuenta admin inicial. El formulario solo pide el correo del administrador y la confirmación escrita `RESETEAR`; el correo se guarda como mail de perfil. El backend crea el usuario `admin`, guarda el correo ingresado como perfil y genera una contraseña temporal aleatoria, que muestra una sola vez al terminar. Copiala y guardala en un gestor seguro antes de cerrar el diálogo; iniciá sesión como `admin` y cambiala desde «Cambiar contraseña» en la app. Si se pierde, hace falta un flujo autorizado de recuperación; no uses una contraseña pública fija. Hacé antes una copia de seguridad; solo deben tener permiso de edición del Sheet personas de confianza.
 
@@ -18,6 +18,10 @@ En el menú de la planilla, `MGD · Base de datos → Crear / reparar estructura
 El acceso anónimo de la Web App permite que la página pública llame al endpoint, pero no habilita lectura/escritura sin autenticar: `auth` comprueba las credenciales de `Usuarios` y las demás acciones requieren una sesión firmada. La API filtra las lecturas por alcance y valida escrituras en backend; docentes pueden cargar notas, asistencia, observaciones y libro de tema solo en cursos asignados. Altas/configuración global, matrículas, edición de estudiantes, papelera y bajas/restauraciones requieren admin. No cargar datos reales hasta migrar Usuarios, actualizar Apps Script y probar dos cuentas docentes independientes.
 
 La nueva pestaña `Disponibilidad docente` se crea automáticamente al registrar bloqueos de horario; conserva ID, día, franja horaria, estado y fecha de actualización. Los bloqueos se consultan por Apps Script, solo por admin, y se contrastan al construir horarios.
+
+### Tablas legibles en Sheets
+
+`Registros` sigue siendo la única fuente canónica. En el menú `MGD · Base de datos`, la opción **Crear / reparar estructura (conservar datos)** crea y actualiza vistas tabulares derivadas: `Escuelas`, `Cursos`, `Divisiones`, `Materias`, `Subgrupos`, `Estudiantes`, `Pertenencias`, `Cortes`, `Escalas`, `Evaluaciones`, `Horarios`, `Asistencias`, `Calificaciones`, `Observaciones`, `Libro de tema`, `Planes de estudio`, `Materias de plan`, `Progresiones de curso`, `Equivalencias`, `Trayectorias`, `Pases e informes` y `Docentes`. Cada vista incluye IDs, estado y versión donde corresponda; los campos nuevos de `dataJson` se agregan automáticamente. Se regeneran al reparar, al sincronizar cambios o cambiar registros de estado; también hay una opción de menú para actualizarlas manualmente. Son vistas de solo lectura para la app: no edites estas pestañas esperando que el cambio vuelva a `Registros`. `Docentes` solo contiene docentes, nombre, correo, ID y alcances; nunca contraseñas. La reparación no resetea datos de negocio; **RESET total** sigue siendo destructivo y no es necesario para generar las vistas.
 
 ### ID del docente y disponibilidad
 
