@@ -2,8 +2,8 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const root=path.join(__dirname,'..'),html=fs.readFileSync(path.join(root,'index.html'),'utf8'),css=fs.readFileSync(path.join(root,'styles.css'),'utf8'),app=fs.readFileSync(path.join(root,'app.js'),'utf8');
 assert.match(html,/id="app-sidebar"[\s\S]*id="theme-toggle"/,'desktop sidebar still includes appearance controls');
-assert.match(html,/id="sidebar-toggle"[\s\S]*aria-label="Más opciones"[\s\S]*<small>Más<\/small>/,'secondary menu is labeled Más');
-assert.match(html,/class="mobile-bottom-nav mobile-primary-nav"[\s\S]*data-tab="summary"[\s\S]*data-tab="attendance"[\s\S]*data-tab="grades"[\s\S]*data-tab="topic"[\s\S]*data-tab="students"[\s\S]*id="sidebar-toggle"/,'primary destinations and Más are in the mobile header');
+assert.match(html,/id="sidebar-menu-button"[^>]*aria-label="Abrir menú"/,'single menu button has a clear accessible label');assert.doesNotMatch(html,/id="sidebar-toggle"|id="mobile-menu-button"|id="sidebar-desktop-toggle"/,'duplicate Más/hamburger controls are removed');
+assert.match(html,/class="mobile-bottom-nav mobile-primary-nav"[\s\S]*data-tab="summary"[\s\S]*data-tab="attendance"[\s\S]*data-tab="grades"[\s\S]*data-tab="topic"[\s\S]*data-tab="students"/,'primary destinations are in the mobile header');assert.match(html,/id="sidebar-menu-button"/,'single menu trigger is in the app bar');
 assert.match(css,/\.mobile-appbar\{position:sticky;top:0/,'mobile header sticks to the top');
 assert.match(css,/\.mobile-primary-nav\{[^}]*position:relative/,'navigation is part of the header, not fixed to the bottom');
 assert.match(app,/window\.scrollTo\(0,0/,'switching sections returns to the beginning');
@@ -12,7 +12,7 @@ assert.match(app,/applyMobileNavigation\(mode\)/,'selector change applies its se
 assert.match(app,/desktop\?'vertical':'horizontal'/,'default follows the viewport');
 assert.match(app,/sidebar-collapsed',desktop&&mode==='horizontal'/,'horizontal mode collapses desktop sidebar');
 assert.match(app,/addEventListener\('change',\(\)=>applyMobileNavigation\(\)\)/,'mode reapplies after viewport changes');
-assert.match(html,/id="desktop-navigation-mode"/,'desktop has a reachable selector in horizontal mode');
+assert.match(html,/id="account-menu"[\s\S]*id="navigation-mode"/,'desktop selector remains available inside account dropdown');
 assert.match(css,/body\[data-mobile-nav="horizontal"\] \.app-sidebar\{display:none\}/,'horizontal mode hides vertical sidebar on desktop');
 assert.match(css,/body\[data-mobile-nav="horizontal"\] \.mobile-appbar\{display:grid/,'horizontal mode shows the top navigation on desktop');
 assert.match(css,/body\[data-mobile-nav="horizontal"\] \.mobile-primary-nav\{display:flex/,'horizontal links lay out across desktop');

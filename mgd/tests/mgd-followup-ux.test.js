@@ -5,7 +5,7 @@ const home=html.slice(html.indexOf('id="view-summary"'),html.indexOf('id="view-s
 assert(home.indexOf('id="teacher-home-context"')<home.indexOf('id="home-record-consultation"'));
 assert.doesNotMatch(home,/id="home-actions"|class="home-action"/);
 assert.match(app,/if\(teacher\)teacher\.hidden=false/);
-assert.match(html,/data-tab="students">Estudiantes[\s\S]*data-admin-only data-tab="admin"[\s\S]*Administración institucional/);
+assert.match(html,/data-tab="students"[\s\S]*Estudiantes[\s\S]*data-tab="admin">[\s\S]*Administración institucional/);
 assert.match(html,/id="view-statistics"[\s\S]*id="global-summary"/);
 assert.match(html,/id="navigation-mode"[\s\S]*value="horizontal"[\s\S]*value="vertical"/);
 assert.match(app,/function navigationModeKey\(\)[\s\S]*localStorage\.setItem\(navigationModeKey\(\)/);

@@ -11,7 +11,7 @@ assert.match(html,/class="brand login-module-title">Módulo de Gestión Docente/
 assert.match(html,/id="connection"[^>]*>Iniciá sesión para conectar con Sheets/,'login top bar keeps the Sheets connection prompt');
 assert.match(html,/class="sidebar-mark"[^>]*>MGD<\/span><span class="sidebar-brand-copy">Módulo de gestión docente/,'authenticated sidebar uses the approved text brand');
 assert.match(html,/Módulo de gestión docente[\s\S]*Tu aula en un solo lugar/,'authenticated sidebar retains the approved tagline');
-assert.match(html,/class="sidebar-avatar" aria-hidden="true">C<\/span>/,'profile avatar uses the approved C initial');
+assert.match(html,/id="account-avatar" class="account-avatar" aria-hidden="true">C<\/span>/,'account dropdown keeps the approved initial before profile data is loaded');assert.match(app,/account-avatar'\)\.textContent=/,'account avatar updates to the signed-in profile initials');
 assert.doesNotMatch(css,/\.sidebar-avatar:after\{content:'CM'/,'obsolete CM avatar monogram is removed');
 assert.match(html,/<h1>Tu aula<\/h1><p class="trama-tagline">en un solo lugar/,'login box uses requested copy');assert.doesNotMatch(html,/<p class="eyebrow">TU ESPACIO ESCOLAR<\/p><h1>MGD<\/h1>/,'old login box identity is removed');
 assert.match(html,/id="sync-review-dialog"[\s\S]*id="sync-review-list"[\s\S]*id="sync-review-submit"/,'sync review dialog exists');
