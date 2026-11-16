@@ -71,7 +71,7 @@ assert.match(app,/view=conflict\?'conflict':dirty\?'pending':'clean'/);
 assert.match(app,/saveBatch/);
 assert.match(app,/latestRemoteRecords\.find/);
 assert.match(app,/const remote=latestRemoteRecords\.find/);
-assert.match(app,/state\.dataset\.syncState=view/);
+assert.match(app,/state\.dataset\.syncState=offline\?'offline':view/);
 assert.doesNotMatch(app,/sessionStorage\.setItem\(['"]pending/);
 assert.match(app,/save-grade-session/);
 assert.match(app,/function renderTopic\(/);
