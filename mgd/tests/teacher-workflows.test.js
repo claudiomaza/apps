@@ -2,7 +2,17 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const root=path.join(__dirname,'..');
 const html=fs.readFileSync(path.join(root,'index.html'),'utf8'),app=fs.readFileSync(path.join(root,'app.js'),'utf8');
-assert.match(html,/id="view-users"[\s\S]*1 · DOCENTES Y DISPONIBILIDAD[\s\S]*Disponibilidad horaria/,'teacher and availability block has explicit label');
+assert.match(html,/id="view-users"[\s\S]*DISPONIBILIDAD DOCENTE[\s\S]*Disponibilidad horaria/,'teacher availability has one clear label');
+assert.match(html,/tbody id="assessment-cards"/,'assessment table exists');
+assert.match(app,/data-assessment-title/);assert.match(app,/data-assessment-date/);assert.match(app,/data-weight=/);
+assert.match(html,/id="generate-assessment-templates"/);
+assert.doesNotMatch(html,/id="view-users"[\s\S]*<ol class="admin-steps"[\s\S]*<ol class="admin-steps"/,'duplicate step numbering was removed');
+assert.match(html,/sidebar-group-info[\s\S]*sidebar-group-admin/,'Information follows My Group and precedes Administration');
+const daily=html.slice(html.indexOf('id="sidebar-group-daily"'),html.indexOf('</details>',html.indexOf('id="sidebar-group-daily"'))),info=html.slice(html.indexOf('id="sidebar-group-info"'),html.indexOf('</details>',html.indexOf('id="sidebar-group-info"')));assert.doesNotMatch(daily,/data-tab="libreta"/,'Libreta is not in daily work');assert.match(info,/data-tab="libreta"/,'Libreta is in Information');
+assert.match(app,/headers\.forEach\(\(header,index\)=>\{/,'sort controls are attached to every named table header');assert.match(app,/function refreshAllTableTools\(\)\{document\.querySelectorAll\('tbody'\)/,'table controls include dynamically generated summary matrices without preset IDs');assert.match(app,/stableSortRows\(visible,sortColumn,sortDirection\)/,'sorting applies to the selected column');
+const sortCode=app.slice(app.indexOf('function stableSortRows('),app.indexOf('\nfunction renderTableTools(')),vm=require('node:vm'),sortContext={String};vm.runInNewContext(sortCode+';globalThis.sort=stableSortRows;',sortContext);const sorted=sortContext.sort([{cells:[{innerText:'Ana'},{innerText:'10'}]},{cells:[{innerText:'Zoe'},{innerText:'2'}]}],1,'asc');assert.deepEqual(sorted.map(x=>x.cells[1].innerText),['2','10'],'A-Z arrow sorts the selected numeric-like column');
+assert.match(html,/data-tab="admin"/,'institutional administration is available to teachers and admins');
+assert.match(html,/data-new="subgroup"[\s\S]*data-new="cutoff"[\s\S]*data-new="scale"/,'complements are available from institutional administration');
 assert.match(html,/id="subject-schedules-section"[\s\S]*id="class-schedule-list"[\s\S]*ASIGNACIÓN DOCENTE ↔ CLASE/,'schedule and assignment blocks are explicit');
 const libreta=html.slice(html.indexOf('id="view-libreta"'),html.indexOf('</section>',html.indexOf('id="view-libreta"')));assert.match(libreta,/export-xlsx/,'group gradebook keeps Excel export');assert.match(libreta,/grade-class-details/,'group gradebook displays class detail');
 assert.doesNotMatch(libreta,/export-subject-teachers/,'administrator subject export is not in Libreta');
