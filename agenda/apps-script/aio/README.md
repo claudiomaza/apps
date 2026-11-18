@@ -1,6 +1,6 @@
 # Agenda AIO (All-in-One)
 
-Frontend autónomo de Agenda servido desde un **proyecto Apps Script independiente**. La interfaz está integrada en `Agenda.html.md`; el `Code.gs` de este proyecto solo entrega la página y la dirige al backend Apps Script vigente.
+Frontend autónomo de Agenda servido desde un **proyecto Apps Script frontend separado**. La interfaz está integrada en `Agenda.html.md`; el `Code.gs` de este proyecto solo entrega la página y la dirige al backend Apps Script vigente.
 
 - `Agenda.html.md`: HTML completo para pegar en el archivo `Agenda` del proyecto frontend nuevo.
 - `Code.gs.md`: `doGet` mínimo del proyecto frontend; el endpoint se abre para mostrar la UI, no es API.
