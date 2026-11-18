@@ -20,11 +20,11 @@ const CONFIG = Object.freeze({
 function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu('Agenda')
-    .addItem('Iniciar app', 'openAgendaAio_')
+    .addItem('Iniciar app', 'openAgendaAio')
     .addToUi();
 }
 
-function openAgendaAio_() {
+function openAgendaAio() {
   const ui = SpreadsheetApp.getUi();
   const url = PropertiesService.getScriptProperties().getProperty('AGENDA_AIO_WEB_APP_URL') || '';
   if (!/^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/(?:exec|dev)$/.test(url)) {
