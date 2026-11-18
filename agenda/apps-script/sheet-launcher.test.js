@@ -1,0 +1,18 @@
+'use strict';
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const code = fs.readFileSync(path.join(__dirname, 'Code.gs'), 'utf8');
+const menu = code.match(/function onOpen\(\)\s*\{([\s\S]*?)\n\}/);
+assert.ok(menu, 'sheet open hook exists');
+assert.ok(menu[1].includes(".createMenu('Agenda')"));
+assert.ok(menu[1].includes(".addItem('Iniciar app', 'openAgendaAio_')"));
+const launcher = code.match(/function openAgendaAio_\(\)\s*\{([\s\S]*?)\n\}/);
+assert.ok(launcher, 'launcher function exists');
+assert.ok(launcher[1].includes("getProperty('AGENDA_AIO_WEB_APP_URL')"));
+assert.match(launcher[1], /https:\/\/script\\\.google\\\.com\\\/macros\\\/s\\\/[A-Za-z0-9_-]+\\\/(?:exec|dev)/);
+assert.ok(launcher[1].includes("showModalDialog(html, 'Agenda')"));
+assert.ok(launcher[1].includes('Iniciar app</a>'));
+assert.match(code, /function doGet\(\)\s*\{\s*return json_\(\{ok:true,service:'apps-calendar',schemaVersion:2\}\);/);
+assert.match(code, /function doPost\(e\)/);
+console.log('Agenda Sheet AIO launcher contract PASS');

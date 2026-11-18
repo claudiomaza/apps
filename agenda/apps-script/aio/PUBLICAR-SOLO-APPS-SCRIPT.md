@@ -10,8 +10,9 @@ Este método crea un **segundo proyecto Apps Script** que solo aloja la interfaz
 2. En el proyecto nuevo, crea un archivo HTML llamado `Agenda`. Desde [`Agenda.html.md`](./Agenda.html.md), copia el bloque `html` completo (sin las marcas de tres backticks) y pégalo en ese archivo.
 3. En el `Code.gs` que viene con el proyecto nuevo, pega el bloque completo de [`Code.gs.md`](./Code.gs.md). Su `doGet` solo sirve el HTML y configura explícitamente la URL del backend existente.
 4. No copies el `Code.gs` backend ni el `appsscript.json` de `agenda/apps-script/` al proyecto frontend. No hace falta habilitar Calendar/Sheets APIs ni otorgar al frontend los scopes del backend; esa integración permanece únicamente en el proyecto backend vigente.
-5. Despliega el proyecto nuevo como Web App. Define quién puede abrir la interfaz según las cuentas previstas y las opciones que permita tu dominio. La interfaz tiene su propio login, pero abrirla no reemplaza la autorización de acceso del backend. No compartas permisos de editor del proyecto para dar acceso a usuarios.
-6. Abre la URL del **nuevo** Web App de interfaz y verifica que aparece el login; luego prueba la autenticación, carga, consultas y una escritura controlada en un entorno de QA. No apuntes una prueba a eventos, agendas ni Sheets reales.
+5. Despliega el proyecto nuevo como Web App. Define quién puede abrir la interfaz según las cuentas previstas y las opciones que permita tu dominio. La interfaz tiene su propio login, pero abrirla no reemplaza la autorización de acceso del backend. No compartas permisos de editor del proyecto para dar acceso a usuarios. Copia la URL `/exec` de ese deployment.
+6. Para habilitar el acceso desde la planilla, el `Code.gs` vinculado al Sheet agrega el menú **Agenda → Iniciar app**. Despliega en el proyecto backend vinculado la revisión versionada de [`../Code.gs`](../Code.gs) y, en Project Settings → Script Properties, agrega `AGENDA_AIO_WEB_APP_URL` con la URL `/exec` del frontend AIO recién desplegado. No pongas esa URL en el `Code.gs` público ni en los datos de la planilla. El menú muestra un diálogo con el botón **Iniciar app**, que abre el HTML en otra pestaña. El `doGet` de salud y el `doPost` de API se conservan sin cambios.
+7. Abre la planilla, recargala y usa **Agenda → Iniciar app**. Verifica que el botón abra el deployment esperado; en QA confirma login, carga, consultas y una escritura controlada. No apuntes la prueba a eventos, agendas ni Sheets reales.
 
 ## La separación de proyectos
 
@@ -24,3 +25,8 @@ Este método crea un **segundo proyecto Apps Script** que solo aloja la interfaz
 ## Validación antes de usar
 
 El bundle y el `Code.gs` frontend se verificaron estáticamente; eso no prueba que HtmlService, las restricciones del navegador y el `fetch` entre el nuevo origen y el Web App backend funcionen juntos. En un proyecto y datos de QA, confirma carga del HTML, acceso a `doPost`, autenticación backend y una operación de prueba con consentimiento. Si el navegador bloquea la comunicación entre orígenes, no cambies el backend activo ni copies `doPost` al proyecto nuevo como atajo: hay que diseñar y validar esa integración separadamente. El backend y el deploy actual no se modifican con estos archivos.
+
+
+## Lanzador desde la planilla
+
+El lanzador es un menú personalizado del spreadsheet (no una celda ni un dibujo): `onOpen` agrega **Agenda → Iniciar app** y el diálogo ofrece el botón para abrir el Web App AIO. La URL se lee de Script Properties como `AGENDA_AIO_WEB_APP_URL` y se valida como deployment `script.google.com/macros/s/.../(exec|dev)`. Sin propiedad válida, el menú informa que falta configurar el frontend y no abre enlaces arbitrarios. Desplegar este código fuente no actualiza automáticamente el Apps Script activo ni la planilla.

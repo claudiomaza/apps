@@ -17,6 +17,26 @@ const CONFIG = Object.freeze({
   HEADERS: ['eventId','title','startAt','endAt','allDay','location','description','ownerEmail','status','version','createdAt','updatedAt','deletedAt','calendarEventId','calendarId','recurrence','reminderMinutes','reminderAt','groupId']
 });
 
+function onOpen() {
+  SpreadsheetApp.getUi()
+    .createMenu('Agenda')
+    .addItem('Iniciar app', 'openAgendaAio_')
+    .addToUi();
+}
+
+function openAgendaAio_() {
+  const ui = SpreadsheetApp.getUi();
+  const url = PropertiesService.getScriptProperties().getProperty('AGENDA_AIO_WEB_APP_URL') || '';
+  if (!/^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/(?:exec|dev)$/.test(url)) {
+    ui.alert('Agenda', 'La app no está configurada. Publicá el frontend AIO y guardá su URL /exec en AGENDA_AIO_WEB_APP_URL dentro de las propiedades del proyecto.', ui.ButtonSet.OK);
+    return;
+  }
+  const html = HtmlService.createHtmlOutput(
+    '<!doctype html><html><head><base target="_top"><style>body{font:14px Arial,sans-serif;text-align:center;padding:22px;color:#1d2c27}a{display:inline-block;padding:12px 20px;border-radius:8px;background:#24483c;color:white;text-decoration:none;font-weight:700}</style></head><body><a target="_blank" rel="noopener" href="' + url + '">Iniciar app</a></body></html>'
+  ).setWidth(320).setHeight(125);
+  ui.showModalDialog(html, 'Agenda');
+}
+
 function doGet() {
   return json_({ok:true,service:'apps-calendar',schemaVersion:2});
 }
