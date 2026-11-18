@@ -7,7 +7,7 @@ Repositorio público con las apps internas y sus contratos comunes. **GitHub es 
 - [`SPEC-PERFORMANCE.md`](./SPEC-PERFORMANCE.md): contratos comunes y reglas para futuras apps.
 - [`SETUP.md`](./SETUP.md): mapa operativo del repositorio, Sheets y despliegues separados.
 - [`mgd/`](./mgd/): frontend publicado de **MGD** y [`apps-script/`](./mgd/apps-script/) con backend, manifiesto e instalación. `/apps/mgd/` es la ruta pública actual; `/apps/notas/` redirige por compatibilidad.
-- [`agenda/`](./agenda/): frontend publicado de Agenda y [`apps-script/`](./agenda/apps-script/) con backend, manifiesto e instalación. La variante autónoma **AIO** para Apps Script vive en [`agenda/apps-script/aio/`](./agenda/apps-script/aio/): interfaz integrada en un segundo proyecto que consume el backend vigente, sin reemplazarlo; requiere QA cross-origin antes de usarla.
+- [`agenda/`](./agenda/): frontend publicado de Agenda y [`apps-script/`](./agenda/apps-script/) con backend, manifiesto e instalación. En [`agenda/apps-script/`](./agenda/apps-script/) también están el HTML y el `Code.gs` copiable para un **segundo proyecto Apps Script frontend** que consume el backend vigente, más su guía; requiere QA cross-origin antes de usarlo.
 
 GitHub Pages conserva las rutas públicas `/apps/`, `/apps/mgd/` y `/apps/agenda/`. Los cambios de HTML/JS/CSS modifican el sitio al publicarse desde `main`; Apps Script se copia/despliega aparte desde el `Code.gs` versionado en cada app.
 

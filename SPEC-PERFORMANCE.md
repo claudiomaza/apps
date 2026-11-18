@@ -192,5 +192,32 @@ Claudio indicó como referencia visual `https://zapia-notas-nav-claudio-20261113
 ### Agenda AIO — frontend HtmlService independiente (2026-11-18)
 
 - `agenda/apps-script/Code.gs` es el backend vigente vinculado al Sheet; su `doGet()` de estado y `doPost(e)` de API se conservan. La UI HtmlService vive en un **segundo proyecto Apps Script** cuyo `doGet()` solo sirve `Agenda.html` e inyecta la URL explícita del backend. No usar el URL de despliegue del frontend como API ni reemplazar el backend.
-- El paquete copiable vive en `agenda/apps-script/aio/`: HTML autocontenido, `Code.gs` del proyecto UI, guía, README y test. El proyecto UI no copia `Code.gs`, `doPost` ni `appsscript.json`/scopes de Calendar/Sheets del backend.
+- El paquete copiable vive en `agenda/apps-script/aio/`: HTML autocontenido, `Code.gs` del proyecto UI con proxy de mantenimiento allowlist, manifiesto mínimo `script.external_request`, guía, README y test. El proyecto UI no copia el `Code.gs` backend ni scopes de Calendar/Sheets; su `Code.gs` incorpora un proxy server-side allowlist de las tres acciones de mantenimiento con `UrlFetchApp` (`script.external_request` solamente), pasando sesión al backend para que allí se verifiquen propietario, confirmación y permiso.
 - El paquete estático no es despliegue ni aceptación. HtmlService, origen y `fetch` al backend, acceso, login y operación de prueba siguen `UNKNOWN` hasta validarlos en QA. Pages y backend se mantienen sin cambios salvo el launcher aditivo descrito abajo.
+
+
+### Agenda — estructura operativa y vistas legibles en Sheets (2026-11-18)
+
+- Conservar el modelo operativo de Agenda, sin migrarlo a `Registros/dataJson` de MGD: canónicas `Eventos` (19 headers exactos de `CONFIG.HEADERS`), `Config` (`key`,`value`), `Usuarios` (`usuario`,`pass`, aceptar el encabezado histórico `mail`), `Agendas`, `CalendarMembers`, `Grupos` y `SyncOperations` (8 columnas, incluyendo `calendarId`). `SyncOperations.calendarId` histórico vacío se rellena `legacy` durante reparación, preservando sus filas.
+- Mantener vistas A1 legibles derivadas: `Eventos legibles`, `Grupos legibles`, `Agendas legibles`, `Colaboradores legibles`, `Usuarios legibles` y `Operaciones legibles`; incluir IDs/referencias, estado/versiones y campos comprensibles. Son proyecciones regenerables, no fuentes editables. `Usuarios legibles` excluye `pass`; no duplicar credenciales. Regenerar al reparar, mediante opción manual y tras escrituras API exitosas.
+- Menú del Sheet `Agenda`: `Iniciar app`, `Crear / reparar estructura (conservar datos)`, `Actualizar tablas legibles`, `RESET total… (elimina hojas y filas)`. La reparación hace preflight de pestañas/nombres y cabeceras; falla cerrado ante incompatibilidades o colisiones de nombre, agrega hojas/headers faltantes conservando filas, y no resetea. Actualizar tablas solo reconstituye proyecciones.
+- `RESET total` es distinto y destructivo: backup previo, confirmación literal `RESETEAR`, segundo consentimiento, gate de owner activo, contraseña aleatoria única para usuario inicial `cmaza`, mostrada una vez. Borra hojas/filas del Spreadsheet, pero no los objetos externos de Google Calendar; las referencias perdidas pueden dejar recursos externos huérfanos. No ejecutar durante QA ni por despliegue de código.
+- El menú y la ejecución de mantenimiento residen en el Apps Script **vinculado** al Sheet, donde puede ejecutarse `onOpen` y usar `SpreadsheetApp.getUi()`; `appsscript.json` debe declarar `script.container.ui`. El `Code.gs` AIO standalone sirve HtmlService y expone únicamente un proxy allowlist a las tres acciones; usa `UrlFetchApp` con su scope mínimo, transmite token de sesión y no duplica lógica, permisos de escritura ni operaciones de Calendar/Sheets. El backend vinculado comparte API con Pages/AIO y conserva `doGet` de salud/`doPost` existentes. Código versionado no demuestra que menú, Script Properties, proyecto ni Sheet operativo estén actualizados.
+
+
+### RESET de Agenda: restitución de acceso (2026-11-18)
+
+- Solo RESET reinicia la sesión del cliente y muestra temporalmente la clave aleatoria generada; reparación y refresh no deben cerrar la sesión. No recargar automáticamente ni ocultar el resultado; mantenerlo visible hasta una acción explícita «Recargar app» para que Claudio pueda guardarla en un gestor de contraseñas. No escribir la clave en logs o en la hoja salvo la fila de credenciales operativa existente.
+
+
+### Agenda — RESET total y sesión/borradores locales (2026-11-18)
+
+- `AGENDA_DATABASE_EPOCH` es una propiedad privada rotada solo tras un RESET completo; se incluye en el token firmado y `requireSession_` lo compara con el valor actual. El reset invalida tokens antiguos en todos los navegadores aunque el nombre de usuario/contraseña pudiera repetirse.
+- El cliente deriva la partición de IndexedDB de Agenda con usuario+epoch. RESET limpia los borradores de la sesión actual; borradores locales que queden en otros navegadores/orígenes con epoch previo ya no se reponen en la cuenta nueva. No confundirlos con filas del Sheet: no se borran remotamente mediante el reset del backend.
+- La contraseña temporal se conserva visible tras una respuesta de reset hasta «Recargar app»; no automatizar el refresh. Registrar esta diferencia local/servidor en la guía de operación.
+
+
+### Manifiesto de scopes para mantenimiento Agenda (2026-11-18)
+
+- Apps Script vinculado al Sheet: añadir `https://www.googleapis.com/auth/script.container.ui` al manifiesto para custom menu/dialogs; preservar scopes avanzados Calendar y demás existentes.
+- Proyecto AIO independiente: `agenda/apps-script/aio/appsscript.json.md` declara solo `https://www.googleapis.com/auth/script.external_request` para su proxy allowlisted `UrlFetchApp`; no copiar scopes Calendar/Sheets del backend. Ambos deployments requieren reautorización y publicación separadas.

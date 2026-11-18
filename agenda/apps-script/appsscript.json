@@ -16,6 +16,7 @@
     "https://www.googleapis.com/auth/calendar",
     "https://www.googleapis.com/auth/calendar.events",
     "https://www.googleapis.com/auth/calendar.readonly",
-    "https://www.googleapis.com/auth/calendar.acls.readonly"
+    "https://www.googleapis.com/auth/calendar.acls.readonly",
+    "https://www.googleapis.com/auth/script.container.ui"
   ]
 }
