@@ -1,10 +1,4 @@
-# Agenda — archivos de Apps Script
+# Apps Script de Agenda
 
-- `Code.gs`: backend Apps Script vigente (`doPost` y APIs). No modificarlo para alojar el frontend.
-- `appsscript.json`: manifiesto y scopes/servicios requeridos solo por el proyecto backend.
-- `Agenda.html.md`: HTML completo de la interfaz para copiar a `Agenda.html` en un **proyecto Apps Script frontend separado**.
-- `Code.gs.md`: código mínimo completo del proyecto frontend nuevo; contiene solo `doGet` y sirve el HTML hacia el backend vigente.
-- `PUBLICAR-SOLO-APPS-SCRIPT.md`: pasos de creación/despliegue del segundo proyecto sin reemplazar el backend ni su despliegue.
-- `standalone-html.test.js`: contrato estático del bundle, Excel embebido, separación del backend y guía.
-
-El material estático está preparado; aún falta probar HtmlService y `fetch` cross-origin al backend en un entorno QA antes de usarlo.
+- `Code.gs` y `appsscript.json` de esta carpeta son el backend vigente de Agenda; conservarlos y desplegarlos por separado.
+- [`aio/`](./aio/) contiene la variante All-in-One del **frontend**, alojada en un segundo proyecto Apps Script. Incluye el HTML y el `Code.gs` mínimos, las instrucciones y el test. No reemplaza el backend.

@@ -189,8 +189,16 @@ Claudio indicó como referencia visual `https://zapia-notas-nav-claudio-20261113
 - Contrato de orden por encabezado, matriz generada y navegación cubierto por `teacher-workflows.test.js`; suite `mgd/tests/*.test.js` ejecutada.
 
 
-### Aclaración del modelo de despliegue Apps Script de Agenda (2026-11-18)
+### Agenda AIO — frontend Apps Script separado (2026-11-18)
 
-- `agenda/apps-script/Code.gs` es exclusivamente el backend vigente. La variante HtmlService se debe desplegar desde **otro proyecto** llamado, por ejemplo, Agenda - Interfaz, cuyo único `Code.gs` contiene `doGet()`; este sirve `Agenda.html` y fija `apiUrl` al endpoint del backend existente. Nunca usar `ScriptApp.getService().getUrl()` del proyecto frontend como URL API, ni reemplazar `doGet`/`doPost` del backend.
-- Material copiable: `agenda/apps-script/Agenda.html.md` y `Code.gs.md`; la guía y test deben nombrar la separación explícitamente. El proyecto frontend no copia el backend ni su manifiesto/scopes avanzados.
-- El HTML y el proyecto servidor son de **preparación**, no aceptación de la variante. HtmlService→`fetch` al endpoint backend desde otro origen, permisos/deployment, login y una operación QA controlada quedan `UNKNOWN` hasta E2E autenticado. Pages y backend vigentes permanecen sin cambios.
+- `agenda/apps-script/Code.gs` es exclusivamente el backend vigente. La variante HtmlService se sirve desde **otro proyecto Apps Script**: su único `Code.gs` contiene `doGet()`, sirve `Agenda.html` y fija `apiUrl` al endpoint backend existente. Nunca usar `ScriptApp.getService().getUrl()` del proyecto frontend como URL API ni reemplazar `doGet`/`doPost` del backend.
+- La implementación copiable vive bajo `agenda/apps-script/aio/`: HTML completo, `Code.gs` mínimo de la interfaz, guía y pruebas. El proyecto frontend no copia el backend ni su manifiesto/scopes avanzados.
+- El bundle es preparación, no aceptación. HtmlService → `fetch` al endpoint backend desde otro origen, deployment/permisos, login y una operación QA controlada permanecen `UNKNOWN` hasta E2E autenticado. Pages y backend vigentes no se alteran.
+
+### Convención AIO por aplicación cuando termina el diseño (2026-11-18)
+
+- Cuando el diseño de una app se da por finalizado, preparar su variante AIO (All-in-One) en un directorio `aio/` dentro de su carpeta `apps-script/`. No generar ni trasladar apps antes de ese hito de diseño.
+- AIO es una **interfaz autocontenida en un proyecto Apps Script separado**: HTML/CSS/JS y recursos frontend empaquetados en un único archivo copiable, más `Code.gs` mínimo de presentación que fija la URL del backend vigente. Acompañar con guía y test verificable.
+- `aio/` nunca es una copia/migración del backend: mantener `Code.gs`, `doGet`/`doPost`, manifiesto, permisos/scopes y despliegue actuales sin cambios. No hacer deploy productivo como efecto de generar el paquete.
+- Antes de considerar AIO listo para uso, validar en QA con cuentas/datos de prueba la ejecución HtmlService, origen/permisos, autenticación backend y operaciones acordadas (incluida escritura controlada solo con consentimiento). Una suite estática no acredita ese E2E ni autoriza migrar. Documentar claramente los UNKNOWN restantes.
+- Agenda es el primer caso: `agenda/apps-script/aio/`. Para cada app futura se aplica la convención al cerrarse su diseño y se documenta en su sección específica del spec común.
