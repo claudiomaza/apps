@@ -1,37 +1,26 @@
-# Publicar Agenda solo desde Google Apps Script
+# Servir Agenda desde un Apps Script separado
 
-Este paquete permite servir el frontend de Agenda desde HtmlService, en lugar de Pages. `Agenda.html.md` contiene el HTML completo para copiar a un archivo HTML de Apps Script llamado `Agenda`. El Markdown es solo documentación y no lo ejecuta GitHub Pages.
+Este método crea un **segundo proyecto Apps Script** que solo aloja la interfaz. El proyecto backend actual `agenda/apps-script/` y su despliegue quedan intactos: el nuevo frontend manda sus peticiones al URL del backend ya existente.
 
-## Qué hay que copiar
+`Agenda.html.md` contiene el HTML completo (interfaz, estilos, JavaScript, IndexedDB y Excel) para pegar en el archivo HTML `Agenda` del proyecto nuevo. `Code.gs.md` contiene el `Code.gs` corto completo para ese proyecto. Ambos `.md` son documentación para copiar: Pages no los ejecuta.
 
-1. En un proyecto Apps Script de prueba, conserva `Code.gs` y `appsscript.json` de esta carpeta. Crea un archivo HTML llamado `Agenda`.
-2. Abre [`Agenda.html.md`](./Agenda.html.md), copia completo el contenido del bloque `html` y pégalo en `Agenda.html`. No pegues las marcas de los tres backticks.
-3. En `Code.gs`, reemplaza la función actual `doGet()` (la que hoy responde el chequeo JSON) por:
+## Crear el proyecto frontend independiente
 
-```javascript
-function doGet(e) {
-  if (e && e.parameter && e.parameter.health === '1') {
-    return json_({ok:true,service:'apps-calendar',schemaVersion:2});
-  }
-  const template = HtmlService.createTemplateFromFile('Agenda');
-  template.apiUrl = ScriptApp.getService().getUrl();
-  return template.evaluate().setTitle('Agenda');
-}
-```
+1. En `script.google.com`, crea un **proyecto nuevo** (por ejemplo, `Agenda - Interfaz`). No abras para editar el proyecto de `agenda/apps-script/`.
+2. En el proyecto nuevo, crea un archivo HTML llamado `Agenda`. Desde [`Agenda.html.md`](./Agenda.html.md), copia el bloque `html` completo (sin las marcas de tres backticks) y pégalo en ese archivo.
+3. En el `Code.gs` que viene con el proyecto nuevo, pega el bloque completo de [`Code.gs.md`](./Code.gs.md). Su `doGet` solo sirve el HTML y configura explícitamente la URL del backend existente.
+4. No copies el `Code.gs` backend ni el `appsscript.json` de `agenda/apps-script/` al proyecto frontend. No hace falta habilitar Calendar/Sheets APIs ni otorgar al frontend los scopes del backend; esa integración permanece únicamente en el proyecto backend vigente.
+5. Despliega el proyecto nuevo como Web App. Define quién puede abrir la interfaz según las cuentas previstas y las opciones que permita tu dominio. La interfaz tiene su propio login, pero abrirla no reemplaza la autorización de acceso del backend. No compartas permisos de editor del proyecto para dar acceso a usuarios.
+6. Abre la URL del **nuevo** Web App de interfaz y verifica que aparece el login; luego prueba la autenticación, carga, consultas y una escritura controlada en un entorno de QA. No apuntes una prueba a eventos, agendas ni Sheets reales.
 
-El resto de `Code.gs`, incluido `doPost(e)`, se mantiene. La pantalla usa `doPost` del mismo Web App como backend. El parámetro `?health=1` conserva el chequeo JSON.
+## La separación de proyectos
 
-4. Conserva `appsscript.json` y habilita/autoriza los servicios y scopes declarados allí, incluido el servicio avanzado Calendar API. Revisa la configuración de despliegue y quién puede acceder al Web App antes de publicar.
-5. Despliega una **nueva versión** como Web App y prueba primero con una copia de la planilla/calendario de QA; no apuntes una prueba a datos reales.
+- **Proyecto backend vigente:** `agenda/apps-script/Code.gs`, con `doPost(e)`, sesiones, permisos y operaciones sobre Calendar/Sheets. Su URL se conserva en el `Code.gs.md` del proyecto frontend.
+- **Proyecto frontend nuevo:** solo un `Code.gs` con `doGet()` y el HTML `Agenda`. El URL de despliegue de este proyecto es el que se abre en el navegador; **no** se usa como API.
+- No reemplaces `doGet`, `doPost`, manifiesto ni despliegue del backend. Este procedimiento agrega una segunda interfaz alojada en Apps Script, no mueve ni duplica el backend.
+- El frontend nuevo y GitHub Pages comparten el mismo backend, pero los orígenes del navegador son distintos. El almacenamiento `sessionStorage` e IndexedDB es por origen: la sesión y los borradores de Pages no aparecen automáticamente en el Web App nuevo. No renombres la clave/namespaces internos `calendarSession` ni `calendario`.
+- El HTML desactiva su registro del Service Worker de Pages y trae sus dependencias visuales/Excel integradas. Sus operaciones conservan el flujo actual: cambios primero quedan como borrador y requieren «Sincronizar»; invitaciones requieren selección y envío explícitos.
 
-## Qué incluye y qué cambia
+## Validación antes de usar
 
-- HTML autocontenido con CSS, JavaScript, el almacén IndexedDB y la librería Excel embebidos. No depende de archivos frontend servidos por Pages ni de `config.js`, `stage-store.js`, `styles.css` o `vendor/xlsx.full.min.js` externos.
-- La URL del backend se inyecta al evaluar la plantilla, así la interfaz usa el mismo despliegue de Apps Script. El `doPost(e)` existente, las validaciones, permisos, invitaciones, planilla, IDs y eventos no se reemplazan por HTML.
-- Se evita registrar el Service Worker de Pages en esta modalidad. La sesión sigue en `sessionStorage` y los borradores en IndexedDB del origen de HtmlService; al cambiar de origen, el navegador puede no mostrar automáticamente datos locales guardados bajo GitHub Pages. No borrar ni renombrar el namespace `calendario`.
-- El documento conserva el flujo actual: cambios de eventos se preparan primero en IndexedDB y requieren «Sincronizar» para escribir en Sheets/Calendar. Las invitaciones requieren seleccionar y enviar de manera explícita.
-- GitHub Pages no cambia al copiar estos archivos; para migrar a Apps Script hay que probar y publicar el Web App por separado. No se modificó ni desplegó Apps Script en esta tarea.
-
-## Verificación y límites
-
-El HTML se construyó desde el frontend versionado de Agenda e integra los assets disponibles en el repositorio. La verificación estática confirma un único bloque HTML, scripts y estilos inline, URL de API inyectada y ausencia de referencias relativas a assets de Pages. Esto aún no prueba la ejecución dentro de HtmlService, el OAuth/scopes, CORS de las solicitudes al Web App ni los permisos de datos. Haz esa prueba autenticada en un proyecto y datos de QA antes de considerar la migración aceptada o cambiar el despliegue activo.
+El bundle y el `Code.gs` frontend se verificaron estáticamente; eso no prueba que HtmlService, las restricciones del navegador y el `fetch` entre el nuevo origen y el Web App backend funcionen juntos. En un proyecto y datos de QA, confirma carga del HTML, acceso a `doPost`, autenticación backend y una operación de prueba con consentimiento. Si el navegador bloquea la comunicación entre orígenes, no cambies el backend activo ni copies `doPost` al proyecto nuevo como atajo: hay que diseñar y validar esa integración separadamente. El backend y el deploy actual no se modifican con estos archivos.

@@ -1,10 +1,10 @@
 # Agenda.html — HTML completo para Apps Script
 
-Este archivo es documentación de copia: el frontend de GitHub Pages **no ejecuta** este Markdown. Copiá únicamente el contenido del bloque `html` completo y pegalo en un archivo HTML llamado `Agenda` dentro del proyecto Apps Script. El código está integrado en un solo documento: interfaz, estilos, lógica, borradores IndexedDB y librería Excel.
+Este archivo es documentación de copia: GitHub Pages **no ejecuta** este Markdown. Copiá solo el contenido del bloque `html` completo y pegalo en un archivo HTML llamado `Agenda` dentro de un **segundo proyecto Apps Script, separado del backend vigente**. El código integra en un único documento la interfaz, estilos, lógica, borradores IndexedDB y librería Excel.
 
-> Requiere el cambio de `doGet(e)` documentado en [`PUBLICAR-SOLO-APPS-SCRIPT.md`](./PUBLICAR-SOLO-APPS-SCRIPT.md). El HTML usa una plantilla de Apps Script para recibir dinámicamente la URL del mismo Web App. No alcanza con pegar el HTML ni cambia el backend `Code.gs`.
+> El HTML usa una plantilla de HtmlService y recibe la URL del backend vigente desde el `Code.gs` pequeño del proyecto separado. No pegues este HTML dentro del proyecto backend ni reemplaces allí `doGet` o `doPost`. Ver [`Code.gs.md`](./Code.gs.md) y [`PUBLICAR-SOLO-APPS-SCRIPT.md`](./PUBLICAR-SOLO-APPS-SCRIPT.md).
 
-> Fuente: frontend `agenda/` y backend `agenda/apps-script/` del commit `a6d8e39cbf0d74e609bdfd4adaeb9c44a79c152a` (2026-11-18). El bloque es grande porque lleva incorporada la librería Excel; pegá todo el bloque sin omitir partes.
+> Fuente: frontend `agenda/` y backend `agenda/apps-script/` del commit `a6d8e39cbf0d74e609bdfd4adaeb9c44a79c152a` (2026-11-18). El bloque es grande porque incluye Excel; copiá el bloque entero sin omitir partes.
 
 ```html
 <!doctype html>

@@ -187,3 +187,10 @@ Claudio indicó como referencia visual `https://zapia-notas-nav-claudio-20261113
 - Todas las tablas, incluidas las matrices que se crean al renderizar Estadísticas, reciben controles ↑ A–Z y ↓ Z–A en cada encabezado con nombre. El orden es estable, respeta la columna elegida y mantiene filtros/filas vacías. Las tablas generadas reciben IDs de herramienta en runtime si no traen uno, sin cambiar IDs de datos.
 - Libreta se ubica en Información, junto a Estadísticas y agrupamientos, no en Trabajo diario. Su vista, exportación y permisos permanecen iguales.
 - Contrato de orden por encabezado, matriz generada y navegación cubierto por `teacher-workflows.test.js`; suite `mgd/tests/*.test.js` ejecutada.
+
+
+### Aclaración del modelo de despliegue Apps Script de Agenda (2026-11-18)
+
+- `agenda/apps-script/Code.gs` es exclusivamente el backend vigente. La variante HtmlService se debe desplegar desde **otro proyecto** llamado, por ejemplo, Agenda - Interfaz, cuyo único `Code.gs` contiene `doGet()`; este sirve `Agenda.html` y fija `apiUrl` al endpoint del backend existente. Nunca usar `ScriptApp.getService().getUrl()` del proyecto frontend como URL API, ni reemplazar `doGet`/`doPost` del backend.
+- Material copiable: `agenda/apps-script/Agenda.html.md` y `Code.gs.md`; la guía y test deben nombrar la separación explícitamente. El proyecto frontend no copia el backend ni su manifiesto/scopes avanzados.
+- El HTML y el proyecto servidor son de **preparación**, no aceptación de la variante. HtmlService→`fetch` al endpoint backend desde otro origen, permisos/deployment, login y una operación QA controlada quedan `UNKNOWN` hasta E2E autenticado. Pages y backend vigentes permanecen sin cambios.
