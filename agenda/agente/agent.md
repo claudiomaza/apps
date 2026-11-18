@@ -43,9 +43,9 @@ El nombre `Render.gs` distingue explícitamente el renderer AIO del backend can�
 
 ## 4. Modelo de datos y decisión de transición
 
-La revisión de GitHub `main` de 2026-11-18 todavía contiene la base legacy separada: `Eventos`, `Config`, `Usuarios`, `Agendas`, `CalendarMembers`, `Grupos`, `SyncOperations`; RESET y docs publicados reflejan esa versión previa. No afirmar que el backend ya está normalizado.
+La base objetivo tiene tres hojas operativas: `Config`, `Registros`, `Usuarios`; el backend conserva solo una capa de compatibilidad en memoria con el shape de las tablas anteriores, nunca hojas persistentes con esos nombres. El reset lo ejecuta Claudio en la hoja real solo después de desplegar el backend publicado.
 
-Decisión futura confirmada por Claudio: cambiar Agenda a un esquema nuevo real basado en el patrón normalizado de MGD. Núcleo previsto:
+Contrato vigente confirmado por Claudio: Agenda opera sobre el esquema normalizado, basado en el patrón de MGD. Núcleo:
 
 - `Config`: `key`, `value`, `description`.
 - `Registros`: `recordId`, `type`, `entityId`, `dataJson`, `version`, `status`, `updatedAt`, `createdAt`.
@@ -57,7 +57,7 @@ Decisión futura confirmada por Claudio: cambiar Agenda a un esquema nuevo real 
 - RESET conserva la palabra exacta `RESET` en un solo campo y segundo consentimiento explícito de backup/pérdida; no ejecutarlo durante QA.
 - Rotar `AGENDA_DATABASE_EPOCH` solo tras reset completo e invalidar sesiones antiguas.
 
-**Estado:** esta decisión aún no está implementada ni verificada en el backend de `main`. Antes de llamar completa la migración, adaptar todos los callers/lectores/escritores/operaciones de idempotencia y Calendar al almacenamiento tipado, conservar autorización y contrato para Pages/AIO, actualizar pruebas/documents, ejecutar suites. No alcanza con cambiar lista de tabs del RESET. El destino de filas legacy durante un rollout sin RESET (migrar/archivar/descartar) no quedó autorizado ni especificado: no inferir ni borrar por otro camino.
+**Estado del contrato:** el backend normalizado está implementado en una rama aislada; verificar el SHA publicado antes de desplegar. Los adaptadores preservan shape interno de la API y persisten en `Registros`; no crean pestañas legacy. Reparación verifica esquema y admin y falla cerrado si detecta hojas antiguas. RESET crea Config/Registros/Usuarios vacíos, vistas derivadas y admin; no migra datos ni borra objetos de Google Calendar. Tras publicar y verificar SHA, Claudio despliega Apps Script y ejecuta el RESET por separado. E2E autenticado con el Apps Script desplegado seguirá pendiente hasta entonces.
 
 ## 5. Comportamiento y contratos de Agenda
 
@@ -86,8 +86,8 @@ Evidencia parcial se etiqueta como parcial. No publicar hasta pruebas pertinente
 
 ## 7. Deploy y publicación
 
-- La autorización para publicar se interpreta según el pedido explícito del turno. Esta solicitud de estructura de repo no autoriza Apps Script, Sheet, reset o invitaciones.
-- GitHub `main` publica Pages; revisar cada diff y el efecto. No hacer push en esta tarea si no se pidió publicar explícitamente.
+- Claudio autorizó la conversión completa y que realizará el RESET al recibir backend listo. Zapia puede publicar el repo tras pasar pruebas y revisar el diff; Claudio despliega Apps Script y ejecuta RESET. Eso no autoriza a Zapia a tocar Sheet/deployment.
+- GitHub `main` publica Pages; revisar cada diff y el efecto. Publicar el backend y los documentos en `main` solo después de las suites y revisión; Pages, Apps Script y RESET son estados separados.
 - Apps Script se copia/reautoriza/despliega manualmente en el proyecto correcto: backend vinculado y proyecto renderer AIO son dos proyectos separados. Dejar claro qué archivos corresponden a cada uno.
 - Nunca decir que AIO o backend está desplegado por solo renombrar/versionar archivos.
 - En el reporte final indicar archivos/rutas, pruebas exactas, si hubo commit/push, estado real de Pages/Apps Script y gates restantes.

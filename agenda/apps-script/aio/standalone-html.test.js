@@ -14,7 +14,7 @@ const backendPath = path.join(dir, '..', 'Code.gs');
 const backend = fs.readFileSync(backendPath, 'utf8');
 assert.equal(fs.existsSync(path.join(dir, 'Code.gs.md')), false, 'the AIO source is named Render.gs, not a duplicate Code.gs markdown file');
 assert.match(backend, /function doPost\(e\)/, 'the canonical backend remains in the parent folder');
-assert.match(backend, /function doGet\(\)\s*\{\s*return json_\(\{ok:true,service:'apps-calendar',schemaVersion:2\}\);/);
+assert.match(backend, /function doGet\(\)\s*\{\s*return json_\(\{ok:true,service:'apps-calendar',schemaVersion:3\}\);/);
 assert.match(render, /function doGet\(\)/);
 assert.match(render, /function runAgendaMaintenance\(/);
 assert.match(render, /UrlFetchApp\.fetch/);

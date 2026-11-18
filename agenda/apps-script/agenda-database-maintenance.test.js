@@ -1,74 +1,43 @@
 'use strict';
-const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
-const vm = require('node:vm');
-const dir = __dirname;
-const code = fs.readFileSync(path.join(dir, 'Code.gs'), 'utf8');
-const spec = fs.readFileSync(path.resolve(dir, '../../SPEC-PERFORMANCE.md'), 'utf8');
-const guide = fs.readFileSync(path.join(dir, 'aio/PUBLICAR-SOLO-APPS-SCRIPT.md'), 'utf8');
-const aioDoc = fs.readFileSync(path.join(dir, 'aio/Code.gs.md'), 'utf8');
-const aioManifest = fs.readFileSync(path.join(dir, 'aio/appsscript.json.md'), 'utf8');
-const aioHtmlDoc = fs.readFileSync(path.join(dir, 'aio/Agenda.html.md'), 'utf8');
-for (const label of ['Iniciar app', 'Crear / reparar estructura (conservar datos)', 'Actualizar tablas legibles', 'RESET total… (elimina hojas y filas)']) assert.ok(code.includes(label), label);
-assert.match(code, /function onOpen\(\)[\s\S]*?\.createMenu\('Agenda'\)[\s\S]*?\.addToUi\(\)/);
-assert.match(code, /function setupAgendaDatabase\(\)[\s\S]*?ensureAgendaDatabaseSchema_\(\)[\s\S]*?refreshAgendaReadableViews_\(\)/);
-assert.match(code, /function refreshAgendaReadableViewsFromMenu\(\)[\s\S]*?refreshAgendaReadableViews_\(\)/);
-assert.match(code, /function resetAgendaDatabase\(request\)[\s\S]*?assertAgendaMaintenanceOwner_\(\)[\s\S]*?resetAgendaDatabaseCore_\(request\)/);
-assert.match(code, /function resetAgendaDatabaseCore_\(request\)[\s\S]*?request\.confirmation !== 'RESET'[\s\S]*?request\.backupConfirmed !== true[\s\S]*?deleteSheet\(sheet\)/);
-assert.match(code, /Escribí exactamente RESET/);
-assert.doesNotMatch(code.match(/function showAgendaResetDialog\(\)[\s\S]*?function agendaDatabaseAction_/)[0], /type=\\?\"email/);
-assert.match(code, /function assertAgendaMaintenanceOwner_\(\)[\s\S]*?Session\.getActiveUser\(\)\.getEmail\(\)/);
-assert.match(code, /function preflightAgendaDatabase_\(allowMissing = true\)[\s\S]*?DATABASE_SCHEMA_MISMATCH[\s\S]*?DATABASE_SCHEMA_NAME_COLLISION/);
-assert.match(code, /\['Eventos', CONFIG\.HEADERS\]/);
-assert.match(code, /\['SyncOperations', \['idempotencyKey',[\s\S]*?'calendarId'\]\]/);
-for (const view of ['Eventos legibles', 'Grupos legibles', 'Agendas legibles', 'Colaboradores legibles', 'Usuarios legibles', 'Operaciones legibles']) assert.ok(code.includes(view), view);
-assert.match(code, /'Usuarios legibles': data\.users\.map\(r => \[r\[0\]\]\)/);
-assert.match(code, /function doPost\(e\)[\s\S]*?doPostApi_\(e\)[\s\S]*?refreshAgendaReadableViews_\(\)/);
-assert.match(code, /\['repairSchema','refreshReadableViews','resetDatabase'\]/);
-assert.match(code, /AGENDA_DATABASE_EPOCH[\s\S]*databaseEpoch/);
-assert.match(code, /function doGet\(\)[\s\S]*?apps-calendar/);
-assert.match(code, /function doPostApi_\(e\)/);
-assert.match(aioDoc, /function doGet\(\)/);
-assert.match(aioDoc, /function runAgendaMaintenance[\s\S]*sessionToken[\s\S]*UrlFetchApp\.fetch/);
-assert.match(aioDoc, /request\.confirmation !== 'RESET'/);
-assert.match(aioDoc, /script\.external_request/);
-assert.match(aioManifest, /script\.external_request/);
-assert.doesNotMatch(aioManifest, /calendar|spreadsheets/);
-assert.match(aioHtmlDoc, /Mantenimiento del Sheet/);
-assert.match(aioHtmlDoc, /if\(!\['cmaza','cmaza@mendoza\.edu\.ar'\]\.includes/);
-assert.match(aioHtmlDoc, /Escribí exactamente RESET/);
-assert.match(aioHtmlDoc, /backupConfirmed:true/);
-assert.doesNotMatch(aioHtmlDoc.match(/<form id="reset-agenda-form"[\s\S]*?<\/form>/)[0], /type="email"|name="backupConfirmed"/);
-assert.match(aioHtmlDoc, /sessionEpoch\(sessionToken\)/);
-assert.match(aioHtmlDoc, /Recargar app \(después de guardar la contraseña\)/);
-assert.match(guide, /Apps Script vinculado al Sheet tiene el menú/);
-assert.match(guide, /Escribí exactamente RESET|escribir `RESET` en un único campo/);
-assert.match(guide, /No borra ni modifica calendarios\/eventos\/permisos de Google Calendar/);
-assert.match(spec, /Agenda — estructura operativa y vistas legibles en Sheets/);
-assert.match(spec, /Apps Script \*\*vinculado\*\* al Sheet/);
-assert.match(spec, /un único campo de texto con la palabra literal `RESET` \(sin pedir correo ni checkbox\)/);
-const context = {Date, JSON, Math, Number, String, Array, Object, Set, Map, RegExp, Error, console};
-vm.createContext(context);
-vm.runInNewContext(code + ';globalThis.projection=buildAgendaReadableRows_;globalThis.safeCell=readableAgendaCell_;globalThis.databaseAction=agendaDatabaseAction_;', context, {timeout: 1000});
-const source = {
-  events: [['e1','Cita','2026-01-01','','false','','','owner@example.com','ACTIVE','3','created','updated','','gcal-event','cal1','{}','15','','grp1']],
-  groups: [['grp1','Familia','BLUE','g-updated','cal1']],
-  calendars: [['cal1','Mi agenda','google-cal-id','owner@example.com','ACTIVE','created','cal-updated']],
-  members: [['cal1','editor@example.com','editor','ACTIVE','m-updated']],
-  users: [['cmaza','must-never-leak-password']],
-  operations: [['idem1','hash','DONE','e1','update','3','op-updated','cal1']]
-};
-const rows = context.projection(source);
-assert.equal(rows['Eventos legibles'][0].length, 21);
-assert.equal(rows['Eventos legibles'][0][19], 'Familia');
-assert.equal(rows['Eventos legibles'][0][20], 'Mi agenda');
-assert.deepEqual(Array.from(rows['Usuarios legibles'][0]), ['cmaza']);
-assert.equal(rows['Colaboradores legibles'][0][1], 'Mi agenda');
-assert.equal(rows['Operaciones legibles'][0][0], 'idem1');
-assert.deepEqual(Array.from(rows['Grupos legibles'][0]), ['grp1','Familia','BLUE','cal1','Mi agenda','g-updated']);
-assert.equal(context.safeCell('=1+1'), "'=1+1");
-assert.throws(() => context.databaseAction('repairSchema', {}, 'reader'), e => e.message === 'DATABASE_OWNER_REQUIRED');
-assert.throws(() => context.databaseAction('resetDatabase', {confirmation:'RESET',backupConfirmed:false}, 'cmaza'), e => e.message === 'RESET_BACKUP_REQUIRED');
-assert.throws(() => context.databaseAction('resetDatabase', {confirmation:'no',backupConfirmed:true}, 'cmaza'), e => e.message === 'RESET_CONFIRMATION_REQUIRED');
-console.log('Agenda schema contract, readable projections, password redaction, spreadsheet-safe cells and reset guards PASS');
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const code=fs.readFileSync(__dirname+'/Code.gs','utf8'),sheets=[];
+assert.match(code,/\['Config', \['key', 'value', 'description'\]\]/);
+assert.match(code,/\['Registros', \['recordId', 'type', 'entityId', 'dataJson', 'version', 'status', 'updatedAt', 'createdAt'\]\]/);
+assert.match(code,/\['Usuarios', \['usuario', 'pass', 'rol', 'alcances', 'mail', 'nombre', 'docenteId'\]\]/);
+for(const legacyName of ['Eventos','Agendas','CalendarMembers','Grupos','SyncOperations'])assert.ok(code.includes(legacyName));
+assert.match(code,/schemaVersion:3/);assert.match(code,/function normalizedTypedRows_\(name,includeDeleted=true\)/);
+
+function sheet(name){return{name,rows:[],filter:null,getName(){return this.name},setName(n){this.name=n},getLastRow(){return this.rows.length},getLastColumn(){return Math.max(0,...this.rows.map(r=>r.length))},getFilter(){return this.filter},clear(){this.rows=[]},setFrozenRows(){},getRange(r,c,n=1,m=1){const self=this;return{getValues(){return Array.from({length:n},(_,i)=>Array.from({length:m},(_,j)=>self.rows[r+i-1]?.[c+j-1]??''))},getDisplayValues(){return this.getValues().map(a=>a.map(String))},getDisplayValue(){return String(self.rows[r-1]?.[c-1]??'')},setValues(v){for(let i=0;i<v.length;i++){while(self.rows.length<r+i)self.rows.push([]);for(let j=0;j<v[i].length;j++)self.rows[r+i-1][c+j-1]=v[i][j]}return this},setValue(v){return this.setValues([[v]])},clearContent(){return this},setFontWeight(){return this},setWrap(){return this},createFilter(){self.filter={remove(){self.filter=null}};return self.filter}}}}}
+const book={getSheets:()=>sheets,getSheetByName:n=>sheets.find(s=>s.name===n)||null,insertSheet(n){const x=sheet(n);sheets.push(x);return x},deleteSheet(x){sheets.splice(sheets.indexOf(x),1)}};
+const props=new Map(),cache=new Map();const c={console,Date,JSON,Math,Number,String,Array,Object,Set,Map,RegExp,Error,URLSearchParams,Utilities:{getUuid:()=> 'uuid',newBlob:s=>({getBytes:()=>[...Buffer.from(s)],getDataAsString:()=>s}),base64EncodeWebSafe:b=>Buffer.from(b).toString('base64url'),base64DecodeWebSafe:b=>Buffer.from(b,'base64url').toString(),computeHmacSha256Signature:s=>[...Buffer.from(s)],computeDigest:(a,v)=>[...Buffer.from(v)],DigestAlgorithm:{SHA_256:'SHA'},Charset:{UTF_8:'UTF8'}},SpreadsheetApp:{openById:()=>book,flush(){},getUi:()=>({alert(){}})},Session:{getActiveUser:()=>({getEmail:()=> 'cmaza@mendoza.edu.ar'})},LockService:{getScriptLock:()=>({tryLock:()=>true,releaseLock(){}})},PropertiesService:{getScriptProperties:()=>({getProperty:k=>props.get(k)||null,setProperty:(k,v)=>props.set(k,v),deleteProperty:k=>props.delete(k)})},CacheService:{getScriptCache:()=>({get:k=>cache.get(k)||null,put:(k,v)=>cache.set(k,v),remove:k=>cache.delete(k)})},ContentService:{createTextOutput:s=>({getContent:()=>s,setMimeType(){return this}}),MimeType:{JSON:'json'}},CalendarApp:{getDefaultCalendar:()=>({getId:()=> 'g1',getName:()=> 'Primary'})},Calendar:{}};vm.createContext(c);vm.runInContext(code+';globalThis.t={reset:resetAgendaDatabaseCore_,repair:ensureAgendaDatabaseSchema_,load:loadUsers_,typed:normalizedTypedRows_,calendars:calendarRows_,members:calendarMemberRows_,data:dataSheet_,groups:groupsSheet_,ops:operationSheet_,ctx:setCalendarContext_,list:listCalendars_,calSheet:calendarsSheet_,memSheet:membersSheet_,begin:beginOperation_,finish:finishOperation_,getOp:getOperation_,get:doGet,delGroup:deleteGroup_,saveGroup:saveGroup_,projection:buildAgendaReadableRows_,listGroups:listGroups_,safe:readableAgendaCell_,rows:agendaSheetRows_};',c);
+assert.equal(JSON.parse(c.t.get().getContent()).schemaVersion,3);
+// Legacy rows remain intact and the UI explicitly requests reset instead of implicit migration.
+for(const [name,headers] of [['Config',['key','value','description']],['Registros',['recordId','type','entityId','dataJson','version','status','updatedAt','createdAt']],['Usuarios',['usuario','pass','rol','alcances','mail','nombre','docenteId']]]){const baseSheet=sheet(name);baseSheet.rows=[headers];sheets.push(baseSheet);}const old=sheet('Eventos');old.rows=[['eventId',...Array(18).fill('')],['e-old',...Array(18).fill('')]];sheets.push(old);assert.throws(()=>c.t.repair(),e=>e.message==='DATABASE_RESET_REQUIRED');assert.equal(old.rows.length,2);assert.throws(()=>c.t.reset({confirmation:'RESET',backupConfirmed:false}),e=>e.message==='RESET_BACKUP_REQUIRED');assert.throws(()=>c.t.reset({confirmation:'not-reset',backupConfirmed:true}),e=>e.message==='RESET_CONFIRMATION_REQUIRED');
+const epochBefore=props.get('AGENDA_DATABASE_EPOCH');c.t.reset({confirmation:'RESET',backupConfirmed:true});assert.notEqual(props.get('AGENDA_DATABASE_EPOCH'),epochBefore);assert.deepEqual(sheets.map(x=>x.name).slice(0,3),['Config','Registros','Usuarios']);for(const n of ['Eventos','Agendas','CalendarMembers','Grupos','SyncOperations'])assert.equal(book.getSheetByName(n),null);for(const n of ['Eventos legibles','Grupos legibles','Agendas legibles','Colaboradores legibles','Usuarios legibles','Operaciones legibles'])assert.ok(book.getSheetByName(n),n);assert.deepEqual(book.getSheetByName('Usuarios legibles').rows[1],['cmaza']);assert.doesNotMatch(code.match(/function resetAgendaDatabaseCore_\(request\)[\s\S]*?\n\}/)[0],/CalendarApp|deleteCalendar/);assert.throws(()=>c.t.reset({confirmation:'wrong',backupConfirmed:true}),e=>e.message==='RESET_CONFIRMATION_REQUIRED');assert.throws(()=>c.t.reset({confirmation:'RESET',backupConfirmed:false}),e=>e.message==='RESET_BACKUP_REQUIRED');
+// Admin schema and auth parsing.
+assert.deepEqual(book.getSheetByName('Usuarios').rows[1].slice(0,1),['cmaza']);assert.equal(book.getSheetByName('Usuarios').rows[1][2],'admin');assert.deepEqual(c.t.load()[0].scopes,[]);assert.deepEqual(book.getSheetByName('Usuarios legibles').rows[1],['cmaza']);assert.ok(!book.getSheetByName('Usuarios legibles').rows.flat().includes('uuidaA1!'));assert.doesNotThrow(()=>c.t.repair());
+// One API-like facade write for each entity maps to typed Registros; reads preserve original row shape.
+const add=(table,row)=>({Agendas:c.t.calSheet,CalendarMembers:c.t.memSheet,Eventos:c.t.data,Grupos:c.t.groups,SyncOperations:c.t.ops}[table]().appendRow(row));
+add('Agendas',['cal1','Name','g1','cmaza@mendoza.edu.ar','ACTIVE','created','updated']);add('CalendarMembers',['cal1','cmaza@mendoza.edu.ar','owner','ACTIVE','updated']);add('Grupos',['grp1','Group','BLUE','updated','g1']);add('SyncOperations',['idem-1','hash','PENDING','ev1','create',0,'updated','cal1']);add('Eventos',['ev1','Title','2026-11-18T10:00:00.000Z','2026-11-18T11:00:00.000Z',false,'','','','ACTIVE',1,'created','updated','','event-google-id','g1','{"frequency":"none"}',null,'','']);
+assert.equal(c.t.calendars().length,1);assert.equal(c.t.members().length,1);assert.equal(c.t.groups().getLastRow(),2);assert.equal(c.t.ops().getLastRow(),2);assert.equal(c.t.data().getLastRow(),2);assert.equal(c.t.data().getRange(1,1,1,19).getDisplayValues()[0][0],'eventId')
+const records=book.getSheetByName('Registros').rows.slice(1);for(const type of ['calendar','calendarMember','group','syncOperation','event'])assert.ok(records.some(r=>r[1]===type),type+' typed record persisted');
+const projection=c.t.projection({events:c.t.rows('Eventos',20),groups:c.t.rows('Grupos',8),calendars:c.t.rows('Agendas',8),members:c.t.rows('CalendarMembers',6),users:c.t.rows('Usuarios',1),operations:c.t.rows('SyncOperations',8)});
+assert.equal(projection['Eventos legibles'][0][0],records.find(r=>r[1]==='event')[0]);
+assert.equal(projection['Eventos legibles'][0][1],'ev1');
+assert.equal(projection['Eventos legibles'][0].length,22);assert.equal(projection['Eventos legibles'][0][21],'Name');
+assert.equal(projection['Grupos legibles'][0][0],records.find(r=>r[1]==='group')[0]);
+assert.equal(projection['Grupos legibles'][0][5],'Name');
+assert.equal(projection['Grupos legibles'][0].length,8);
+assert.equal(projection['Agendas legibles'][0][0],records.find(r=>r[1]==='calendar')[0]);
+assert.equal(projection['Colaboradores legibles'][0][0],records.find(r=>r[1]==='calendarMember')[0]);
+assert.equal(projection['Operaciones legibles'][0][0],records.find(r=>r[1]==='syncOperation')[0]);
+assert.deepEqual(Array.from(projection['Usuarios legibles'][0]),['cmaza']);
+assert.equal(c.t.safe('=1+1'),"'=1+1");
+const typedView=c.t.typed('Grupos').find(x=>x.entityId==='grp1');assert.ok(typedView);c.t.ctx({calendarId:'cal1'},'cmaza@mendoza.edu.ar','saveGroup');const beforeGroupSaveFailure=book.getSheetByName('Registros').rows.slice(1).find(r=>r[1]==='group'&&r[2]==='grp1').slice();const originalListGroups=c.listGroups_;c.listGroups_=()=>{throw Error('SIMULATED_RESPONSE_FAILURE')};assert.throws(()=>c.t.saveGroup({groupId:'grp1',name:'Changed',color:'GREEN'}),e=>e.message==='SIMULATED_RESPONSE_FAILURE');c.listGroups_=originalListGroups;assert.deepEqual(book.getSheetByName('Registros').rows.slice(1).find(r=>r[1]==='group'&&r[2]==='grp1'),beforeGroupSaveFailure,'failed save response restores typed group row');assert.ok(typedView);assert.equal(typedView.data.name,'Group');assert.equal(typedView.data.color,'BLUE');assert.equal(c.t.typed('CalendarMembers')[0].data.email,'cmaza@mendoza.edu.ar');assert.equal(c.t.typed('SyncOperations')[0].data.state,'PENDING');assert.ok(code.includes("['Usuarios legibles', ['usuario']]"));assert.doesNotMatch(code.match(/'Usuarios legibles':[\s\S]*?\n  \}/)[0],/pass|temporaryPassword/);
+for(const n of ['Eventos','Agendas','CalendarMembers','Grupos','SyncOperations'])assert.equal(book.getSheetByName(n),null);
+assert.equal(c.t.list('cmaza@mendoza.edu.ar')[0].role,'owner');
+const groupRow=c.t.groups().getRange(2,1,1,5).getValues()[0];groupRow[1]='Renamed';c.t.groups().getRange(2,1,1,5).setValues([groupRow]);assert.equal(c.t.groups().getRange(2,1,1,5).getDisplayValues()[0][1],'Renamed');
+c.t.ctx({calendarId:'cal1'},'cmaza@mendoza.edu.ar','deleteGroup');c.t.delGroup({groupId:'grp1'});assert.equal(c.t.groups().getLastRow(),2,'the compatibility facade retains tombstone row positions for later writes');assert.ok(book.getSheetByName('Registros').rows.slice(1).some(r=>r[1]==='group'&&r[2]==='grp1'&&r[5]==='DELETED'));assert.equal(book.getSheetByName('Registros').rows.slice(1).filter(r=>r[1]==='group'&&r[5]!=='DELETED').length,0);assert.equal(c.t.typed('Grupos').length,1,'includeDeleted default retains tombstone rows for the adapter');assert.equal(c.t.typed('Grupos',false).length,0,'deleted groups are excluded from active typed queries');assert.throws(()=>c.t.groups().appendRow(['grp1','Recreated','BLUE','today','g1']),e=>e.message==='DATABASE_RECORD_DELETED','tombstoned ids cannot be recreated');assert.equal(c.t.ops().getLastRow(),2,'operation rows remain queryable through the idempotency facade');
+const eventRow=c.t.data().getRange(2,1,1,19).getValues()[0];eventRow[1]='Updated title';c.t.data().getRange(2,1,1,19).setValues([eventRow]);assert.equal(JSON.parse(book.getSheetByName('Registros').rows.slice(1).find(r=>r[1]==='event')[3]).title,'Updated title');
+c.t.ctx({calendarId:'cal1'},'cmaza@mendoza.edu.ar','delete');const deletedEvent=c.t.data().getRange(2,1,1,19).getValues()[0];deletedEvent[8]='DELETED';deletedEvent[9]=2;c.t.data().getRange(2,1,1,19).setValues([deletedEvent]);assert.equal(JSON.parse(book.getSheetByName('Registros').rows.slice(1).find(r=>r[1]==='event')[3]).status,'DELETED');assert.equal(c.t.data().getRange(2,1,1,19).getValues()[0][8],'DELETED');
+c.t.ctx({calendarId:'cal1'},'cmaza@mendoza.edu.ar','create');const pending=c.t.begin('create',{eventId:'ev2',idempotencyKey:'op-12345678',expectedVersion:0,changes:{title:'another'}});assert.equal(pending.done,false);c.t.finish(pending,'DONE','ev2',1);const storedOperation=JSON.parse(book.getSheetByName('Registros').rows.slice(1).find(r=>r[1]==='syncOperation'&&JSON.parse(r[3]).idempotencyKey==='op-12345678')[3]);assert.equal(storedOperation.state,'DONE');assert.equal(storedOperation.calendarId,'cal1');assert.ok(c.t.getOp({idempotencyKey:'op-12345678'}).found);console.log('Agenda normalized schema/reset/auth/all-entity facades PASS');

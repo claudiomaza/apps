@@ -11,4 +11,4 @@ Los assets Excel se reutilizan desde `../vendor`, sin duplicar el fichero grande
 
 El backend único y canónico está en [`apps-script/Code.gs`](./apps-script/Code.gs). El UI HtmlService independiente está documentado bajo [`apps-script/aio/`](./apps-script/aio/README.md), cuyo renderer se llama `Render.gs` para no confundirlo con el backend. La guía maestra de reconstrucción, contratos y límites es [`agente/agent.md`](./agente/agent.md).
 
-El backend en `main` aún refleja el esquema anterior de pestañas legacy. La transición acordada a `Registros/dataJson` y el RESET sin tabs legacy no están implementados todavía; consultar el spec antes de cualquier migración.
+El backend en preparación usa el esquema normalizado `Config`/`Registros`/`Usuarios`; RESET crea la base nueva vacía y la reparación falla cerrado si detecta hojas legacy. No migra datos ni borra objetos externos de Google Calendar. El despliegue de Apps Script y el RESET son pasos separados que realiza Claudio.

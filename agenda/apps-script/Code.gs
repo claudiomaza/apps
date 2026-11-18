@@ -1,12 +1,11 @@
 /**
  * Backend Calendario para Apps Script vinculado al Sheet.
- * Las cuentas activas se administran en la pestaña `Usuarios` del Sheet,
- * columnas `usuario` (o el encabezado heredado `mail`) y `pass`.
- * El usuario puede tener cualquier formato; las claves se guardan en texto plano.
+ * Backend Agenda sobre Config / Registros tipados / Usuarios normalizados.
+ * El formato de credenciales sigue el contrato histórico de esta app.
  */
 const CONFIG = Object.freeze({
   SPREADSHEET_ID: '1OypDck9kNKtTPHOdNWPLCqU9Sjr591a9bL6S3YhjFH0',
-  DATA_SHEET: 'Eventos',
+  DATA_SHEET: 'Registros',
   USERS_SHEET: 'Usuarios',
   CACHE_SECONDS: 60,
   SESSION_SECONDS: 8 * 60 * 60,
@@ -18,21 +17,25 @@ const CONFIG = Object.freeze({
 });
 
 const AGENDA_DATABASE_SCHEMA_ = Object.freeze([
-  ['Eventos', CONFIG.HEADERS],
-  ['Config', ['key', 'value']],
-  ['Usuarios', ['usuario', 'pass']],
-  ['Agendas', ['calendarId', 'name', 'googleCalendarId', 'ownerEmail', 'status', 'createdAt', 'updatedAt']],
-  ['CalendarMembers', ['calendarId', 'email', 'role', 'status', 'updatedAt']],
-  ['Grupos', ['groupId', 'name', 'color', 'updatedAt', 'calendarId']],
-  ['SyncOperations', ['idempotencyKey', 'requestHash', 'state', 'eventId', 'action', 'version', 'updatedAt', 'calendarId']]
+  ['Config', ['key', 'value', 'description']],
+  ['Registros', ['recordId', 'type', 'entityId', 'dataJson', 'version', 'status', 'updatedAt', 'createdAt']],
+  ['Usuarios', ['usuario', 'pass', 'rol', 'alcances', 'mail', 'nombre', 'docenteId']]
 ]);
+const AGENDA_LEGACY_SHEETS_ = Object.freeze(['Eventos', 'Agendas', 'CalendarMembers', 'Grupos', 'SyncOperations']);
+const AGENDA_TYPED_TABLES_ = Object.freeze({
+  Eventos:{type:'event',headers:CONFIG.HEADERS,id:'eventId',key:r=>String(r.eventId||'')},
+  Agendas:{type:'calendar',headers:['calendarId','name','googleCalendarId','ownerEmail','status','createdAt','updatedAt'],id:'calendarId',key:r=>String(r.calendarId||'')},
+  CalendarMembers:{type:'calendarMember',headers:['calendarId','email','role','status','updatedAt'],id:'calendarMemberId',key:r=>calendarMemberRecordId_(r.calendarId,r.email)},
+  Grupos:{type:'group',headers:['groupId','name','color','updatedAt','calendarId'],id:'groupId',key:r=>String(r.groupId||'')},
+  SyncOperations:{type:'syncOperation',headers:['idempotencyKey','requestHash','state','eventId','action','version','updatedAt','calendarId'],id:'idempotencyKey',key:r=>String(r.calendarId||'')+'::'+String(r.idempotencyKey||'')}
+});
 const AGENDA_READABLE_VIEW_SCHEMA_ = Object.freeze([
-  ['Eventos legibles', ['eventId', 'Título', 'Inicio', 'Fin', 'Todo el día', 'Ubicación', 'Descripción', 'ownerEmail', 'Estado', 'Versión', 'Creado', 'Actualizado', 'Eliminado', 'Google Calendar event ID', 'calendarId', 'Recurrencia (JSON)', 'Recordatorio (min)', 'Recordatorio', 'groupId', 'Grupo', 'Agenda']],
-  ['Grupos legibles', ['groupId', 'Grupo', 'Color', 'calendarId', 'Agenda', 'Actualizado']],
-  ['Agendas legibles', ['calendarId', 'Agenda', 'Google Calendar ID', 'Propietario', 'Estado', 'Creado', 'Actualizado']],
-  ['Colaboradores legibles', ['calendarId', 'Agenda', 'Cuenta', 'Rol', 'Estado', 'Actualizado']],
+  ['Eventos legibles', ['recordId','eventId', 'Título', 'Inicio', 'Fin', 'Todo el día', 'Ubicación', 'Descripción', 'ownerEmail', 'Estado', 'Versión', 'Creado', 'Actualizado', 'Eliminado', 'Google Calendar event ID', 'calendarId', 'Recurrencia (JSON)', 'Recordatorio (min)', 'Recordatorio', 'groupId', 'Grupo', 'Agenda']],
+  ['Grupos legibles', ['recordId','groupId', 'Grupo', 'Color', 'calendarId', 'Agenda', 'Actualizado','Estado']],
+  ['Agendas legibles', ['recordId','calendarId', 'Agenda', 'Google Calendar ID', 'Propietario', 'Estado', 'Creado', 'Actualizado']],
+  ['Colaboradores legibles', ['recordId','calendarId', 'Agenda', 'Cuenta', 'Rol', 'Estado', 'Actualizado']],
   ['Usuarios legibles', ['usuario']],
-  ['Operaciones legibles', ['idempotencyKey', 'eventId', 'Acción', 'Estado', 'Versión', 'calendarId', 'Actualizado']]
+  ['Operaciones legibles', ['recordId','idempotencyKey', 'eventId', 'Acción', 'Estado', 'Versión', 'calendarId', 'Actualizado']]
 ]);
 
 function onOpen() {
@@ -40,10 +43,10 @@ function onOpen() {
     .createMenu('Agenda')
     .addItem('Iniciar app', 'openAgendaAio')
     .addSeparator()
-    .addItem('Crear / reparar estructura (conservar datos)', 'setupAgendaDatabase')
+    .addItem('Verificar esquema normalizado', 'setupAgendaDatabase')
     .addItem('Actualizar tablas legibles', 'refreshAgendaReadableViewsFromMenu')
     .addSeparator()
-    .addItem('RESET total… (elimina hojas y filas)', 'showAgendaResetDialog')
+    .addItem('RESET total… (crea esquema normalizado)', 'showAgendaResetDialog')
     .addToUi();
 }
 function openAgendaAio() {
@@ -63,39 +66,23 @@ function assertAgendaMaintenanceOwner_() {
   const email = String(Session.getActiveUser().getEmail() || '').toLowerCase();
   if (email !== CONFIG.INITIAL_OWNER_EMAIL.toLowerCase()) throw new Error('DATABASE_OWNER_REQUIRED');
 }
-function agendaExpectedHeader_(name, index, actual) {
-  return name === 'Usuarios' && index === 0 && String(actual).toLowerCase() === 'mail';
-}
-function preflightAgendaSheet_(sheet, name, headers) {
-  if (!sheet || !sheet.getLastRow() || !sheet.getLastColumn()) return;
-  const width = Math.max(headers.length, sheet.getLastColumn());
-  const actual = sheet.getRange(1, 1, 1, width).getDisplayValues()[0];
-  for (let i = 0; i < width; i++) {
-    if (i < headers.length && actual[i] && actual[i] !== headers[i] && !agendaExpectedHeader_(name, i, actual[i])) {
-      throw new Error('DATABASE_SCHEMA_MISMATCH:' + name);
-    }
-  }
-  if (actual.slice(headers.length).some(Boolean)) throw new Error('DATABASE_SCHEMA_MISMATCH:' + name);
-}
 function preflightAgendaDatabase_(allowMissing = true) {
-  const book = agendaBook_();
-  const operationalNames = new Set(AGENDA_DATABASE_SCHEMA_.map(([name]) => name));
-  for (const [name, headers] of AGENDA_DATABASE_SCHEMA_) {
-    const sheet = book.getSheetByName(name);
-    if (!sheet && !allowMissing) throw new Error('DATABASE_SCHEMA_MISSING:' + name);
-    preflightAgendaSheet_(sheet, name, headers);
-  }
-  for (const [name, headers] of AGENDA_READABLE_VIEW_SCHEMA_) {
-    const sheet = book.getSheetByName(name);
-    if (sheet && operationalNames.has(name)) throw new Error('DATABASE_SCHEMA_NAME_COLLISION:' + name);
-    if (sheet && sheet.getLastRow() && sheet.getLastColumn()) {
-      const actual = sheet.getRange(1, 1, 1, Math.max(headers.length, sheet.getLastColumn())).getDisplayValues()[0];
-      if (headers.some((header, i) => actual[i] && actual[i] !== header) || actual.slice(headers.length).some(Boolean)) throw new Error('READABLE_VIEW_SCHEMA_MISMATCH:' + name);
+  const book=agendaBook_();
+  for(const [name,headers] of AGENDA_DATABASE_SCHEMA_){
+    const sheet=book.getSheetByName(name);
+    if(!sheet&&!allowMissing)throw new Error('DATABASE_SCHEMA_MISSING:'+name);
+    if(sheet&&sheet.getLastRow()&&sheet.getLastColumn()){
+      const actual=sheet.getRange(1,1,1,Math.max(headers.length,sheet.getLastColumn())).getDisplayValues()[0];
+      if(headers.some((header,i)=>actual[i]&&actual[i]!==header)||actual.slice(headers.length).some(Boolean))throw new Error('DATABASE_SCHEMA_MISMATCH:'+name);
     }
   }
-  for (const [name, headers] of AGENDA_READABLE_VIEW_SCHEMA_) {
-    const existing = book.getSheetByName(name);
-    if (existing && operationalNames.has(name)) throw new Error('DATABASE_SCHEMA_NAME_COLLISION:' + name);
+  for(const name of AGENDA_LEGACY_SHEETS_)if(book.getSheetByName(name))throw new Error('DATABASE_RESET_REQUIRED');
+  for(const [name,headers] of AGENDA_READABLE_VIEW_SCHEMA_){
+    const sheet=book.getSheetByName(name);
+    if(sheet&&sheet.getLastRow()&&sheet.getLastColumn()){
+      const actual=sheet.getRange(1,1,1,Math.max(headers.length,sheet.getLastColumn())).getDisplayValues()[0];
+      if(headers.some((header,i)=>actual[i]&&actual[i]!==header)||actual.slice(headers.length).some(Boolean))throw new Error('READABLE_VIEW_SCHEMA_MISMATCH:'+name);
+    }
   }
 }
 function ensureAgendaSheet_(name, headers) {
@@ -117,21 +104,16 @@ function ensureAgendaSheet_(name, headers) {
   sheet.setFrozenRows(1);
   return sheet;
 }
-function ensureAgendaDatabaseSchema_() {
-  preflightAgendaDatabase_();
-  for (const [name, headers] of AGENDA_DATABASE_SCHEMA_) ensureAgendaSheet_(name, headers);
-  const operations = agendaBook_().getSheetByName('SyncOperations');
-  const count = operations.getLastRow() - 1;
-  if (count > 0) {
-    const data = operations.getRange(2, 1, count, 8).getDisplayValues();
-    const missing = data.map(row => [row[7] || (row[0] ? 'legacy' : '')]);
-    operations.getRange(2, 8, count, 1).setValues(missing);
-  }
-}
-function agendaSheetRows_(name, width) {
-  const sheet = agendaBook_().getSheetByName(name);
-  if (!sheet || sheet.getLastRow() < 2) return [];
-  return sheet.getRange(2, 1, sheet.getLastRow() - 1, width).getDisplayValues().filter(row => row[0]);
+function ensureAgendaDatabaseSchema_(){preflightAgendaDatabase_(false);const users=loadUsers_(),owner=users.find(user=>user.username.toLowerCase()===CONFIG.INITIAL_OWNER_USERNAME.toLowerCase());if(!owner||owner.role!=='admin'||owner.email.toLowerCase()!==CONFIG.INITIAL_OWNER_EMAIL.toLowerCase())throw new Error('DATABASE_ADMIN_MISSING');}
+function agendaSheetRows_(name,width){
+  if(name==='CalendarMembers')return normalizedTypedRows_(name).map(x=>[x.recordId,x.data.calendarId,x.data.email,x.data.role,x.data.status,x.data.updatedAt]).filter(r=>r[1]).map(r=>r.slice(0,width));
+  if(name==='SyncOperations'){const records=normalizedTypedRows_(name);return records.map(x=>{const d=x.data;return[x.recordId,d.idempotencyKey,d.eventId,d.action,d.state,d.version,d.calendarId,d.updatedAt];}).filter(r=>r[1]).map(r=>r.slice(0,width));}
+  if(name==='Usuarios')return loadUsers_().map(u=>[u.username]).filter(r=>r[0]).map(r=>r.slice(0,width));
+  if(name==='Config'){const sheet=agendaBook_().getSheetByName('Config');return sheet&&sheet.getLastRow()>1?sheet.getRange(2,1,sheet.getLastRow()-1,2).getDisplayValues().filter(r=>r[0]):[];}
+  if(name==='Eventos')return normalizedTypedRows_(name,true).map(x=>[x.recordId,...normalizedTypedRow_(name,x)]).map(r=>r.slice(0,width));
+  if(name==='Agendas')return normalizedTypedRows_(name).map(x=>[x.recordId,...normalizedTypedRow_(name,x)]).map(r=>r.slice(0,width));
+  if(name==='Grupos')return normalizedTypedRows_(name,true).map(x=>[x.recordId,...normalizedTypedRow_(name,x),x.status]).map(r=>r.slice(0,width));
+  throw new Error('INVALID_DATABASE_TABLE');
 }
 function writeAgendaReadableView_(name, headers, rows) {
   const safeRows = rows.map(row => row.map(readableAgendaCell_));
@@ -146,15 +128,16 @@ function writeAgendaReadableView_(name, headers, rows) {
   sheet.setFrozenRows(1);
 }
 function buildAgendaReadableRows_(data) {
-  const calendarNames = new Map(data.calendars.map(row => [row[0], row[1]]));
-  const groupNames = new Map(data.groups.map(row => [row[0], row[1]]));
+  const calendarsById=new Map(data.calendars.map(row=>[row[1],row]));
+  const calendarNames=new Map(data.calendars.flatMap(row=>[[row[1],row[2]],[row[3],row[2]]]));
+  const groupNames=new Map(data.groups.map(row=>[row[1],row[2]]));
   return {
-    'Eventos legibles': data.events.map(r => [r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[7], r[8], r[9], r[10], r[11], r[12], r[13], r[14], r[15], r[16], r[17], r[18], groupNames.get(r[18]) || '', calendarNames.get(r[14]) || '']),
-    'Grupos legibles': data.groups.map(r => [r[0], r[1], r[2], r[4], calendarNames.get(r[4]) || '', r[3]]),
-    'Agendas legibles': data.calendars.map(r => [r[0], r[1], r[2], r[3], r[4], r[5], r[6]]),
-    'Colaboradores legibles': data.members.map(r => [r[0], calendarNames.get(r[0]) || '', r[1], r[2], r[3], r[4]]),
-    'Usuarios legibles': data.users.map(r => [r[0]]),
-    'Operaciones legibles': data.operations.map(r => [r[0], r[3], r[4], r[2], r[5], r[7], r[6]])
+    'Eventos legibles': data.events.map(r=>{const calendar=calendarsById.get(r[15]);return[r[0],r[1],r[2],r[3],r[4],r[5],r[6],r[7],r[8],r[9],r[10],r[11],r[12],r[13],r[14],r[15],r[16],r[17],r[18],r[19],groupNames.get(r[19])||'',calendar?calendar[2]:calendarNames.get(r[15])||''];}),
+    'Grupos legibles': data.groups.map(r=>[r[0],r[1],r[2],r[3],r[5],calendarNames.get(r[5])||'',r[4],r[6]]),
+    'Agendas legibles': data.calendars.map(r=>[r[0],r[1],r[2],r[3],r[4],r[5],r[6],r[7]]),
+    'Colaboradores legibles': data.members.map(r=>{const calendar=calendarsById.get(r[1]);return[r[0],r[1],calendar?calendar[2]:'',r[2],r[3],r[4],r[5]];}),
+    'Usuarios legibles': data.users.map(r=>[r[0]]),
+    'Operaciones legibles': data.operations.map(r=>[r[0],r[1],r[2],r[3],r[4],r[5],r[6],r[7]])
   };
 }
 function readableAgendaCell_(value) {
@@ -165,43 +148,21 @@ function readableAgendaCell_(value) {
 function refreshAgendaReadableViews_() {
   preflightAgendaDatabase_(false);
   const rows = buildAgendaReadableRows_({
-    events:agendaSheetRows_('Eventos', CONFIG.HEADERS.length),
-    groups:agendaSheetRows_('Grupos', 5),
-    calendars:agendaSheetRows_('Agendas', 7),
-    members:agendaSheetRows_('CalendarMembers', 5),
-    users:agendaSheetRows_('Usuarios', 2),
+    events:agendaSheetRows_('Eventos', CONFIG.HEADERS.length+1),
+    groups:agendaSheetRows_('Grupos', 7),
+    calendars:agendaSheetRows_('Agendas', 8),
+    members:agendaSheetRows_('CalendarMembers', 6),
+    users:agendaSheetRows_('Usuarios', 1),
     operations:agendaSheetRows_('SyncOperations', 8)
   });
   for (const [name, headers] of AGENDA_READABLE_VIEW_SCHEMA_) writeAgendaReadableView_(name, headers, rows[name]);
   return {ok:true, views:AGENDA_READABLE_VIEW_SCHEMA_.map(([name]) => name), counts:Object.fromEntries(Object.entries(rows).map(([name, list]) => [name, list.length]))};
 }
-function setupAgendaDatabase() {
-  assertAgendaMaintenanceOwner_();
-  const lock = LockService.getScriptLock();
-  if (!lock.tryLock(5000)) throw new Error('BUSY_RETRY');
-  try {
-    ensureAgendaDatabaseSchema_();
-    const result = refreshAgendaReadableViews_();
-    SpreadsheetApp.flush();
-    SpreadsheetApp.getUi().alert('Estructura revisada y tablas legibles actualizadas. Se conservaron las filas de las tablas canónicas.');
-    return result;
-  } finally { lock.releaseLock(); }
-}
-function refreshAgendaReadableViewsFromMenu() {
-  assertAgendaMaintenanceOwner_();
-  const lock = LockService.getScriptLock();
-  if (!lock.tryLock(5000)) throw new Error('BUSY_RETRY');
-  try {
-    ensureAgendaDatabaseSchema_();
-    const result = refreshAgendaReadableViews_();
-    SpreadsheetApp.flush();
-    SpreadsheetApp.getUi().alert('Tablas legibles actualizadas desde Eventos, Grupos, Agendas, CalendarMembers, Usuarios y SyncOperations.');
-    return result;
-  } finally { lock.releaseLock(); }
-}
+function setupAgendaDatabase(){assertAgendaMaintenanceOwner_();const lock=LockService.getScriptLock();if(!lock.tryLock(5000))throw new Error('BUSY_RETRY');try{ensureAgendaDatabaseSchema_();const result=refreshAgendaReadableViews_();SpreadsheetApp.flush();SpreadsheetApp.getUi().alert('Esquema normalizado verificado. Si detectás tablas legacy, primero realizá el RESET acordado; esta acción no las migra ni borra.');return result;}finally{lock.releaseLock();}}
+function refreshAgendaReadableViewsFromMenu(){assertAgendaMaintenanceOwner_();const lock=LockService.getScriptLock();if(!lock.tryLock(5000))throw new Error('BUSY_RETRY');try{ensureAgendaDatabaseSchema_();const result=refreshAgendaReadableViews_();SpreadsheetApp.flush();SpreadsheetApp.getUi().alert('Vistas legibles actualizadas desde Registros y Usuarios.');return result;}finally{lock.releaseLock();}}
 function showAgendaResetDialog() {
   assertAgendaMaintenanceOwner_();
-  const html = HtmlService.createHtmlOutput(`<div style="font:14px Arial,sans-serif;padding:18px"><h2>RESET total de Agenda</h2><p><b>Acción destructiva e irreversible:</b> se eliminarán todas las hojas y filas de este libro; se recreará el esquema vacío y la cuenta inicial. Primero hacé una copia de seguridad.</p><p>Esto no borra eventos, calendarios ni permisos en Google Calendar; sí borra de la planilla sus relaciones, credenciales, configuraciones e historial de operaciones.</p><label>Escribí exactamente RESET<br><input id="confirm" autocomplete="off"></label><p><button id="go">Borrar hojas y filas</button></p><p id="status" role="status" aria-live="polite"></p><script>document.getElementById('go').onclick=()=>{const b=document.getElementById('go'),s=document.getElementById('status'),confirmation=document.getElementById('confirm').value;if(confirmation!=='RESET'){s.textContent='Escribí exactamente RESET para confirmar.';return;}if(!confirm('Se eliminarán todas las hojas y filas. ¿Confirmás que ya tenés un respaldo?'))return;b.disabled=true;s.textContent='Reseteando…';google.script.run.withSuccessHandler(r=>{s.textContent='Base recreada. Usuario: '+r.username+'. Contraseña temporal (guardala ahora; no se volverá a mostrar): '+r.temporaryPassword;b.disabled=false;}).withFailureHandler(e=>{s.textContent='No se completó: '+e.message;b.disabled=false;}).resetAgendaDatabase({confirmation,backupConfirmed:true});};</script></div>`).setWidth(540).setHeight(390);
+  const html = HtmlService.createHtmlOutput(`<div style="font:14px Arial,sans-serif;padding:18px"><h2>RESET total de Agenda</h2><p><b>Acción destructiva e irreversible:</b> se eliminarán todas las hojas y filas de este libro; se recrearán Config, Registros y Usuarios, más las vistas legibles y la cuenta inicial. Primero hacé una copia de seguridad.</p><p>Esto no borra eventos, calendarios ni permisos en Google Calendar; sí borra de la planilla sus relaciones, credenciales, configuraciones e historial de operaciones.</p><label>Escribí exactamente RESET<br><input id="confirm" autocomplete="off"></label><p><button id="go">Borrar hojas y filas</button></p><p id="status" role="status" aria-live="polite"></p><script>document.getElementById('go').onclick=()=>{const b=document.getElementById('go'),s=document.getElementById('status'),confirmation=document.getElementById('confirm').value;if(confirmation!=='RESET'){s.textContent='Escribí exactamente RESET para confirmar.';return;}if(!confirm('Se eliminarán todas las hojas y filas. ¿Confirmás que ya tenés un respaldo?'))return;b.disabled=true;s.textContent='Reseteando…';google.script.run.withSuccessHandler(r=>{s.textContent='Base recreada. Usuario: '+r.username+'. Contraseña temporal (guardala ahora; no se volverá a mostrar): '+r.temporaryPassword;b.disabled=false;}).withFailureHandler(e=>{s.textContent='No se completó: '+e.message;b.disabled=false;}).resetAgendaDatabase({confirmation,backupConfirmed:true});};</script></div>`).setWidth(540).setHeight(390);
   SpreadsheetApp.getUi().showModalDialog(html, 'RESET total de Agenda');
 }
 function agendaDatabaseAction_(action, body, username) {
@@ -225,32 +186,27 @@ function resetAgendaDatabase(request) {
   assertAgendaMaintenanceOwner_();
   return resetAgendaDatabaseCore_(request);
 }
-function resetAgendaDatabaseCore_(request) {
-  if (!request || request.confirmation !== 'RESET') throw new Error('RESET_CONFIRMATION_REQUIRED');
-  if (request.backupConfirmed !== true) throw new Error('RESET_BACKUP_REQUIRED');
-  const lock = LockService.getScriptLock();
-  if (!lock.tryLock(5000)) throw new Error('BUSY_RETRY');
-  try {
-    const book = agendaBook_(), sheets = book.getSheets(), keep = sheets[0];
-    for (const sheet of sheets.slice(1)) book.deleteSheet(sheet);
-    if (keep.getFilter()) keep.getFilter().remove();
-    keep.clear();
-    if (keep.getName() !== 'Eventos') keep.setName('Eventos');
-    for (const [name, headers] of AGENDA_DATABASE_SCHEMA_) ensureAgendaSheet_(name, headers);
-    const temporaryPassword = Utilities.getUuid().replace(/-/g, '') + 'aA1!';
-    book.getSheetByName('Usuarios').getRange(2, 1, 1, 2).setValues([[CONFIG.INITIAL_OWNER_USERNAME, temporaryPassword]]);
-    const result = refreshAgendaReadableViews_();
-    SpreadsheetApp.flush();
-    limpiarCacheUsuarios();
-    limpiarCacheConfig();
-    PropertiesService.getScriptProperties().deleteProperty('DATA_VERSION');
-    PropertiesService.getScriptProperties().setProperty('AGENDA_DATABASE_EPOCH', Utilities.getUuid());
-    return {ok:true, username:CONFIG.INITIAL_OWNER_USERNAME, temporaryPassword, views:result.views};
-  } finally { lock.releaseLock(); }
+function resetAgendaDatabaseCore_(request){
+  if(!request||request.confirmation!=='RESET')throw new Error('RESET_CONFIRMATION_REQUIRED');
+  if(request.backupConfirmed!==true)throw new Error('RESET_BACKUP_REQUIRED');
+  const lock=LockService.getScriptLock();if(!lock.tryLock(5000))throw new Error('BUSY_RETRY');
+  try{
+    const book=agendaBook_(),sheets=book.getSheets(),keep=sheets[0];
+    for(const sheet of sheets.slice(1))book.deleteSheet(sheet);
+    if(keep.getFilter())keep.getFilter().remove();keep.clear();if(keep.getName()!=='Config')keep.setName('Config');
+    for(const [name,headers] of AGENDA_DATABASE_SCHEMA_)ensureAgendaSheet_(name,headers);
+    const temporaryPassword=Utilities.getUuid().replace(/-/g,'')+'aA1!';
+    book.getSheetByName('Usuarios').getRange(2,1,1,7).setValues([[CONFIG.INITIAL_OWNER_USERNAME,temporaryPassword,'admin','[]',CONFIG.INITIAL_OWNER_EMAIL,'Claudio Maza','']]);
+    for(const [name,headers] of AGENDA_READABLE_VIEW_SCHEMA_)ensureAgendaSheet_(name,headers);
+    limpiarCacheUsuarios();limpiarCacheConfig();
+    const result=refreshAgendaReadableViews_();SpreadsheetApp.flush();limpiarCacheUsuarios();limpiarCacheConfig();
+    PropertiesService.getScriptProperties().deleteProperty('DATA_VERSION');PropertiesService.getScriptProperties().setProperty('AGENDA_DATABASE_EPOCH',Utilities.getUuid());
+    return{ok:true,username:CONFIG.INITIAL_OWNER_USERNAME,temporaryPassword,views:result.views};
+  }finally{lock.releaseLock();}
 }
 
 function doGet() {
-  return json_({ok:true,service:'apps-calendar',schemaVersion:2});
+  return json_({ok:true,service:'apps-calendar',schemaVersion:3});
 }
 
 const CALENDAR_ACTIONS_={read:['list','getEvent','getOperation','listGroups','exportEvents','listCalendarMembers'],edit:['create','update','delete','createBatch','saveGroup','deleteGroup'],owner:['manageMembers','renameCalendar','listAppUsers','createAppUser','inviteCalendarEmail','removeCalendarInvite']};
@@ -258,29 +214,111 @@ function validateCalendarName_(name){name=String(name||'').trim();if(!name||name
 function validateMemberEmail_(email){email=String(email||'').trim().toLowerCase();if(email.length>254||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))throw new Error('INVALID_MEMBER_EMAIL');return email;}
 function validateCalendarRole_(role){role=String(role||'');if(!['editor','reader'].includes(role))throw new Error('INVALID_CALENDAR_ROLE');return role;}
 function roleAllows_(role,action){if(CALENDAR_ACTIONS_.read.includes(action))return ['owner','editor','reader'].includes(role);if(CALENDAR_ACTIONS_.edit.includes(action))return ['owner','editor'].includes(role);if(CALENDAR_ACTIONS_.owner.includes(action))return role==='owner';return false;}
-function calendarsSheet_(){const ss=SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);let s=ss.getSheetByName('Agendas');if(!s){s=ss.insertSheet('Agendas');s.getRange(1,1,1,7).setValues([['calendarId','name','googleCalendarId','ownerEmail','status','createdAt','updatedAt']]);}const h=s.getRange(1,1,1,7).getDisplayValues()[0];if(h.some((v,i)=>v!==['calendarId','name','googleCalendarId','ownerEmail','status','createdAt','updatedAt'][i]))throw new Error('CALENDAR_SHEET_INVALID');return s;}
-function membersSheet_(){const ss=SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);let s=ss.getSheetByName('CalendarMembers');if(!s){s=ss.insertSheet('CalendarMembers');s.getRange(1,1,1,5).setValues([['calendarId','email','role','status','updatedAt']]);}const h=s.getRange(1,1,1,5).getDisplayValues()[0];if(h.some((v,i)=>v!==['calendarId','email','role','status','updatedAt'][i]))throw new Error('CALENDAR_MEMBERS_SHEET_INVALID');return s;}
-function calendarRows_(){const s=calendarsSheet_(),n=s.getLastRow();return n<2?[]:s.getRange(2,1,n-1,7).getDisplayValues().filter(r=>r[0]).map(r=>({calendarId:r[0],name:r[1],googleCalendarId:r[2],ownerEmail:r[3],status:r[4],createdAt:r[5],updatedAt:r[6]}));}
-function calendarMemberRows_(){const s=membersSheet_(),n=s.getLastRow();return n<2?[]:s.getRange(2,1,n-1,5).getDisplayValues().filter(r=>r[0]).map(r=>({calendarId:r[0],email:r[1],role:r[2],status:r[3],updatedAt:r[4]}));}
-function ensureLegacyCalendar_(username){const lock=LockService.getScriptLock();if(!lock.tryLock(5000))throw new Error('BUSY_RETRY');try{const googleId=configValue_('calendarId'),google=googleId?CalendarApp.getCalendarById(googleId):CalendarApp.getDefaultCalendar();if(!google)throw new Error('CALENDAR_NOT_FOUND');let item=calendarRows_().find(r=>r.googleCalendarId===google.getId());if(item){const legacyOwner=String(item.ownerEmail).toLowerCase()===CONFIG.INITIAL_OWNER_EMAIL.toLowerCase()&&(String(username).toLowerCase()===CONFIG.INITIAL_OWNER_USERNAME||String(username).toLowerCase()===CONFIG.INITIAL_OWNER_EMAIL.toLowerCase());if(legacyOwner&&!calendarMemberRows_().some(m=>m.calendarId===item.calendarId&&m.email.toLowerCase()===String(username).toLowerCase()&&m.status==='ACTIVE'))membersSheet_().appendRow([item.calendarId,username,'owner','ACTIVE',new Date().toISOString()]);return item;}if(String(username).toLowerCase()!==CONFIG.INITIAL_OWNER_USERNAME)throw new Error('CALENDAR_BOOTSTRAP_OWNER_REQUIRED');const now=new Date().toISOString(),name=configValue_('calendarName')||google.getName();item={calendarId:'legacy',name,googleCalendarId:google.getId(),ownerEmail:CONFIG.INITIAL_OWNER_EMAIL,status:'ACTIVE',createdAt:now,updatedAt:now};calendarsSheet_().appendRow([item.calendarId,name,item.googleCalendarId,item.ownerEmail,'ACTIVE',now,now]);membersSheet_().appendRow([item.calendarId,CONFIG.INITIAL_OWNER_USERNAME,'owner','ACTIVE',now]);if(CONFIG.INITIAL_OWNER_EMAIL.toLowerCase()!==CONFIG.INITIAL_OWNER_USERNAME.toLowerCase())membersSheet_().appendRow([item.calendarId,CONFIG.INITIAL_OWNER_EMAIL,'owner','ACTIVE',now]);return item;}finally{lock.releaseLock();}}
-function listCalendars_(username){const ms=calendarMemberRows_().filter(m=>m.email.toLowerCase()===String(username).toLowerCase()&&m.status==='ACTIVE');return calendarRows_().filter(c=>c.status==='ACTIVE'&&ms.some(m=>m.calendarId===c.calendarId)).map(c=>({calendarId:c.calendarId,name:c.name,role:ms.find(m=>m.calendarId===c.calendarId).role}));}
+function calendarMemberRecordId_(calendarId,email){const normalized=String(email||'').trim().toLowerCase();const digest=Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,normalized,Utilities.Charset.UTF_8);return String(calendarId||'')+'::'+Utilities.base64EncodeWebSafe(digest).replace(/=+$/,'');}
+function requireNormalizedAgenda_(){
+  const book=agendaBook_();
+  for(const name of AGENDA_LEGACY_SHEETS_)if(book.getSheetByName(name))throw new Error('DATABASE_RESET_REQUIRED');
+  for(const [name,headers] of AGENDA_DATABASE_SCHEMA_){
+    const sheet=book.getSheetByName(name);if(!sheet)throw new Error('DATABASE_SCHEMA_MISSING:'+name);
+    const width=sheet.getLastColumn(),actual=sheet.getLastRow()?sheet.getRange(1,1,1,Math.max(headers.length,width)).getDisplayValues()[0]:[];
+    if(actual.length!==headers.length||width!==headers.length||headers.some((header,i)=>actual[i]!==header))throw new Error('DATABASE_SCHEMA_MISMATCH:'+name);
+  }
+}
+function normalizedTypedRows_(name,includeDeleted=true){
+  const spec=AGENDA_TYPED_TABLES_[name];if(!spec)throw new Error('INVALID_DATABASE_TABLE');requireNormalizedAgenda_();const sheet=agendaBook_().getSheetByName('Registros');
+  const last=sheet.getLastRow(),rows=last>1?sheet.getRange(2,1,last-1,8).getValues():[],seen=new Set();
+  return rows.map((r,i)=>({r,i})).filter(x=>x.r[1]===spec.type&&(includeDeleted||x.r[5]!=='DELETED')).map(({r,i})=>{
+    let data;try{data=JSON.parse(r[3]);}catch(_){throw new Error('INVALID_STORED_RECORD');}
+    const id=String(r[0]||''),entity=String(r[2]||''),version=Number(r[4]),status=String(r[5]||'');
+    if(!data||typeof data!=='object'||Array.isArray(data)||!id||id.length>200||/[\u0000-\u001f\u007f]/.test(id)||!entity||entity.length>200||/[\u0000-\u001f\u007f]/.test(entity)||id!==spec.type+'::'+entity||String(r[1])!==spec.type||!Number.isInteger(version)||version<1||!['ACTIVE','DELETED'].includes(status)||JSON.stringify(data).length>45000||seen.has(entity))throw new Error('INVALID_STORED_RECORD');
+    seen.add(entity);
+    return{recordId:id,type:r[1],entityId:entity,data,version,status,updatedAt:r[6],createdAt:r[7],physicalRow:i+2};
+  });
+}
+function normalizedTypedRow_(name,item){const spec=AGENDA_TYPED_TABLES_[name];return spec.headers.map(key=>key==='calendarMemberId'?item.entityId:key==='status'?(item.status==='DELETED'?'DELETED':item.data.status||'ACTIVE'):(item.data[key]===undefined?(key===spec.id?item.entityId:''):item.data[key]));}
+function typedRowsForTable_(name){return normalizedTypedRows_(name,true);}
+function tombstoneTypedRow_(item){const sheet=agendaBook_().getSheetByName('Registros'),row=sheet.getRange(item.physicalRow,1,1,8).getValues()[0],now=new Date().toISOString();if(row[5]==='DELETED')return;row[3]=JSON.stringify(Object.assign({},JSON.parse(row[3]||'{}'),{status:'DELETED'}));row[4]=Number(row[4])+1;row[5]='DELETED';row[6]=now;sheet.getRange(item.physicalRow,1,1,8).setValues([row]);incrementDataVersion_();}
+function persistTypedRow_(name,row){
+  const spec=AGENDA_TYPED_TABLES_[name];if(!row||!row[0])throw new Error('INVALID_DATABASE_RECORD');
+  const rows=normalizedTypedRows_(name,true),data={};spec.headers.forEach((field,i)=>data[field]=row[i]===undefined?'':row[i]);
+  if(name==='Grupos'&&!data.status)data.status='ACTIVE';
+  const key=String(spec.key(data));if(!key||key.length>200)throw new Error('INVALID_DATABASE_RECORD');
+  if(name==='CalendarMembers')data.calendarMemberId=key;
+  const item=rows.find(x=>x.entityId===key),now=new Date().toISOString();
+  if(item&&item.status==='DELETED'&&data.status!=='DELETED')throw new Error('DATABASE_RECORD_DELETED');
+  const lifecycle=data.status==='DELETED'?'DELETED':'ACTIVE';
+  const stored=[item?item.recordId:spec.type+'::'+key,spec.type,key,JSON.stringify(data),item?item.version+1:1,lifecycle,String(data.updatedAt||now),String(data.createdAt||item&&item.createdAt||now)];
+  const sheet=agendaBook_().getSheetByName('Registros');
+  if(item)sheet.getRange(item.physicalRow,1,1,8).setValues([stored]);else sheet.getRange(sheet.getLastRow()+1,1,1,8).setValues([stored]);
+  incrementDataVersion_();
+}
+function normalizedTypedRange_(name,row,column,numRows,numColumns){
+  const spec=AGENDA_TYPED_TABLES_[name];if(row===1){const header=Array.from({length:numColumns},(_,i)=>spec.headers[column-1+i]||'');return [header,...Array.from({length:Math.max(0,numRows-1)},()=>Array(numColumns).fill(''))];}
+  const items=typedRowsForTable_(name),out=[];
+  for(let i=0;i<numRows;i++){
+    const item=items[row-2+i];
+    if(!item){out.push(Array(numColumns).fill(''));continue;}
+    out.push(normalizedTypedRow_(name,item).slice(column-1,column-1+numColumns));
+  }
+  return out;
+}
+function legacyAgendaSheet_(name){
+  const spec=AGENDA_TYPED_TABLES_[name];if(!spec)throw new Error('INVALID_DATABASE_TABLE');requireNormalizedAgenda_();
+  const facade={
+    getLastRow(){return typedRowsForTable_(name).length+1;},getLastColumn(){return spec.headers.length;},
+    getRange(row,column,numRows=1,numColumns=1){
+      return{
+        getValues(){return normalizedTypedRange_(name,row,column,numRows,numColumns);},
+        getDisplayValues(){return this.getValues().map(r=>r.map(v=>v===null||v===undefined?'':String(v)));},
+        getDisplayValue(){return String((this.getDisplayValues()[0]||[])[0]||'');},
+        setValues(values){
+          if(row===1){const expected=spec.headers.slice(column-1,column-1+values[0].length);if(values.length!==1||values[0].some((v,i)=>v!==expected[i]))throw new Error('DATABASE_SCHEMA_IMMUTABLE');return this;}
+          if(column===1&&numColumns===spec.headers.length&&values.length>1){
+            const normalized=typedRowsForTable_(name);if(row!==normalized.length+2)throw new Error('DATABASE_RANGE_WRITE_UNSUPPORTED');
+            const sheet=agendaBook_().getSheetByName('Registros'),start=sheet.getLastRow()+1,stored=values.map(valuesRow=>{
+              const data={};spec.headers.forEach((key,i)=>{if(key!==spec.id)data[key]=valuesRow[i]===undefined?'':valuesRow[i]});if(name!=='CalendarMembers'&&name!=='SyncOperations')data[spec.id]=String(valuesRow[0]);const key=String(spec.key(data));if(!key||key.length>200)throw new Error('INVALID_DATABASE_RECORD');if(name!=='CalendarMembers'&&name!=='SyncOperations')data[spec.id]=key;return[spec.type+'::'+key,spec.type,key,JSON.stringify(data),1,'ACTIVE',String(data.updatedAt||new Date().toISOString()),String(data.createdAt||new Date().toISOString())];
+            });
+            const ids=new Set(normalizedTypedRows_(name,true).map(x=>x.entityId));for(const r of stored){if(ids.has(r[2]))throw new Error('DATABASE_RECORD_EXISTS');ids.add(r[2]);}
+            sheet.getRange(start,1,stored.length,8).setValues(stored);return this;
+          }
+          for(let i=0;i<values.length;i++){
+            const index=row+i-2,items=typedRowsForTable_(name),current=items[index];
+            if(!current){if(column!==1||values[i].length!==spec.headers.length)throw new Error('DATABASE_RECORD_NOT_FOUND');persistTypedRow_(name,values[i]);continue;}
+            const full=normalizedTypedRow_(name,current);for(let j=0;j<values[i].length;j++)full[column+j-1]=values[i][j];persistTypedRow_(name,full);
+          }
+          return this;
+        },
+        setValue(value){return this.setValues([[value]]);},
+        clearContent(){for(let i=0;i<numRows;i++){const item=typedRowsForTable_(name)[row+i-2];if(item)tombstoneTypedRow_(item);}return this;}
+      };
+    },
+    appendRow(row){persistTypedRow_(name,row);return facade;},
+    deleteRow(row){const item=typedRowsForTable_(name)[row-2];if(!item)throw new Error('DATABASE_RECORD_NOT_FOUND');tombstoneTypedRow_(item);return facade;}
+  };return facade;
+}
+function calendarsSheet_(){return legacyAgendaSheet_('Agendas');}
+function membersSheet_(){return legacyAgendaSheet_('CalendarMembers');}
+function calendarRows_(){const s=calendarsSheet_(),n=s.getLastRow();return n<2?[]:s.getRange(2,1,n-1,7).getDisplayValues().filter(r=>r[0]&&r[4]==='ACTIVE').map(r=>({calendarId:r[0],name:r[1],googleCalendarId:r[2],ownerEmail:r[3],status:r[4],createdAt:r[5],updatedAt:r[6]}));}
+function calendarMemberRows_(){const s=membersSheet_(),n=s.getLastRow();return n<2?[]:s.getRange(2,1,n-1,5).getDisplayValues().filter(r=>r[0]&&r[3]!=='DELETED').map(r=>({calendarId:r[0],email:r[1],role:r[2],status:r[3],updatedAt:r[4]}));}
+function ensureLegacyCalendar_(username){const owner=String(username||'').toLowerCase();if(owner!==CONFIG.INITIAL_OWNER_USERNAME&&owner!==CONFIG.INITIAL_OWNER_EMAIL.toLowerCase())throw new Error('CALENDAR_BOOTSTRAP_OWNER_REQUIRED');const lock=LockService.getScriptLock();if(!lock.tryLock(5000))throw new Error('BUSY_RETRY');try{const googleId=configValue_('calendarId'),google=googleId?CalendarApp.getCalendarById(googleId):CalendarApp.getDefaultCalendar();if(!google)throw new Error('CALENDAR_NOT_FOUND');let item=calendarRows_().find(r=>r.googleCalendarId===google.getId());if(!item){const now=new Date().toISOString(),name=configValue_('calendarName')||google.getName(),calendarId='legacy';item={calendarId,name,googleCalendarId:google.getId(),ownerEmail:CONFIG.INITIAL_OWNER_EMAIL,status:'ACTIVE',createdAt:now,updatedAt:now};persistTypedRow_('Agendas',[item.calendarId,item.name,item.googleCalendarId,item.ownerEmail,item.status,item.createdAt,item.updatedAt]);}for(const identity of [CONFIG.INITIAL_OWNER_USERNAME,CONFIG.INITIAL_OWNER_EMAIL])if(!calendarMemberRows_().some(m=>m.calendarId===item.calendarId&&m.email.toLowerCase()===identity.toLowerCase()&&m.status==='ACTIVE'))persistTypedRow_('CalendarMembers',[item.calendarId,identity,'owner','ACTIVE',new Date().toISOString()]);return item;}finally{lock.releaseLock();}}
+function listCalendars_(username){const ms=calendarMemberRows_().filter(m=>m.status==='ACTIVE'&&m.email.toLowerCase()===String(username).toLowerCase());return calendarRows_().filter(c=>c.status==='ACTIVE'&&ms.some(m=>m.calendarId===c.calendarId)).map(c=>({calendarId:c.calendarId,name:c.name,role:ms.find(m=>m.calendarId===c.calendarId).role}));}
 let ACTIVE_GOOGLE_CALENDAR_='',ACTIVE_CALENDAR_ID_='',ACTIVE_CALENDAR_NAME_='';
 function withCalendarContext_(body,user,action){return setCalendarContext_(body,user,action);}
 function setCalendarContext_(body,user,action){let id=String(body.calendarId||'');if(String(user).toLowerCase()===CONFIG.INITIAL_OWNER_USERNAME||String(user).toLowerCase()===CONFIG.INITIAL_OWNER_EMAIL.toLowerCase())ensureLegacyCalendar_(user);const available=listCalendars_(user);if(!id){if(available.length!==1){if(available.some(c=>c.role==='owner'&&c.calendarId==='legacy'))id='legacy';else throw new Error('CALENDAR_REQUIRED');}else id=available[0].calendarId;}const calendar=calendarRows_().find(c=>c.calendarId===id&&c.status==='ACTIVE');if(!calendar)throw new Error('CALENDAR_NOT_FOUND');let member=calendarMemberRows_().find(m=>m.calendarId===id&&m.email.toLowerCase()===String(user).toLowerCase()&&m.status==='ACTIVE');if(!member&&String(calendar.ownerEmail).toLowerCase()===String(user).toLowerCase()){membersSheet_().appendRow([id,user,'owner','ACTIVE',new Date().toISOString()]);member={calendarId:id,email:user,role:'owner',status:'ACTIVE'};}if(!member)throw new Error('CALENDAR_ACCESS_DENIED');if(!roleAllows_(member.role,action))throw new Error(member.role==='reader'?'CALENDAR_READ_ONLY':'CALENDAR_ADMIN_REQUIRED');ACTIVE_GOOGLE_CALENDAR_=calendar.googleCalendarId;ACTIVE_CALENDAR_ID_=id;ACTIVE_CALENDAR_NAME_=calendar.name;return{calendar,role:member.role,user};}
 function activeGoogleCalendar_(){const c=CalendarApp.getCalendarById(ACTIVE_GOOGLE_CALENDAR_);if(!c)throw new Error('CALENDAR_NOT_FOUND');return c;}
 function eventBelongsToCalendar_(row){return String(row[14]||'')===ACTIVE_GOOGLE_CALENDAR_||(!row[14]&&ACTIVE_CALENDAR_ID_==='legacy');}
 function groupBelongsToCalendar_(row){return String(row[4]||'')===ACTIVE_GOOGLE_CALENDAR_||(!row[4]&&ACTIVE_CALENDAR_ID_==='legacy');}
-function createCalendar_(body,user){const name=validateCalendarName_(body.name),lock=LockService.getScriptLock();if(!lock.tryLock(5000))throw new Error('BUSY_RETRY');let g,agendaRow=0,memberRows=[];try{const agendas=calendarsSheet_(),members=membersSheet_();g=CalendarApp.createCalendar(name);const id='cal-'+Utilities.getUuid(),now=new Date().toISOString(),ownerEmail=String(user).toLowerCase()===CONFIG.INITIAL_OWNER_USERNAME?CONFIG.INITIAL_OWNER_EMAIL:user;agendaRow=agendas.getLastRow()+1;agendas.getRange(agendaRow,1,1,7).setValues([[id,name,g.getId(),ownerEmail,'ACTIVE',now,now]]);const identities=[user];if(ownerEmail!==user)identities.push(ownerEmail);for(const identity of identities){const row=members.getLastRow()+1;members.getRange(row,1,1,5).setValues([[id,identity,'owner','ACTIVE',now]]);memberRows.push(row);}return{ok:true,calendar:{calendarId:id,name,role:'owner'}};}catch(err){try{const members=membersSheet_(),agendas=calendarsSheet_();memberRows.reverse().forEach(r=>members.deleteRow(r));if(agendaRow)agendas.deleteRow(agendaRow);if(g)g.deleteCalendar();}catch(_){}throw err;}finally{lock.releaseLock();}}
-function renameCalendar_(body,user){const a=setCalendarContext_(body,user,'renameCalendar'),name=validateCalendarName_(body.name),rows=calendarRows_(),i=rows.findIndex(c=>c.calendarId===a.calendar.calendarId),g=CalendarApp.getCalendarById(a.calendar.googleCalendarId);if(i<0)throw new Error('CALENDAR_NOT_FOUND');if(!g)throw new Error('CALENDAR_NOT_FOUND');const old=g.getName(),oldName=rows[i].name,oldUpdated=rows[i].updatedAt;g.setName(name);try{calendarsSheet_().getRange(i+2,2).setValue(name);calendarsSheet_().getRange(i+2,7).setValue(new Date().toISOString());}catch(err){try{g.setName(old);calendarsSheet_().getRange(i+2,2).setValue(oldName);calendarsSheet_().getRange(i+2,7).setValue(oldUpdated);}catch(_){}throw err;}ACTIVE_CALENDAR_NAME_=name;return{ok:true,calendarName:name};}
-function changeCalendarMember_(body,user,remove){const a=setCalendarContext_(body,user,'manageMembers'),username=String(body.username||'').trim(),account=loadUsers_().find(u=>u.username.toLowerCase()===username.toLowerCase());if(!account)throw new Error('MEMBER_NOT_REGISTERED');const identity=account.username;if(identity.toLowerCase()===a.calendar.ownerEmail.toLowerCase()||identity.toLowerCase()===String(user).toLowerCase())throw new Error('OWNER_MEMBER_LOCKED');const sheet=membersSheet_(),members=calendarMemberRows_(),i=members.findIndex(m=>m.calendarId===a.calendar.calendarId&&m.email.toLowerCase()===identity.toLowerCase()),now=new Date().toISOString(),g=CalendarApp.getCalendarById(a.calendar.googleCalendarId);if(!g)throw new Error('CALENDAR_NOT_FOUND');const isEmail=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identity);if(remove){if(isEmail)g.removeViewer(identity);try{if(i>=0){sheet.getRange(i+2,4).setValue('REMOVED');sheet.getRange(i+2,5).setValue(now);}}catch(err){try{if(isEmail)g.addViewer(identity);}catch(_){}throw err;}return{ok:true};}const role=validateCalendarRole_(body.role);if(isEmail)g.addViewer(identity);try{if(i<0)sheet.appendRow([a.calendar.calendarId,identity,role,'ACTIVE',now]);else sheet.getRange(i+2,3,1,3).setValues([[role,'ACTIVE',now]]);}catch(err){try{if(i<0){if(isEmail)g.removeViewer(identity);}else{const previousRole=members[i].role;if(isEmail)previousRole==='reader'?g.addViewer(identity):g.addEditor(identity);sheet.getRange(i+2,3,1,3).setValues([[previousRole,'ACTIVE',members[i].updatedAt]]);}}catch(_){}throw err;}return{ok:true,username:identity,role,googleCalendarRole:isEmail?'reader':'none'};}
+function createCalendar_(body,user){const name=validateCalendarName_(body.name),lock=LockService.getScriptLock();if(!lock.tryLock(5000))throw new Error('BUSY_RETRY');let g,created=[];try{g=CalendarApp.createCalendar(name);const id='cal-'+Utilities.getUuid(),now=new Date().toISOString(),ownerEmail=String(user).toLowerCase()===CONFIG.INITIAL_OWNER_USERNAME?CONFIG.INITIAL_OWNER_EMAIL:user;const agendaRow=[id,name,g.getId(),ownerEmail,'ACTIVE',now,now];persistTypedRow_('Agendas',agendaRow);created.push(['Agendas',id]);const identities=[user];if(ownerEmail!==user)identities.push(ownerEmail);for(const identity of identities){persistTypedRow_('CalendarMembers',[id,identity,'owner','ACTIVE',now]);created.push(['CalendarMembers',calendarMemberRecordId_(id,identity)]);}return{ok:true,calendar:{calendarId:id,name,role:'owner'}};}catch(err){for(let i=created.length-1;i>=0;i--){const item=normalizedTypedRows_(created[i][0]).find(x=>x.entityId===created[i][1]);if(item)tombstoneTypedRow_(item);}if(g)try{g.deleteCalendar();}catch(_){}throw err;}finally{lock.releaseLock();}}
+function renameCalendar_(body,user){const a=setCalendarContext_(body,user,'renameCalendar'),name=validateCalendarName_(body.name),rows=calendarRows_(),prior=rows.find(c=>c.calendarId===a.calendar.calendarId),g=CalendarApp.getCalendarById(a.calendar.googleCalendarId);if(!prior||!g)throw new Error('CALENDAR_NOT_FOUND');const old=g.getName(),now=new Date().toISOString();g.setName(name);try{persistTypedRow_('Agendas',[prior.calendarId,name,prior.googleCalendarId,prior.ownerEmail,prior.status,prior.createdAt,now]);}catch(err){try{g.setName(old);}catch(_){}throw err;}ACTIVE_CALENDAR_NAME_=name;return{ok:true,calendarName:name};}
+function changeCalendarMember_(body,user,remove){const a=setCalendarContext_(body,user,'manageMembers'),username=String(body.username||'').trim(),account=loadUsers_().find(u=>u.username.toLowerCase()===username.toLowerCase());if(!account)throw new Error('MEMBER_NOT_REGISTERED');const identity=account.username;if(identity.toLowerCase()===a.calendar.ownerEmail.toLowerCase()||identity.toLowerCase()===String(user).toLowerCase())throw new Error('OWNER_MEMBER_LOCKED');const members=calendarMemberRows_(),i=members.findIndex(m=>m.calendarId===a.calendar.calendarId&&m.email.toLowerCase()===identity.toLowerCase()),now=new Date().toISOString(),g=CalendarApp.getCalendarById(a.calendar.googleCalendarId);if(!g)throw new Error('CALENDAR_NOT_FOUND');const isEmail=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identity);if(remove){if(isEmail)g.removeViewer(identity);try{if(i>=0)persistTypedRow_('CalendarMembers',[a.calendar.calendarId,identity,members[i].role,'REMOVED',now]);}catch(err){try{if(isEmail)g.addViewer(identity);}catch(_){}throw err;}return{ok:true};}const role=validateCalendarRole_(body.role);if(isEmail)g.addViewer(identity);try{persistTypedRow_('CalendarMembers',[a.calendar.calendarId,identity,role,'ACTIVE',now]);}catch(err){try{if(isEmail)g.removeViewer(identity);}catch(_){}throw err;}return{ok:true,username:identity,role,googleCalendarRole:isEmail?'reader':'none'};}
 function listAppUsers_(body,user){setCalendarContext_(body,user,'listAppUsers');const current=String(user).toLowerCase();return{ok:true,users:loadUsers_().filter(u=>u.username.toLowerCase()!==current).map(u=>({username:u.username}))};}
 function normalizeAppUserInput_(input){const username=String(input&&input.username||'').trim(),password=String(input&&input.password||'');if(!username||username.length>254||/[\u0000-\u001f\u007f]/.test(username)||!password||password.length>200)throw new Error('INVALID_APP_USER');return{username,password};}
-function createAppUser_(body,user){setCalendarContext_(body,user,'createAppUser');const account=normalizeAppUserInput_(body),lock=LockService.getScriptLock();if(!lock.tryLock(5000))throw new Error('BUSY_RETRY');try{limpiarCacheUsuarios();if(loadUsers_().some(u=>u.username.toLowerCase()===account.username.toLowerCase()))throw new Error('APP_USER_EXISTS');const sheet=SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID).getSheetByName(CONFIG.USERS_SHEET);if(!sheet)throw new Error('USERS_SHEET_NOT_FOUND');sheet.appendRow([account.username,account.password]);limpiarCacheUsuarios();return{ok:true,username:account.username};}finally{lock.releaseLock();}}
+function createAppUser_(body,user){setCalendarContext_(body,user,'createAppUser');const account=normalizeAppUserInput_(body),lock=LockService.getScriptLock();if(!lock.tryLock(5000))throw new Error('BUSY_RETRY');try{limpiarCacheUsuarios();if(loadUsers_().some(u=>u.username.toLowerCase()===account.username.toLowerCase()))throw new Error('APP_USER_EXISTS');const username=account.username,mail=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(username)?username:'',sheet=agendaBook_().getSheetByName(CONFIG.USERS_SHEET);if(!sheet)throw new Error('USERS_SHEET_NOT_FOUND');sheet.appendRow([username,account.password,'user','[]',mail,username,'']);limpiarCacheUsuarios();return{ok:true,username};}finally{lock.releaseLock();}}
 function calendarAclHttpStatus_(err){const values=[err&&err.status,err&&err.statusCode,err&&err.code,err&&err.details&&err.details.code,err&&err.response&&err.response.status,err&&err.response&&err.response.statusCode,err&&err.response&&err.response.data&&err.response.data.error&&err.response.data.error.code];for(const value of values){const status=Number(value);if(status>=400&&status<600)return status;}const message=String(err&&err.message||err||'');return Number(message.match(/(?:http(?:\s+status)?|status|response code|error)\s*[:=]?\s*(4\d\d|5\d\d)\b/i)?.[1])||0;}
 function calendarAclErrorCode_(err,operation){const message=String(err&&err.message||err||'').toLowerCase(),status=calendarAclHttpStatus_(err);if(/api.{0,40}(not enabled|disabled)|access not configured|has not been used|service.{0,30}disabled|calendar api.{0,40}(disabled|not enabled)|google calendar api.{0,40}(disabled|not enabled)/.test(message))return'CALENDAR_API_DISABLED';if(status===401)return'CALENDAR_AUTH_REQUIRED';if(status===403||/insufficient permission|forbidden|not authorized|not authorised|must be (an )?owner|permission denied|access denied|insufficientpermissions|\b403\b|http\s*403/.test(message))return'CALENDAR_PERMISSION_DENIED';if(status===404)return'CALENDAR_NOT_FOUND';if(status===429)return'CALENDAR_RATE_LIMITED';if(status>=500)return'CALENDAR_API_UNAVAILABLE';if(/already exists|duplicate|\b409\b|already shared|user.{0,40}(already|exists)|acl.{0,40}(already|exists)/.test(message))return'CALENDAR_ACCESS_ALREADY_EXISTS';return operation==='lookup'?'CALENDAR_INVITATION_LOOKUP_FAILED':'INVITATION_FAILED';}
 function findCalendarAclRule_(calendarId,email){let pageToken='';do{const result=Calendar.Acl.list(calendarId,{maxResults:250,...(pageToken?{pageToken}:{})}),items=result.items||[],match=items.find(rule=>rule.scope&&rule.scope.type==='user'&&String(rule.scope.value||'').toLowerCase()===email);if(match)return match;pageToken=result.nextPageToken||'';}while(pageToken);return null;}
-function inviteCalendarEmail_(body,user){const a=setCalendarContext_(body,user,'inviteCalendarEmail'),email=validateMemberEmail_(body.email),members=calendarMemberRows_(),i=members.findIndex(m=>m.calendarId===a.calendar.calendarId&&m.email.toLowerCase()===email&&m.status==='ACTIVE');if(String(a.calendar.ownerEmail||'').toLowerCase()===email||members.some(m=>m.calendarId===a.calendar.calendarId&&m.email.toLowerCase()===email&&m.role==='owner'&&m.status==='ACTIVE'))throw new Error('OWNER_MEMBER_LOCKED');const lock=LockService.getScriptLock();if(!lock.tryLock(5000))throw new Error('BUSY_RETRY');try{if(loadUsers_().some(u=>u.username.toLowerCase()===email))throw new Error('APP_USER_ALREADY_REGISTERED');const fresh=calendarMemberRows_(),existing=fresh.findIndex(m=>m.calendarId===a.calendar.calendarId&&m.email.toLowerCase()===email&&m.status==='ACTIVE');if(existing>=0)return{ok:true,email,alreadyInvited:true};let aclRule;try{aclRule=findCalendarAclRule_(a.calendar.googleCalendarId,email);}catch(err){const code=calendarAclErrorCode_(err,'lookup');console.error(JSON.stringify({event:'calendar_acl_lookup_failed',code,status:calendarAclHttpStatus_(err)}));throw new Error(code);}if(aclRule&&aclRule.role!=='none'){const row=fresh.findIndex(m=>m.calendarId===a.calendar.calendarId&&m.email.toLowerCase()===email);if(row<0)membersSheet_().appendRow([a.calendar.calendarId,email,aclRule.role,'ACTIVE',new Date().toISOString()]);return{ok:true,email,alreadyInvited:true,existingAccessRole:aclRule.role};}const sheet=membersSheet_(),at=fresh.findIndex(m=>m.calendarId===a.calendar.calendarId&&m.email.toLowerCase()===email);let calendar;try{calendar=aclRule?Calendar.Acl.update({role:'reader',scope:aclRule.scope},a.calendar.googleCalendarId,aclRule.id,{sendNotifications:true}):Calendar.Acl.insert({role:'reader',scope:{type:'user',value:email}},a.calendar.googleCalendarId,{sendNotifications:true});}catch(err){const code=calendarAclErrorCode_(err,'insert');if(code==='CALENDAR_ACCESS_ALREADY_EXISTS'){try{const current=findCalendarAclRule_(a.calendar.googleCalendarId,email);if(current&&current.role!=='none'){const row=fresh.findIndex(m=>m.calendarId===a.calendar.calendarId&&m.email.toLowerCase()===email);if(row<0)sheet.appendRow([a.calendar.calendarId,email,current.role,'ACTIVE',new Date().toISOString()]);return{ok:true,email,alreadyInvited:true,existingAccessRole:current.role};}}catch(_){} }throw new Error(code);}try{if(at<0)sheet.appendRow([a.calendar.calendarId,email,'reader','ACTIVE',new Date().toISOString()]);else sheet.getRange(at+2,3,1,3).setValues([['reader','ACTIVE',new Date().toISOString()]]);}catch(err){try{if(aclRule)Calendar.Acl.update({role:aclRule.role,scope:aclRule.scope},a.calendar.googleCalendarId,aclRule.id);else Calendar.Acl.remove(a.calendar.googleCalendarId,email);}catch(rollback){throw new Error('INVITATION_STATE_PARTIAL');}throw err;}return{ok:true,email,invitationSent:true,role:calendar.role||'reader'};}finally{lock.releaseLock();}}
-function removeCalendarInvite_(body,user){const a=setCalendarContext_(body,user,'removeCalendarInvite'),email=validateMemberEmail_(body.email),sheet=membersSheet_(),members=calendarMemberRows_(),i=members.findIndex(m=>m.calendarId===a.calendar.calendarId&&m.email.toLowerCase()===email&&m.status==='ACTIVE');if(i<0)throw new Error('INVITATION_NOT_FOUND');const lock=LockService.getScriptLock();if(!lock.tryLock(5000))throw new Error('BUSY_RETRY');try{if(loadUsers_().some(u=>u.username.toLowerCase()===email))throw new Error('APP_USER_ALREADY_REGISTERED');const rule=findCalendarAclRule_(a.calendar.googleCalendarId,email);if(rule&&rule.role==='owner')throw new Error('OWNER_MEMBER_LOCKED');if(rule){try{Calendar.Acl.remove(a.calendar.googleCalendarId,rule.id);}catch(err){const code=calendarAclErrorCode_(err,'remove');console.error(JSON.stringify({event:'calendar_acl_remove_failed',code,status:calendarAclHttpStatus_(err)}));throw new Error(code==='CALENDAR_PERMISSION_DENIED'?code:'INVITATION_REVOKE_FAILED');}}try{sheet.getRange(i+2,4,1,2).setValues([['REMOVED',new Date().toISOString()]]);}catch(err){if(rule)try{Calendar.Acl.insert({role:rule.role,scope:rule.scope},a.calendar.googleCalendarId);}catch(rollback){throw new Error('INVITATION_STATE_PARTIAL');}throw err;}return{ok:true,email};}finally{lock.releaseLock();}}
+function inviteCalendarEmail_(body,user){const a=setCalendarContext_(body,user,'inviteCalendarEmail'),email=validateMemberEmail_(body.email),members=calendarMemberRows_();if(String(a.calendar.ownerEmail||'').toLowerCase()===email||members.some(m=>m.calendarId===a.calendar.calendarId&&m.email.toLowerCase()===email&&m.role==='owner'&&m.status==='ACTIVE'))throw new Error('OWNER_MEMBER_LOCKED');const lock=LockService.getScriptLock();if(!lock.tryLock(5000))throw new Error('BUSY_RETRY');try{if(loadUsers_().some(u=>u.username.toLowerCase()===email))throw new Error('APP_USER_ALREADY_REGISTERED');const fresh=calendarMemberRows_(),existing=fresh.find(m=>m.calendarId===a.calendar.calendarId&&m.email.toLowerCase()===email&&m.status==='ACTIVE');if(existing)return{ok:true,email,alreadyInvited:true};let aclRule;try{aclRule=findCalendarAclRule_(a.calendar.googleCalendarId,email);}catch(err){const code=calendarAclErrorCode_(err,'lookup');console.error(JSON.stringify({event:'calendar_acl_lookup_failed',code,status:calendarAclHttpStatus_(err)}));throw new Error(code);}if(aclRule&&aclRule.role!=='none'){if(!fresh.some(m=>m.calendarId===a.calendar.calendarId&&m.email.toLowerCase()===email))persistTypedRow_('CalendarMembers',[a.calendar.calendarId,email,aclRule.role,'ACTIVE',new Date().toISOString()]);return{ok:true,email,alreadyInvited:true,existingAccessRole:aclRule.role};}let result;try{result=aclRule?Calendar.Acl.update({role:'reader',scope:aclRule.scope},a.calendar.googleCalendarId,aclRule.id,{sendNotifications:true}):Calendar.Acl.insert({role:'reader',scope:{type:'user',value:email}},a.calendar.googleCalendarId,{sendNotifications:true});}catch(err){const code=calendarAclErrorCode_(err,'insert');if(code==='CALENDAR_ACCESS_ALREADY_EXISTS'){try{const current=findCalendarAclRule_(a.calendar.googleCalendarId,email);if(current&&current.role!=='none'){persistTypedRow_('CalendarMembers',[a.calendar.calendarId,email,current.role,'ACTIVE',new Date().toISOString()]);return{ok:true,email,alreadyInvited:true,existingAccessRole:current.role};}}catch(_){} }throw new Error(code);}try{persistTypedRow_('CalendarMembers',[a.calendar.calendarId,email,'reader','ACTIVE',new Date().toISOString()]);}catch(err){try{if(aclRule)Calendar.Acl.update({role:aclRule.role,scope:aclRule.scope},a.calendar.googleCalendarId,aclRule.id);else Calendar.Acl.remove(a.calendar.googleCalendarId,email);}catch(rollback){throw new Error('INVITATION_STATE_PARTIAL');}throw err;}return{ok:true,email,invitationSent:true,role:result.role||'reader'};}finally{lock.releaseLock();}}
+function removeCalendarInvite_(body,user){const a=setCalendarContext_(body,user,'removeCalendarInvite'),email=validateMemberEmail_(body.email),members=calendarMemberRows_(),member=members.find(m=>m.calendarId===a.calendar.calendarId&&m.email.toLowerCase()===email&&m.status==='ACTIVE');if(!member)throw new Error('INVITATION_NOT_FOUND');const lock=LockService.getScriptLock();if(!lock.tryLock(5000))throw new Error('BUSY_RETRY');try{if(loadUsers_().some(u=>u.username.toLowerCase()===email))throw new Error('APP_USER_ALREADY_REGISTERED');const rule=findCalendarAclRule_(a.calendar.googleCalendarId,email);if(rule&&rule.role==='owner')throw new Error('OWNER_MEMBER_LOCKED');if(rule){try{Calendar.Acl.remove(a.calendar.googleCalendarId,rule.id);}catch(err){const code=calendarAclErrorCode_(err,'remove');console.error(JSON.stringify({event:'calendar_acl_remove_failed',code,status:calendarAclHttpStatus_(err)}));throw new Error(code==='CALENDAR_PERMISSION_DENIED'?code:'INVITATION_REVOKE_FAILED');}}try{persistTypedRow_('CalendarMembers',[a.calendar.calendarId,email,member.role,'REMOVED',new Date().toISOString()]);}catch(err){if(rule)try{Calendar.Acl.insert({role:rule.role,scope:rule.scope},a.calendar.googleCalendarId);}catch(rollback){throw new Error('INVITATION_STATE_PARTIAL');}throw err;}return{ok:true,email};}finally{lock.releaseLock();}}
 function listCalendarMembers_(body,user){const a=setCalendarContext_(body,user,'listCalendarMembers'),users=loadUsers_().map(u=>u.username.toLowerCase());return{ok:true,members:calendarMemberRows_().filter(m=>m.calendarId===a.calendar.calendarId&&m.status==='ACTIVE'&&m.role!=='owner').map(m=>({username:m.email,role:m.role,kind:users.includes(m.email.toLowerCase())?'account':'invite'}))};}
 
 function bootstrapCalendar_(body,user){ensureLegacyCalendar_(user);const calendars=listCalendars_(user);if(!calendars.length)throw new Error('CALENDAR_ACCESS_DENIED');const selected=String(body.calendarId||''),calendar=calendars.find(c=>c.calendarId===selected)||calendars[0];setCalendarContext_({calendarId:calendar.calendarId},user,'list');const result=listEvents_(body);return{ok:true,calendars,calendarId:calendar.calendarId,calendarName:calendarDisplayName_(),records:result.records||[],groups:listGroups_()};}
@@ -353,28 +391,22 @@ function requireSession_(token) {
 }
 function credentialTag_(user){return sign_('credential:'+user.username+':'+user.pass);}
 function loadUsers_(){
-  const cache=CacheService.getScriptCache(),key='auth:users:v2',hit=cache.get(key);
-  if(hit)return JSON.parse(hit);
-  const sheet=SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID).getSheetByName(CONFIG.USERS_SHEET);
-  if(!sheet)throw new Error('USERS_SHEET_NOT_FOUND');
-  const last=sheet.getLastRow();
-  const values=last?sheet.getRange(1,1,last,2).getDisplayValues():[];
-  if(!values.length||!['mail','usuario'].includes(String(values[0][0]).toLowerCase())||values[0][1]!=='pass')throw new Error('USERS_SHEET_INVALID');
+  requireNormalizedAgenda_();
+  const cache=CacheService.getScriptCache(),key='auth:users:v3',hit=cache.get(key);if(hit)return JSON.parse(hit);
+  const sheet=agendaBook_().getSheetByName(CONFIG.USERS_SHEET);if(!sheet)throw new Error('USERS_SHEET_NOT_FOUND');
+  const last=sheet.getLastRow(),values=last?sheet.getRange(1,1,last,7).getDisplayValues():[];
+  if(!values.length||values[0].join('|')!=='usuario|pass|rol|alcances|mail|nombre|docenteId')throw new Error('USERS_SHEET_INVALID');
   const users=[],seen=new Set();
-  values.slice(1).forEach(row=>{
-    const username=String(row[0]||'').trim(),pass=String(row[1]||'');
-    if(!username&&!pass)return;
-    if(!username||username.length>254||/[\u0000-\u001F\u007F]/.test(username)||pass.length<1||pass.length>200)throw new Error('USERS_SHEET_INVALID');
-    if(users.length>=200)throw new Error('USERS_SHEET_INVALID');
-    const normalized=username.toLowerCase();
-    if(seen.has(normalized))throw new Error('USERS_SHEET_INVALID');
-    seen.add(normalized);users.push({username,pass});
-  });
-  if(users.length>200)throw new Error('USERS_SHEET_INVALID');
-  cache.put(key,JSON.stringify(users),15);
-  return users;
+  for(const row of values.slice(1)){
+    const username=String(row[0]||'').trim(),pass=String(row[1]||'');if(!username&&!pass)continue;
+    if(!username||username.length>254||/[\u0000-\u001F\u007F]/.test(username)||pass.length<1||pass.length>200||users.length>=200)throw new Error('USERS_SHEET_INVALID');
+    const normalized=username.toLowerCase();if(seen.has(normalized))throw new Error('USERS_SHEET_INVALID');
+    let scopes;try{scopes=JSON.parse(row[3]||'[]');}catch(_){throw new Error('USERS_SHEET_INVALID');}if(!Array.isArray(scopes))throw new Error('USERS_SHEET_INVALID');
+    seen.add(normalized);users.push({username,pass,role:String(row[2]||'user'),scopes,email:String(row[4]||''),name:String(row[5]||''),teacherId:String(row[6]||'')});
+  }
+  cache.put(key,JSON.stringify(users),15);return users;
 }
-function limpiarCacheUsuarios(){const c=CacheService.getScriptCache();c.remove('auth:users:v1');c.remove('auth:users:v2');}
+function limpiarCacheUsuarios(){const c=CacheService.getScriptCache();c.remove('auth:users:v1');c.remove('auth:users:v2');c.remove('auth:users:v3');}
 function sign_(value) {
   const props = PropertiesService.getScriptProperties();
   let secret = props.getProperty('APP_SESSION_SIGNING_KEY');
@@ -399,7 +431,7 @@ function listEvents_(q) {
   const limit = Math.min(Math.max(Number(q.limit)||100,1),CONFIG.MAX_PAGE_SIZE),month=from.slice(0,7);
   const version = PropertiesService.getScriptProperties().getProperty('DATA_VERSION') || '0';
   if(!ACTIVE_GOOGLE_CALENDAR_||!ACTIVE_CALENDAR_ID_)throw new Error('CALENDAR_REQUIRED');
-  const key = 'events:v2:'+ACTIVE_CALENDAR_ID_+':'+version+':'+month+':'+limit;
+  const key = 'events:v3:'+ACTIVE_CALENDAR_ID_+':'+version+':'+month+':'+limit;
   const cache = CacheService.getScriptCache();
   const hit = cache.get(key);
   if (hit) return JSON.parse(hit);
@@ -439,10 +471,10 @@ function exportEventsPage_(q){
 
 function getEventById_(body){const id=String(body.eventId||'');if(!/^[\w-]{8,80}$/.test(id))throw new Error('INVALID_EVENT_ID');const sheet=dataSheet_(),last=sheet.getLastRow(),rows=last>1?sheet.getRange(2,1,last-1,CONFIG.HEADERS.length).getValues():[],index=rows.findIndex(r=>r[0]===id&&eventBelongsToCalendar_(r));if(index<0)return{ok:true,found:false};return{ok:true,found:true,record:rowObject_(rows[index])};}
 
-function operationSheet_(){const ss=SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);let sh=ss.getSheetByName('SyncOperations');if(!sh){sh=ss.insertSheet('SyncOperations');sh.getRange(1,1,1,8).setValues([['idempotencyKey','requestHash','state','eventId','action','version','updatedAt','calendarId']]);}const expected=['idempotencyKey','requestHash','state','eventId','action','version','updatedAt'];if(sh.getRange(1,1,1,expected.length).getDisplayValues()[0].some((x,i)=>x!==expected[i]))throw new Error('OPERATION_SHEET_INVALID');if(sh.getLastColumn()<8){sh.getRange(1,8).setValue('calendarId');if(sh.getLastRow()>1)sh.getRange(2,8,sh.getLastRow()-1,1).setValue('legacy');}else if(sh.getRange(1,8).getDisplayValue()!=='calendarId')throw new Error('OPERATION_SHEET_INVALID');const n=sh.getLastRow();if(n>1){const ids=sh.getRange(2,1,n-1,1).getDisplayValues(),cal=sh.getRange(2,8,n-1,1).getDisplayValues(),pending=cal.map((r,i)=>[!r[0]&&ids[i][0]?'legacy':r[0]]);sh.getRange(2,8,n-1,1).setValues(pending);}return sh;}
+function operationSheet_(){return legacyAgendaSheet_('SyncOperations');}
 function operationHash_(action,body){const request=JSON.stringify({calendarId:ACTIVE_CALENDAR_ID_,action,eventId:String(body.eventId||''),expectedVersion:Number(body.expectedVersion||0),changes:body.changes||{}});return Utilities.base64EncodeWebSafe(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,request,Utilities.Charset.UTF_8)).replace(/=+$/,'');}
 function beginOperation_(action,body){const key=String(body.idempotencyKey||'');if(!/^[\w-]{8,100}$/.test(key))throw new Error('INVALID_IDEMPOTENCY_KEY');const sh=operationSheet_(),last=sh.getLastRow(),rows=last>1?sh.getRange(2,1,last-1,8).getValues():[],hash=operationHash_(action,body),index=rows.findIndex(r=>r[0]===key&&String(r[7]||'')===ACTIVE_CALENDAR_ID_);if(index>=0){const row=rows[index];if(row[1]!==hash||row[3]!==String(body.eventId||'')||row[4]!==action||String(row[7]||'')!==ACTIVE_CALENDAR_ID_)throw new Error('IDEMPOTENCY_KEY_REUSED');if(row[2]==='DONE')return{done:true,record:{eventId:row[3],version:Number(row[5]||0)}};if(row[2]==='UNKNOWN'||row[2]==='PENDING')throw new Error('OUTCOME_UNKNOWN');const rn=index+2;sh.getRange(rn,3,1,5).setValues([['PENDING',row[3],action,Number(row[5]||0),new Date().toISOString()]]);return{done:false,rowNumber:rn,key,hash};}const rn=last+1;sh.getRange(rn,1,1,8).setValues([[key,hash,'PENDING',String(body.eventId||''),action,Number(body.expectedVersion||0),new Date().toISOString(),ACTIVE_CALENDAR_ID_]]);return{done:false,rowNumber:rn,key,hash};}
-function finishOperation_(op,state,eventId,version){if(!op||op.done)return;operationSheet_().getRange(op.rowNumber,3,1,5).setValues([[state,eventId||'',op.action||'',Number(version||0),new Date().toISOString()]]);}
+function finishOperation_(op,state,eventId,version){if(!op||op.done)return;const row=operationSheet_().getRange(op.rowNumber,1,1,8).getValues()[0];row[2]=state;row[3]=eventId||'';row[4]=op.action||'';row[5]=Number(version||0);row[6]=new Date().toISOString();operationSheet_().getRange(op.rowNumber,1,1,8).setValues([row]);}
 function getOperation_(body){const key=String(body.idempotencyKey||'');if(!/^[\w-]{8,100}$/.test(key))throw new Error('INVALID_IDEMPOTENCY_KEY');const lock=LockService.getScriptLock();if(!lock.tryLock(5000))throw new Error('BUSY_RETRY');try{const sh=operationSheet_(),last=sh.getLastRow(),rows=last>1?sh.getRange(2,1,last-1,8).getValues():[],index=rows.findIndex(x=>x[0]===key&&String(x[7]||'')===ACTIVE_CALENDAR_ID_);if(index<0)return{ok:true,found:false};let r=rows[index];if(r[2]==='PENDING'){const sheet=dataSheet_(),n=sheet.getLastRow(),ids=n>1?sheet.getRange(2,1,n-1,1).getDisplayValues().flat():[],i=ids.indexOf(String(r[3]));if(i>=0){const values=sheet.getRange(i+2,1,1,CONFIG.HEADERS.length).getValues()[0];if(!eventBelongsToCalendar_(values))return{ok:true,found:true,state:r[2],eventId:r[3],version:Number(r[5]||0)};const event=rowObject_(values),expected=Number(r[5]||0),committed=r[4]==='create'?event.status==='ACTIVE'&&Number(event.version)===1:r[4]==='update'?event.status==='ACTIVE'&&Number(event.version)===expected+1:r[4]==='delete'?event.status==='DELETED'&&Number(event.version)===expected+1:false;if(committed){finishOperation_({rowNumber:index+2,action:r[4]},'DONE',r[3],event.version);return{ok:true,found:true,state:'DONE',eventId:r[3],version:Number(event.version)};}}}return{ok:true,found:true,state:r[2],eventId:r[3],version:Number(r[5]||0)};}finally{lock.releaseLock();}}
 
 function mutateEvent_(action, body) {
@@ -594,18 +626,20 @@ function updateCalendarEvent_(id,d,calendarId,oldRecurrence,oldGroupId) {
   return {event,calendarId:calendar.getId()};
 }
 function configValue_(key) {
-  const cache=CacheService.getScriptCache(),cacheKey='calendar:config:v1',hit=cache.get(cacheKey),values=hit?JSON.parse(hit):null;
+  requireNormalizedAgenda_();
+  const cache=CacheService.getScriptCache(),cacheKey='calendar:config:v3',hit=cache.get(cacheKey),values=hit?JSON.parse(hit):null;
   let config=values;
   if(!config){
     const sheet=SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID).getSheetByName('Config');
     if(!sheet)throw new Error('CONFIG_SHEET_NOT_FOUND');
-    config={};sheet.getDataRange().getDisplayValues().slice(1).forEach(row=>{if(row[0])config[String(row[0]).trim()]=String(row[1]||'').trim();});
+    const count=Math.max(0,sheet.getLastRow()-1),rows=count?sheet.getRange(2,1,count,2).getDisplayValues():[];
+    config={};rows.forEach(row=>{if(row[0])config[String(row[0]).trim()]=String(row[1]||'').trim();});
     cache.put(cacheKey,JSON.stringify(config),30);
   }
   return config[key]||'';
 }
 function calendarDisplayName_(){if(!ACTIVE_GOOGLE_CALENDAR_)throw new Error('CALENDAR_REQUIRED');return ACTIVE_CALENDAR_NAME_||activeGoogleCalendar_().getName();}
-function limpiarCacheConfig(){CacheService.getScriptCache().remove('calendar:config:v1');}
+function limpiarCacheConfig(){const c=CacheService.getScriptCache();['calendar:config:v1','calendar:config:v2','calendar:config:v3'].forEach(k=>c.remove(k));}
 function deleteCalendarEvent_(id,calendarId,recurrence) {
   if(!id)return;
   const calendar=calendarId?CalendarApp.getCalendarById(calendarId):activeGoogleCalendar_();
@@ -635,13 +669,7 @@ function validateEvent_(d) {
   const groupId=String(d.groupId||'').trim();if(groupId&&!/^[-\w]{1,80}$/.test(groupId))throw new Error('INVALID_GROUP');if(groupId&&!findGroup_(groupId))throw new Error('GROUP_NOT_FOUND');
   return {title,startAt,endAt,allDay:false,location:String(d.location||'').slice(0,160),description:String(d.description||'').slice(0,1000),recurrence,reminderMinutes,reminderAt,groupId};
 }
-function dataSheet_() {
-  const ss=SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
-  const sheet=ss.getSheetByName(CONFIG.DATA_SHEET);
-  if(!sheet)throw new Error('SHEET_NOT_FOUND');
-  ensureHeaders_(sheet);
-  return sheet;
-}
+function dataSheet_(){return legacyAgendaSheet_('Eventos');}
 function ensureHeaders_(sheet) {
   if(sheet.getLastRow()===0){sheet.getRange(1,1,1,CONFIG.HEADERS.length).setValues([CONFIG.HEADERS]);return;}
   const oldHeaders=CONFIG.HEADERS.slice(0,18),actual=sheet.getRange(1,1,1,Math.min(18,Math.max(sheet.getLastColumn(),15))).getDisplayValues()[0];
@@ -650,20 +678,47 @@ function ensureHeaders_(sheet) {
   const groupHeader=sheet.getRange(1,19).getDisplayValue();if(groupHeader&&groupHeader!=='groupId')throw new Error('HEADER_MISMATCH');if(!groupHeader)sheet.getRange(1,19).setValue('groupId');
 }
 const GROUP_COLORS_={PALE_BLUE:'1',PALE_GREEN:'2',MAUVE:'3',PALE_RED:'4',YELLOW:'5',ORANGE:'6',CYAN:'7',GRAY:'8',BLUE:'9',GREEN:'10',RED:'11'};
-function groupsSheet_(){const ss=SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);let sh=ss.getSheetByName('Grupos');if(!sh){sh=ss.insertSheet('Grupos');sh.getRange(1,1,1,5).setValues([['groupId','name','color','updatedAt','calendarId']]);}const h=sh.getRange(1,1,1,Math.max(4,sh.getLastColumn())).getDisplayValues()[0],expected=['groupId','name','color','updatedAt','calendarId'];if(h.slice(0,4).some((x,i)=>x!==expected[i]))throw new Error('GROUP_SHEET_INVALID');if(h[4]&&h[4]!==expected[4])throw new Error('GROUP_SHEET_INVALID');if(!h[4])sh.getRange(1,5).setValue(expected[4]);return sh;}
-function listGroups_(){if(!ACTIVE_GOOGLE_CALENDAR_)throw new Error('CALENDAR_REQUIRED');const sh=groupsSheet_(),n=sh.getLastRow();if(n<=1)return[];const rows=sh.getRange(2,1,n-1,5).getDisplayValues().filter(r=>r[0]&&groupBelongsToCalendar_(r)),ids=new Set(),names=new Set();return rows.map(r=>{const id=String(r[0]),name=String(r[1]||'').trim(),color=String(r[2]||''),key=name.toLocaleLowerCase();if(!/^[-\w]{1,80}$/.test(id)||!name||name.length>60||!Object.prototype.hasOwnProperty.call(GROUP_COLORS_,color)||ids.has(id)||names.has(key))throw new Error('GROUP_SHEET_INVALID');ids.add(id);names.add(key);return{groupId:id,name,color,updatedAt:r[3]};});}
+function groupsSheet_(){return legacyAgendaSheet_('Grupos');}
+function listGroups_(){if(!ACTIVE_GOOGLE_CALENDAR_)throw new Error('CALENDAR_REQUIRED');const rows=normalizedTypedRows_('Grupos').filter(item=>item.status==='ACTIVE').map(item=>({item,row:normalizedTypedRow_('Grupos',item)})).filter(x=>groupBelongsToCalendar_(x.row)),ids=new Set(),names=new Set();return rows.map(({row:r})=>{const id=String(r[0]),name=String(r[1]||'').trim(),color=String(r[2]||''),key=name.toLocaleLowerCase();if(!/^[-\w]{1,80}$/.test(id)||!name||name.length>60||!Object.prototype.hasOwnProperty.call(GROUP_COLORS_,color)||ids.has(id)||names.has(key))throw new Error('GROUP_SHEET_INVALID');ids.add(id);names.add(key);return{groupId:id,name,color,updatedAt:r[3]};});}
 function findGroup_(id){return listGroups_().find(g=>g.groupId===id)||null;}
 function applyEventGroupColor_(event,groupId,clear=false){if(!groupId){if(clear)event.setColor('0');return;}const group=findGroup_(groupId);if(!group)throw new Error('GROUP_NOT_FOUND');event.setColor(CalendarApp.EventColor[group.color]);}
 function validateGroup_(b){const name=String(b.name||'').trim(),color=String(b.color||'');if(!name||name.length>60||/[\u0000-\u001f\u007f]/.test(name))throw new Error('INVALID_GROUP_NAME');if(!Object.prototype.hasOwnProperty.call(GROUP_COLORS_,color))throw new Error('INVALID_GROUP_COLOR');return{name,color};}
-function saveGroup_(b){const lock=LockService.getScriptLock();if(!lock.tryLock(5000))throw new Error('BUSY_RETRY');try{const {name,color}=validateGroup_(b),id=String(b.groupId||'').trim(),groups=listGroups_(),prior=id?groups.find(g=>g.groupId===id):null;if(id&&!prior)throw new Error('GROUP_NOT_FOUND');if(groups.some(g=>g.groupId!==id&&g.name.toLocaleLowerCase()===name.toLocaleLowerCase()))throw new Error('GROUP_NAME_TAKEN');const groupId=id||Utilities.getUuid(),now=new Date().toISOString(),sheet=groupsSheet_(),raw=sheet.getLastRow()>1?sheet.getRange(2,1,sheet.getLastRow()-1,5).getDisplayValues():[],row=raw.findIndex(r=>r[0]===groupId&&(r[4]===ACTIVE_GOOGLE_CALENDAR_||(!r[4]&&ACTIVE_CALENDAR_ID_==='legacy'))),targetRow=row>=0?row+2:sheet.getLastRow()+1,record={groupId,name,color,updatedAt:now},changed=prior&&prior.color!==color?applyGroupColorToExistingEvents_(groupId,color):[];let wroteGroup=false;try{sheet.getRange(targetRow,1,1,5).setValues([[groupId,name,color,now,ACTIVE_GOOGLE_CALENDAR_]]);wroteGroup=true;incrementDataVersion_();return{ok:true,group:record,groups:listGroups_()};}catch(err){let rollbackFailed=false;try{if(prior)sheet.getRange(targetRow,1,1,5).setValues([[prior.groupId,prior.name,prior.color,prior.updatedAt,ACTIVE_GOOGLE_CALENDAR_]]);else if(wroteGroup||sheet.getRange(targetRow,1).getDisplayValue()===groupId)sheet.deleteRow(targetRow);}catch(_){rollbackFailed=true;}try{restoreEventColors_(changed);}catch(_){rollbackFailed=true;}if(rollbackFailed)throw new Error('PARTIAL_GROUP_UPDATE');throw err;}}finally{lock.releaseLock();}}
+function saveGroup_(b){
+  const lock=LockService.getScriptLock();if(!lock.tryLock(5000))throw new Error('BUSY_RETRY');
+  let changed=[],prior=null,groupId='',before=null,persistAttempted=false;
+  try{
+    const {name,color}=validateGroup_(b),id=String(b.groupId||'').trim(),groups=listGroups_();prior=id?groups.find(g=>g.groupId===id):null;
+    if(id&&!prior)throw new Error('GROUP_NOT_FOUND');
+    if(groups.some(g=>g.groupId!==id&&g.name.toLocaleLowerCase()===name.toLocaleLowerCase()))throw new Error('GROUP_NAME_TAKEN');
+    groupId=id||Utilities.getUuid();const now=new Date().toISOString(),calendarId=ACTIVE_GOOGLE_CALENDAR_;
+    if(prior&&prior.color!==color)changed=applyGroupColorToExistingEvents_(groupId,color);
+    const reg=agendaBook_().getSheetByName('Registros');
+    const old=normalizedTypedRows_('Grupos').find(item=>item.entityId===groupId);
+    before=old?reg.getRange(old.physicalRow,1,1,8).getValues()[0]:null;
+    persistAttempted=true;
+    persistTypedRow_('Grupos',[groupId,name,color,now,calendarId]);
+    return{ok:true,group:{groupId,name,color,updatedAt:now},groups:listGroups_()};
+  }catch(err){
+    let stateRollbackFailed=false;
+    if(persistAttempted&&groupId)try{
+      const reg=agendaBook_().getSheetByName('Registros'),current=normalizedTypedRows_('Grupos').find(item=>item.entityId===groupId);
+      if(before){if(!current)throw new Error('GROUP_STATE_MISSING');reg.getRange(current.physicalRow,1,1,8).setValues([before]);}
+      else if(current)tombstoneTypedRow_(current);
+    }catch(_){stateRollbackFailed=true;}
+    let colorRollbackFailed=false;try{restoreEventColors_(changed);}catch(_){colorRollbackFailed=true;}
+    if(stateRollbackFailed)throw new Error('GROUP_STATE_PARTIAL_FAILURE');
+    if(colorRollbackFailed)throw new Error('GROUP_COLOR_PARTIAL_FAILURE');
+    throw err;
+  }finally{lock.releaseLock();}
+}
 function restoreEventColors_(changed){let failed=false;for(let i=changed.length-1;i>=0;i--)try{changed[i].event.setColor(changed[i].color);}catch(_){failed=true;}if(failed)throw new Error('GROUP_COLOR_PARTIAL_FAILURE');}
 function applyGroupColorToExistingEvents_(groupId,color){const sheet=dataSheet_(),last=sheet.getLastRow(),events=last>1?sheet.getRange(2,1,last-1,CONFIG.HEADERS.length).getValues():[],targets=[];for(const r of events){if(r[8]!=='ACTIVE'||String(r[18]||'')!==groupId||!eventBelongsToCalendar_(r)||!r[13])continue;const calendar=CalendarApp.getCalendarById(String(r[14]||''));if(!calendar)throw new Error('CALENDAR_NOT_FOUND');const recurrence=parseRecurrence_(r[15]),event=recurrence&&recurrence.frequency&&recurrence.frequency!=='none'?calendar.getEventSeriesById(String(r[13])):calendar.getEventById(String(r[13]));if(!event)throw new Error('NOT_FOUND');targets.push({event,color:event.getColor()});}const changed=[];try{for(const target of targets){changed.push(target);target.event.setColor(CalendarApp.EventColor[color]);}return changed;}catch(err){try{restoreEventColors_(changed);}catch(_){throw new Error('GROUP_COLOR_PARTIAL_FAILURE');}throw err;}}
-function deleteGroup_(b){const id=String(b.groupId||'');if(!/^[-\w]{1,80}$/.test(id))throw new Error('INVALID_GROUP');const lock=LockService.getScriptLock();if(!lock.tryLock(5000))throw new Error('BUSY_RETRY');try{const group=findGroup_(id);if(!group)throw new Error('GROUP_NOT_FOUND');const sheet=dataSheet_(),last=sheet.getLastRow(),events=last>1?sheet.getRange(2,1,last-1,CONFIG.HEADERS.length).getDisplayValues():[];if(events.some(r=>r[8]==='ACTIVE'&&r[18]===id&&String(r[14]||'')===ACTIVE_GOOGLE_CALENDAR_))throw new Error('GROUP_IN_USE');const sh=groupsSheet_(),raw=sh.getRange(2,1,sh.getLastRow()-1,5).getDisplayValues(),row=raw.findIndex(r=>r[0]===id&&(r[4]===ACTIVE_GOOGLE_CALENDAR_||(!r[4]&&ACTIVE_CALENDAR_ID_==='legacy')));if(row<0)throw new Error('GROUP_NOT_FOUND');sh.deleteRow(row+2);incrementDataVersion_();return{ok:true,groups:listGroups_()};}finally{lock.releaseLock();}}
+function deleteGroup_(b){const id=String(b.groupId||'');if(!/^[-\w]{1,80}$/.test(id))throw new Error('INVALID_GROUP');const lock=LockService.getScriptLock();if(!lock.tryLock(5000))throw new Error('BUSY_RETRY');try{const group=findGroup_(id);if(!group)throw new Error('GROUP_NOT_FOUND');const sheet=dataSheet_(),last=sheet.getLastRow(),events=last>1?sheet.getRange(2,1,last-1,CONFIG.HEADERS.length).getDisplayValues():[];if(events.some(r=>r[8]==='ACTIVE'&&r[18]===id&&String(r[14]||'')===ACTIVE_GOOGLE_CALENDAR_))throw new Error('GROUP_IN_USE');const record=normalizedTypedRows_('Grupos').find(x=>x.entityId===id);if(!record)throw new Error('GROUP_NOT_FOUND');const row=[id,record.data.name,record.data.color,record.data.updatedAt,record.data.calendarId];row[3]=new Date().toISOString();row.status='DELETED';const reg=agendaBook_().getSheetByName('Registros'),raw=reg.getRange(record.physicalRow,1,1,8).getValues()[0],data=JSON.parse(raw[3]);data.status='DELETED';data.updatedAt=row[3];raw[3]=JSON.stringify(data);raw[4]=Number(raw[4])+1;raw[5]='DELETED';raw[6]=row[3];reg.getRange(record.physicalRow,1,1,8).setValues([raw]);incrementDataVersion_();return{ok:true,groups:listGroups_()};}finally{lock.releaseLock();}}
 function parseRecurrence_(value){if(!value)return {frequency:'none'};if(typeof value==='object')return value;try{return JSON.parse(value);}catch(_){return {frequency:'none'};}}
 function rowObject_(r) { const o={}; CONFIG.HEADERS.forEach((h,i)=>o[h]=r[i] instanceof Date?r[i].toISOString():r[i]);if(CONFIG.HEADERS.includes('recurrence'))o.recurrence=parseRecurrence_(o.recurrence);o.groupId=String(o.groupId||'');return o; }
 function json_(value) { return ContentService.createTextOutput(JSON.stringify(value)).setMimeType(ContentService.MimeType.JSON); }
 function publicError_(err) {
-  const allowed=['CALENDAR_REQUIRED','CALENDAR_NOT_FOUND','CALENDAR_ACCESS_DENIED','CALENDAR_READ_ONLY','CALENDAR_ADMIN_REQUIRED','CALENDAR_BOOTSTRAP_OWNER_REQUIRED','CALENDAR_SHEET_INVALID','CALENDAR_MEMBERS_SHEET_INVALID','CALENDAR_API_DISABLED','CALENDAR_PERMISSION_DENIED','CALENDAR_ACCESS_ALREADY_EXISTS','CALENDAR_INVITATION_LOOKUP_FAILED','INVITATION_FAILED','INVALID_CALENDAR_NAME','INVALID_CALENDAR_ROLE','INVALID_MEMBER_EMAIL','MEMBER_NOT_REGISTERED','OWNER_MEMBER_LOCKED','INVALID_APP_USER','APP_USER_EXISTS','APP_USER_ALREADY_REGISTERED','INVITATION_NOT_FOUND','INVITATION_REVOKE_FAILED','INVITATION_STATE_PARTIAL','INVALID_ACTION','SYNC_REQUIRED','INVALID_IDEMPOTENCY_KEY','IDEMPOTENCY_KEY_REUSED','OUTCOME_UNKNOWN','OPERATION_SHEET_INVALID','DATABASE_SCHEMA_MISMATCH','DATABASE_SCHEMA_MISSING','DATABASE_SCHEMA_NAME_COLLISION','READABLE_VIEW_SCHEMA_MISMATCH','DATABASE_OWNER_REQUIRED','RESET_CONFIRMATION_REQUIRED','RESET_BACKUP_REQUIRED','INVALID_FROM','INVALID_CURSOR','EXPORT_CHANGED','BUSY_RETRY','INVALID_RECURRENCE','INVALID_REMINDER','INVALID_EVENT_ID','INVALID_EVENT','INVALID_GROUP','GROUP_NOT_FOUND','GROUP_IN_USE','INVALID_GROUP_NAME','INVALID_GROUP_COLOR','GROUP_NAME_TAKEN','GROUP_COLOR_PARTIAL_FAILURE','PARTIAL_GROUP_UPDATE','GROUP_SHEET_INVALID','INVALID_BATCH','NOT_FOUND','CONFLICT','SHEET_NOT_FOUND','CONFIG_SHEET_NOT_FOUND','CALENDAR_NOT_FOUND','USERS_SHEET_NOT_FOUND','USERS_SHEET_INVALID','INVALID_CREDENTIALS','UNAUTHORIZED','SESSION_EXPIRED'];
+  const allowed=['CALENDAR_REQUIRED','CALENDAR_NOT_FOUND','CALENDAR_ACCESS_DENIED','CALENDAR_READ_ONLY','CALENDAR_ADMIN_REQUIRED','CALENDAR_BOOTSTRAP_OWNER_REQUIRED','CALENDAR_SHEET_INVALID','CALENDAR_MEMBERS_SHEET_INVALID','CALENDAR_API_DISABLED','CALENDAR_PERMISSION_DENIED','CALENDAR_ACCESS_ALREADY_EXISTS','CALENDAR_INVITATION_LOOKUP_FAILED','INVITATION_FAILED','INVALID_CALENDAR_NAME','INVALID_CALENDAR_ROLE','INVALID_MEMBER_EMAIL','MEMBER_NOT_REGISTERED','OWNER_MEMBER_LOCKED','INVALID_APP_USER','APP_USER_EXISTS','APP_USER_ALREADY_REGISTERED','INVITATION_NOT_FOUND','INVITATION_REVOKE_FAILED','INVITATION_STATE_PARTIAL','INVALID_ACTION','SYNC_REQUIRED','INVALID_IDEMPOTENCY_KEY','IDEMPOTENCY_KEY_REUSED','OUTCOME_UNKNOWN','OPERATION_SHEET_INVALID','DATABASE_SCHEMA_MISMATCH','DATABASE_SCHEMA_MISSING','DATABASE_RESET_REQUIRED','INVALID_DATABASE_TABLE','INVALID_DATABASE_RECORD','DATABASE_RECORD_NOT_FOUND','DATABASE_RECORD_EXISTS','DATABASE_RECORD_DELETED','DATABASE_ADMIN_MISSING','DATABASE_RANGE_WRITE_UNSUPPORTED','READABLE_VIEW_SCHEMA_MISMATCH','DATABASE_OWNER_REQUIRED','RESET_CONFIRMATION_REQUIRED','RESET_BACKUP_REQUIRED','INVALID_FROM','INVALID_CURSOR','EXPORT_CHANGED','BUSY_RETRY','INVALID_RECURRENCE','INVALID_REMINDER','INVALID_EVENT_ID','INVALID_EVENT','INVALID_GROUP','GROUP_NOT_FOUND','GROUP_IN_USE','INVALID_GROUP_NAME','INVALID_GROUP_COLOR','GROUP_NAME_TAKEN','GROUP_COLOR_PARTIAL_FAILURE','GROUP_STATE_PARTIAL_FAILURE','PARTIAL_GROUP_UPDATE','GROUP_SHEET_INVALID','INVALID_BATCH','NOT_FOUND','CONFLICT','SHEET_NOT_FOUND','CONFIG_SHEET_NOT_FOUND','CALENDAR_NOT_FOUND','USERS_SHEET_NOT_FOUND','USERS_SHEET_INVALID','INVALID_CREDENTIALS','UNAUTHORIZED','SESSION_EXPIRED'];
   return allowed.includes(err.message)?err.message:'INTERNAL_ERROR';
 }
 
