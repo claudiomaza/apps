@@ -19,7 +19,7 @@ function runAgendaMaintenance(action, payload) {
   if (!['repairSchema', 'refreshReadableViews', 'resetDatabase'].includes(action)) throw new Error('INVALID_ACTION');
   const request = payload || {};
   if (typeof request.sessionToken !== 'string' || !request.sessionToken) throw new Error('UNAUTHORIZED');
-  if (action === 'resetDatabase' && (request.confirmation !== 'RESETEAR' || request.backupConfirmed !== true)) throw new Error('RESET_CONFIRMATION_REQUIRED');
+  if (action === 'resetDatabase' && (request.confirmation !== 'RESET' || request.backupConfirmed !== true)) throw new Error('RESET_CONFIRMATION_REQUIRED');
   const response = UrlFetchApp.fetch(AGENDA_BACKEND_URL, {
     method: 'post',
     contentType: 'text/plain;charset=utf-8',
