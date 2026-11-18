@@ -1,20 +1,13 @@
-# Agenda AIO (All-in-One)
+# Agenda AIO (HtmlService)
 
-Frontend autónomo de Agenda servido desde un **proyecto Apps Script frontend separado**. La interfaz está integrada en `Agenda.html.md`; el `Code.gs` de este proyecto solo entrega la página y la dirige al backend Apps Script vigente.
+Frontend autónomo servido desde un **segundo proyecto Apps Script**. El backend canónico sigue siendo `../Code.gs`, el Apps Script vinculado a la planilla. El proyecto AIO no lo duplica.
 
-- `Agenda.html.md`: HTML completo para pegar en el archivo `Agenda` del proyecto frontend nuevo.
-- `Code.gs.md`: `doGet` mínimo del proyecto frontend; el endpoint se abre para mostrar la UI, no es API.
-- `PUBLICAR-SOLO-APPS-SCRIPT.md`: instrucciones para crear y desplegar esa UI independiente.
-- `appsscript.json.md`: manifiesto mínima del proyecto UI (solo `script.external_request`).
-- `standalone-html.test.js`: verifica HTML, assets, integridad de Excel, separación del backend y sintaxis JS.
+- `Agenda.html.md`: HTML autocontenido para crear el archivo HTML `Agenda` del proyecto UI.
+- `Render.gs`: renderer servidor AIO y proxy allowlist de mantenimiento. Copiarlo como `Render.gs` en el proyecto UI; no es backend y no define `doPost`.
+- `appsscript.json.md`: manifiesto mínimo del proyecto UI (`script.external_request` solamente).
+- `PUBLICAR-SOLO-APPS-SCRIPT.md`: pasos de creación y publicación del proyecto UI y límites.
+- `standalone-html.test.js`: valida bundle/assets, `Render.gs`, separación respecto del backend y sintaxis.
 
-**No** copiar ni modificar desde aquí el backend, su `doGet`/`doPost`, manifiesto, scopes ni deploy vigente. La comprobación en HtmlService y la comunicación desde el origen nuevo hacia el backend (CORS, permisos, login y una operación QA) siguen pendientes: este paquete no implica migración ni despliegue.
+El backend único y canónico vive en `agenda/apps-script/Code.gs`; sus scopes/API/permisos se administran ahí. Pages y AIO llaman al backend común. Publicar archivos no despliega Apps Script ni cambia la planilla. El proyecto AIO, el backend vinculado y Pages se despliegan independientemente.
 
-
-El Sheet vinculado puede abrir esta UI desde el menú «Agenda → Iniciar app». El launcher está en el `Code.gs` del backend versionado y lee `AGENDA_AIO_WEB_APP_URL` desde Script Properties; requiere desplegar el backend vinculado y configurar el `/exec` AIO. No se activa por subir archivos a GitHub.
-
-
-Cuando el usuario inicial autenticado `cmaza` está en una sesión, la UI ofrece «Mantenimiento del Sheet»: reparación sin borrar datos, actualización de vistas legibles o RESET con doble confirmación. Esas acciones se hacen por el backend vinculado; el `Code.gs` de esta carpeta sigue siendo solo el renderer HtmlService.
-
-
-El proxy de mantenimiento en `Code.gs.md` necesita solo `script.external_request`; `appsscript.json.md` da el manifiesto mínimo del frontend. No incorporar en este segundo proyecto los scopes Calendar/Sheets del backend.
+El renderer AIO no accede directamente a Sheets ni Calendar. Reenvía las acciones de mantenimiento autorizadas al backend; la autorización efectiva permanece en el backend. No copiar los scopes de Calendar/Sheets al manifiesto AIO.

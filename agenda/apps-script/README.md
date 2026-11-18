@@ -1,11 +1,10 @@
 # Agenda — Apps Script
 
-- `Code.gs`: backend vinculado al Sheet. Conserva `doGet` de estado y `doPost` API; incluye el menú **Agenda → Iniciar app** que abre el AIO en otra pestaña.
-- `appsscript.json`: scopes y servicio avanzado del backend vigente; `script.container.ui` habilita el menú/diálogos del Sheet.
-- [`aio/`](./aio/): frontend autónomo para desplegar como **segundo proyecto Apps Script**; no sustituye al backend.
-- `sheet-launcher.test.js`: contrato del menú, URL validada y preservación de endpoints. `agenda-database-maintenance.test.js`: vistas derivadas, redacción de credenciales y gates de reset.
+- [`Code.gs`](./Code.gs): backend canónico único, vinculado al Sheet. Conserva `doGet` de estado y `doPost` API; contiene autenticación, permisos, operaciones Calendar/Sheets, mantenimiento y el menú **Agenda → Iniciar app**.
+- [`appsscript.json`](./appsscript.json): manifiesto/scopes del backend vigente; los scopes Calendar/Sheets y `script.container.ui` pertenecen a este proyecto.
+- [`aio/`](./aio/): fuentes complementarias para un **segundo proyecto Apps Script renderer**: HTML, `Render.gs`, manifiesto mínimo, guía e integridad/tests. `Render.gs` no sustituye ni duplica el backend `Code.gs`.
+- Tests del backend: `sheet-launcher.test.js`, `agenda-database-maintenance.test.js`, `multi-calendar.test.js`, `calendar-invitation.test.js` y `multi-calendar-ui.test.js`.
 
-Para operar el launcher, desplegar el código vinculado y configurar la propiedad de script `AGENDA_AIO_WEB_APP_URL` con el URL `/exec` del AIO. Esto todavía requiere probarse en QA; publicar el repositorio no activa el menú en la planilla.
+Para abrir el renderer desde el Sheet, el launcher del backend lee `AGENDA_AIO_WEB_APP_URL` desde Script Properties. Configurar con el `/exec` del proyecto AIO que se despliega por separado. Publicar GitHub no cambia Apps Script ni activa el menú en la planilla.
 
-
-La estructura de Agenda conserva pestañas operativas normalizadas separadas (no migra a `Registros/dataJson`): Eventos, Config, Usuarios, Agendas, CalendarMembers, Grupos y SyncOperations. El mantenimiento añade seis hojas `* legibles` derivadas; Usuarios legibles nunca copia contraseñas. RESET elimina las hojas y filas, no elimina calendarios/eventos de Google Calendar, y está bloqueado por confirmación de backup/owner. Ver `agenda-database-maintenance.test.js` y la sección de Agenda en el spec común.
+**Estado del esquema:** `main` aún contiene el backend legacy con pestañas operativas separadas. La decisión nueva de normalizar sobre `Registros/dataJson` y RESET sin DB legacy está acordada pero sigue pendiente de implementación completa, pruebas y publicación. Consultar `../agente/agent.md` y `../../SPEC-PERFORMANCE.md`; no inferir que este README significa que el backend activo esté actualizado.
