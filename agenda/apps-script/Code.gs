@@ -11,7 +11,7 @@ const CONFIG = Object.freeze({
   SESSION_SECONDS: 8 * 60 * 60,
   MAX_PAGE_SIZE: 300,
   MAX_BATCH_SIZE: 100,
-  INITIAL_OWNER_USERNAME: 'cmaza',
+  INITIAL_OWNER_USERNAME: 'admin',
   INITIAL_OWNER_EMAIL: 'cmaza@mendoza.edu.ar',
   HEADERS: ['eventId','title','startAt','endAt','allDay','location','description','ownerEmail','status','version','createdAt','updatedAt','deletedAt','calendarEventId','calendarId','recurrence','reminderMinutes','reminderAt','groupId']
 });

@@ -54,6 +54,6 @@ Son pruebas sintéticas/estáticas; no acreditan deployment activo, login real, 
 
 ## RESET y protección de datos
 
-**RESET no forma parte del despliegue ni del smoke test.** Solo Claudio lo ejecuta manualmente, después de crear y verificar un backup y aceptar expresamente la pérdida del esquema/datos de Agenda. La UI exige escribir `RESET` y confirmar en un segundo diálogo. Recrea el esquema normalizado y la cuenta admin inicial; no migra datos legacy ni elimina calendarios/eventos de Google Calendar. La contraseña temporal se muestra una sola vez. No ejecutes RESET para probar el menú, el login ni la publicación.
+**RESET no forma parte del despliegue ni del smoke test.** Solo Claudio lo ejecuta manualmente, después de crear y verificar un backup y aceptar expresamente la pérdida del esquema/datos de Agenda. La UI exige escribir `RESET` y confirmar en un segundo diálogo. Recrea el esquema normalizado y la cuenta inicial con usuario `admin`, correo `cmaza@mendoza.edu.ar` y rol `admin`; genera una contraseña temporal y la muestra una sola vez. No migra datos legacy ni elimina calendarios/eventos de Google Calendar. No ejecutes RESET para probar el menú, el login ni la publicación.
 
 La guía de operación y decisiones está en [`../agente/agent.md`](../agente/agent.md); el spec común es [`../../SPEC-PERFORMANCE.md`](../../SPEC-PERFORMANCE.md).

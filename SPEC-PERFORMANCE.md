@@ -234,5 +234,10 @@ Claudio indicó como referencia visual `https://zapia-notas-nav-claudio-20261113
 
 ### Agenda — transición al esquema normalizado
 
-- Decisión confirmada por Claudio: el esquema destino de Agenda será `Config`, `Registros` (`recordId,type,entityId,dataJson,version,status,updatedAt,createdAt`) y `Usuarios` (`usuario,pass,rol,alcances,mail,nombre,docenteId`); eventos, calendarios, miembros, grupos y operaciones pasan a ser registros tipados, con vistas legibles derivadas. RESET crea solo la nueva base vacía y el admin `cmaza` / `cmaza@mendoza.edu.ar` / Claudio Maza / admin; reparación no migra ni recrea pestañas legacy. RESET no elimina objetos externos de Google Calendar.
+- Decisión confirmada por Claudio: el esquema destino de Agenda será `Config`, `Registros` (`recordId,type,entityId,dataJson,version,status,updatedAt,createdAt`) y `Usuarios` (`usuario,pass,rol,alcances,mail,nombre,docenteId`); eventos, calendarios, miembros, grupos y operaciones pasan a ser registros tipados, con vistas legibles derivadas. La elección inicial del usuario de RESET fue `cmaza`; Claudio la reemplazó por `admin` el 2026-11-18 (ver subsección «RESET Agenda — usuario inicial»). Reparación no migra ni recrea pestañas legacy. RESET no elimina objetos externos de Google Calendar.
 - Implementación verificada en rama aislada: adaptadores mantienen contrato HTTP; persistencia de eventos/agendas/miembros/grupos/operaciones es tipada en `Registros`, sin pestañas legacy. Reparación verifica esquema y admin y falla cerrado ante DB previa; RESET crea tres hojas operativas vacías, vistas derivadas, siembra admin y rota `AGENDA_DATABASE_EPOCH`, sin borrar Calendar externo ni migrar datos. Suite Agenda 26/26 en VM1, `node --check`, `git diff --check` PASS. La revisión independiente no estuvo disponible por cuota; esta limitación queda registrada, no equivale a aprobación. Apps Script deploy y RESET son gates separados de Claudio.
+
+
+### RESET Agenda — usuario inicial (2026-11-18)
+
+- La cuenta creada por RESET inicia sesión con usuario literal `admin`, correo `cmaza@mendoza.edu.ar`, nombre Claudio Maza y rol `admin`; se genera una contraseña temporal aleatoria y se muestra una sola vez. No confundir el nombre de usuario con el rol.

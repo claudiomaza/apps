@@ -47,7 +47,7 @@ Contrato vigente confirmado por Claudio: Agenda opera sobre el esquema normaliza
 - `Registros`: `recordId`, `type`, `entityId`, `dataJson`, `version`, `status`, `updatedAt`, `createdAt`.
 - `Usuarios`: `usuario`, `pass`, `rol`, `alcances`, `mail`, `nombre`, `docenteId`.
 - Eventos, calendarios, membresías/colaboradores, grupos y operaciones de sincronización se guardan como tipos de registro en `Registros`; hojas legibles son vistas derivadas, no fuentes.
-- RESET crea solo la nueva estructura vacía y la cuenta admin indicada por Claudio (`cmaza`, `cmaza@mendoza.edu.ar`, nombre Claudio Maza, rol `admin`, scopes vacíos); contraseña temporal aleatoria se devuelve/muestra una sola vez y nunca se registra en vista/log.
+- RESET crea solo la nueva estructura vacía y la cuenta admin indicada por Claudio (usuario `admin`, correo `cmaza@mendoza.edu.ar`, nombre Claudio Maza, rol `admin`, scopes vacíos); contraseña temporal aleatoria se devuelve/muestra una sola vez y nunca se registra en vista/log.
 - La reparación común no migra automáticamente datos antiguos ni debe recrear tabs legacy. Tiene que fallar cerrado y dirigir a RESET.
 - No borrar ni modificar objetos externos de Google Calendar durante RESET. Perder referencias Sheet puede dejar objetos huérfanos.
 - RESET conserva la palabra exacta `RESET` en un solo campo y segundo consentimiento explícito de backup/pérdida; no ejecutarlo durante QA.
