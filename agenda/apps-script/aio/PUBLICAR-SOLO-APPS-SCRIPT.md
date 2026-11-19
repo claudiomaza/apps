@@ -1,31 +1,28 @@
-# Publicar la interfaz AIO de Agenda (Apps Script independiente)
+# Publicar Agenda — un solo proyecto Apps Script
 
-El repositorio tiene un solo backend canónico de Agenda: `agenda/apps-script/Code.gs`, vinculado al Sheet. El AIO vive en un proyecto Apps Script separado y solo sirve la interfaz mediante HtmlService. Su archivo servidor se llama `Render.gs` para distinguirlo del backend; no reemplaza `Code.gs`, no implementa la API ni opera directamente en Sheets/Calendar.
+## Composición
 
-## Crear el proyecto AIO
+Agenda usa **una planilla y un proyecto Apps Script vinculado**. El mismo proyecto contiene el backend `Code.gs`, la interfaz `Agenda.html` y el único `appsscript.json`.
 
-1. Crea un proyecto nuevo en Apps Script, por ejemplo `Agenda - Interfaz`; no abras el proyecto vinculado para convertirlo en renderer.
-2. Agrega un archivo de script `Render.gs` y copia el contenido de [`Render.gs`](./Render.gs).
-3. Agrega un archivo HTML llamado `Agenda`. Copia el bloque `html` íntegro de [`Agenda.html.md`](./Agenda.html.md), sin las marcas Markdown del bloque.
-4. Activa el archivo de manifiesto y copia el JSON de [`appsscript.json.md`](./appsscript.json.md). El scope mínimo es `script.external_request`; no añadas scopes Calendar/Sheets del backend.
-5. Guarda, autoriza el scope cuando Apps Script lo solicite y despliega este proyecto como Web App con el acceso que corresponda a las cuentas usuarias. Copia su URL `/exec`.
-6. En el **Apps Script vinculado al Sheet**, el `Code.gs` canónico contiene el menú `Agenda → Iniciar app`. Configura su Script Property `AGENDA_AIO_WEB_APP_URL` con la URL `/exec` del renderer; respeta el formato validado en el backend. No publiques esa URL como secreto en un frontend, ni confundas la URL AIO con la API.
-7. Recarga el Sheet y usa el menú para abrir el AIO. Verifica la carga de la UI. Login y operaciones dependen de la API del backend común; probar cambios solo en un entorno sintético autorizado.
+- El menú del Sheet muestra primero **Agenda → Abrir Agenda** y abre el AIO en una ventana HtmlService.
+- `doGet(e)` sirve esa interfaz. El GET opcional `?status=1` devuelve el estado/schemaVersion.
+- `doPost(e)` sigue siendo el API JSON que usa GitHub Pages.
+- La interfaz HtmlService usa `google.script.run` para llamar `runAgendaApi` y `runAgendaMaintenance` en el mismo backend, sin llamadas HTTP a otro deployment.
+- Verificar esquema, actualizar vistas y RESET quedan como acciones de menú separadas, debajo de Abrir Agenda.
+- GitHub Pages sigue desplegándose desde `main` y usa el URL del Web App backend que está en `agenda/config.js`.
 
-## Qué archivo se copia en cada proyecto
+## Archivos del proyecto vinculado
 
-- **Backend vinculado al Sheet:** `agenda/apps-script/Code.gs` y su manifiesto `agenda/apps-script/appsscript.json`. Ahí viven `doGet()` de estado, `doPost(e)` API, sesiones/permisos, operaciones de Calendar/Sheets, mantenimiento y launcher.
-- **Proyecto AIO:** `Render.gs`, archivo HTML `Agenda`, y su manifiesto mínimo de `appsscript.json.md`. `Render.gs` define el `doGet()` que presenta la UI y el proxy de mantenimiento allowlist que reenvía peticiones autenticadas al backend.
-- **Pages:** `agenda/` se sirve desde GitHub Pages y llama al mismo backend. Pages y HtmlService son orígenes distintos; sessionStorage/IndexedDB no se comparten automáticamente. Preservar `sessionStorage.calendarSession` y namespace IndexedDB `calendario`.
+1. En el Apps Script **vinculado al Sheet existente**, reemplazá `Code.gs` por [`../Code.gs`](../Code.gs).
+2. Creá/reemplazá el archivo HTML llamado exactamente `Agenda` con [`../Agenda.html`](../Agenda.html).
+3. Conservá `appsscript.json` de [`../appsscript.json`](../appsscript.json): es el único manifiesto; contiene los scopes de Sheets, Calendar y `script.container.ui`. No uses el manifiesto mínimo histórico del AIO.
+4. Guardá, reautorizá scopes si Apps Script los pide y actualizá el deployment Web App **existente** para mantener su URL `/exec`, que también usa Pages.
+5. Recargá la planilla y comprobá que el menú muestre Abrir Agenda primero, seguido por Verificar esquema, Actualizar tablas legibles y RESET.
 
-No copiar el backend en el proyecto AIO, no mantener una segunda versión del API, no usar el endpoint renderer como API, y no conceder autoridad a la UI/proxy. El backend canónico valida el actor, sesión, rol, scope y confirmaciones antes de ejecutar acciones. El proxy del renderer solo permite las acciones configuradas y utiliza `UrlFetchApp` dentro de su scope mínimo.
+## RESET y alcance
 
-## Pruebas y estado operativo
+Antes del RESET, hacé backup de la planilla. El RESET requiere escribir `RESET` y aceptar el segundo diálogo; reemplaza los datos y credenciales de la planilla por el esquema vacío y el usuario admin inicial. No elimina calendarios ni eventos externos de Google Calendar. La contraseña temporal se muestra una sola vez. El usuario ejecuta el RESET manualmente después de desplegar y verificar el backend.
 
-`node agenda/apps-script/aio/standalone-html.test.js` valida el bundle HTML, assets autocontenidos, JavaScript, `Render.gs` y el límite entre UI/backend. `node agenda/apps-script/sheet-launcher.test.js` cubre el launcher del backend. Las pruebas estáticas no verifican despliegues ni comunicación real entre orígenes. La compatibilidad autenticada de HtmlService, CORS, permisos y operación real requiere QA aparte y aprobación, sin usar el Sheet real durante pruebas.
+## GitHub Pages y validación
 
-Los archivos de este paquete son fuente versionada para copiar. Subir a GitHub no actualiza ningún proyecto Apps Script. Claudio realiza el despliegue manual; esta guía no autoriza cambios en la planilla, reset ni despliegue.
-
-## Esquema de Agenda: decisión y estado
-
-El backend versionado debe operar con `Config`, `Registros` (`recordId,type,entityId,dataJson,version,status,updatedAt,createdAt`) y `Usuarios` (`usuario,pass,rol,alcances,mail,nombre,docenteId`), con eventos/calendarios/colaboradores/grupos/operaciones como tipos en `Registros`. RESET crea solo Config/Registros/Usuarios y las vistas legibles derivadas, sin tablas legacy, y siembra el admin indicado; reparación falla cerrado sin migrar datos antiguos. El despliegue del backend y el RESET real corresponden a Claudio; los archivos AIO no ejecutan RESET ni actualizan Apps Script. No ejecutar RESET durante QA. RESET no debe borrar objetos de Google Calendar.
+Pages comparte el mismo backend por `POST /exec`; no copies el backend al frontend ni cambies la URL sin actualizar `agenda/config.js`. Publicar GitHub no despliega Apps Script. Los tests sintéticos cubren contratos, pero no sustituyen QA real del deployment, login, origen, permisos y funcionamiento desde ambos frontends. No ejecutar RESET durante QA.

@@ -189,17 +189,18 @@ Claudio indicó como referencia visual `https://zapia-notas-nav-claudio-20261113
 - Contrato de orden por encabezado, matriz generada y navegación cubierto por `teacher-workflows.test.js`; suite `mgd/tests/*.test.js` ejecutada.
 
 
-### Agenda AIO — frontend HtmlService independiente (2026-11-18)
+### Agenda — Pages + HtmlService en un solo proyecto Apps Script (decisión 2026-11-18)
 
-- `agenda/apps-script/Code.gs` es la única fuente del backend vinculado al Sheet; su `doGet()` de estado y `doPost(e)` API se conservan. La UI HtmlService vive en un **segundo proyecto Apps Script** con `aio/Render.gs` (renderer/proxy) y `Agenda.html`; no usa el URL de despliegue del renderer como API ni reemplaza o copia el backend.
-- El backend canónico único vive en `agenda/apps-script/Code.gs`, vinculado al Sheet, con `doGet()` de estado y `doPost(e)` de API. El proyecto AIO independiente vive en `agenda/apps-script/aio/`: HTML autocontenido, `Render.gs` para renderer/proxy allowlist, manifiesto mínimo `script.external_request`, guía, README y tests. `Render.gs` no es backend ni accede directamente a Sheets/Calendar; el proyecto AIO no duplica la API ni copia scopes del backend. El proxy reenvía sesión y las acciones limitadas al backend, que es autoridad para permisos y cambios.
-- El paquete estático no es despliegue ni aceptación. HtmlService, origen y `fetch` al backend, acceso, login y operación de prueba siguen `UNKNOWN` hasta validarlos en QA. Pages y backend se mantienen sin cambios salvo el launcher aditivo descrito abajo.
-
+- Una planilla y un único proyecto Apps Script vinculado contienen el backend `agenda/apps-script/Code.gs`, el HTML canónico `agenda/apps-script/Agenda.html` y un solo `appsscript.json` con scopes de Sheets, Calendar y `script.container.ui`.
+- `GET /exec` sirve la UI HtmlService Agenda (opcional `?status=1` da health/schema); `POST /exec` conserva la API JSON usada por GitHub Pages. La UI del Sheet usa `google.script.run.runAgendaApi` y `runAgendaMaintenance`, llamando la misma autorización y lógica de backend; no hay proxy por URL de renderer ni segundo proyecto AIO.
+- Menú del Sheet: primero «Abrir Agenda», seguido por «Verificar esquema normalizado», «Actualizar tablas legibles» y «RESET». Abrir no ejecuta mantenimiento ni RESET.
+- Pages y HtmlService comparten backend/Sheet; Pages permanece frontend independiente y usa `agenda/config.js`. Mantener el mismo deployment `/exec` al actualizar; si cambia, actualizar Pages. No usar un manifiesto mínimo distinto para AIO.
+- GitHub Pages, código Apps Script y RESET son estados independientes. Claudio actualiza manualmente el proyecto vinculado; el RESET requiere backup, palabra exacta y segundo consentimiento; no borrar objetos externos de Calendar. QA autenticado con Apps Script real queda pendiente hasta desplegar.
 
 ### Agenda — estructura previa del Sheet (decisión supersedida, 2026-11-18)
 
 - Esta decisión intermedia preservaba pestañas operativas legacy (`Eventos`, `Agendas`, `CalendarMembers`, `Grupos`, `SyncOperations`) con vistas legibles. Claudio la reemplazó expresamente por el esquema normalizado descrito más abajo. No usar esta sección como contrato destino.
-- Siguen vigentes: backup/confirmación antes de RESET; campo literal `RESET` y segundo consentimiento; gate de owner; no borrar objetos externos de Google Calendar; menú/operaciones de mantenimiento en el Apps Script vinculado; Pages, backend y renderer AIO se despliegan por separado. Código versionado no demuestra despliegue activo.
+- Siguen vigentes: backup/confirmación antes de RESET; campo literal `RESET` y segundo consentimiento; gate de owner; no borrar objetos externos de Google Calendar; menú/operaciones de mantenimiento en el Apps Script vinculado. Pages y el proyecto Apps Script vinculado se publican por separado; backend y AIO HtmlService comparten el mismo deployment Apps Script. Código versionado no demuestra despliegue activo.
 
 ### RESET de Agenda: restitución de acceso (2026-11-18)
 
@@ -216,14 +217,14 @@ Claudio indicó como referencia visual `https://zapia-notas-nav-claudio-20261113
 ### Manifiesto de scopes para mantenimiento Agenda (2026-11-18)
 
 - Apps Script vinculado al Sheet: añadir `https://www.googleapis.com/auth/script.container.ui` al manifiesto para custom menu/dialogs; preservar scopes avanzados Calendar y demás existentes.
-- Proyecto AIO independiente: `agenda/apps-script/aio/appsscript.json.md` declara solo `https://www.googleapis.com/auth/script.external_request` para su proxy allowlisted `UrlFetchApp`; no copiar scopes Calendar/Sheets del backend. Ambos deployments requieren reautorización y publicación separadas.
+- Un único manifiesto en `agenda/apps-script/appsscript.json` reúne los scopes de Sheets, Calendar, ACL y `script.container.ui`. No mantener el manifiesto mínimo histórico de renderer ni pedir `script.external_request` si ya no hay proxy HTTP desde AIO.
 
 
 ### Agenda — organización del backend y paquete AIO (2026-11-18)
 
-- Existe un solo backend canónico: `agenda/apps-script/Code.gs`, vinculado al Sheet. `agenda/apps-script/aio/Render.gs` pertenece al proyecto HtmlService separado y contiene únicamente renderer/proxy; su nombre evita confundirlo con el backend. El AIO conserva HTML, manifiesto mínimo, guía, README y test, pero no otra copia del backend o archivo `Code.gs.md`.
+- Existe un solo proyecto Apps Script vinculado que contiene el backend `agenda/apps-script/Code.gs`, el HTML AIO `agenda/apps-script/Agenda.html` y un único manifiesto. `doGet` sirve HtmlService, `doPost` sigue siendo API Pages y `google.script.run` llama al backend común. La carpeta `aio/` conserva documentación/pruebas de la arquitectura integrada, no otro deployment ni otro manifiesto runtime.
 - `agenda/agente/agent.md` es la guía maestra de reconstrucción/operación de Agenda, siguiendo el patrón `mgd/agente/agent.md`, adaptado a las reglas, modelos, verificaciones y límites propios de Agenda.
-- La arquitectura de carpetas no demuestra despliegue. Pages, backend vinculado y renderer AIO se publican de forma independiente; el usuario despliega Apps Script.
+- La arquitectura de carpetas no demuestra despliegue. Pages y el proyecto Apps Script único se publican de forma independiente; GET HtmlService y POST API son entradas del mismo deployment. Claudio despliega Apps Script manualmente.
 
 ### Agenda — transición al esquema normalizado
 

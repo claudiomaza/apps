@@ -1,19 +1,11 @@
-# Agenda AIO (HtmlService)
+# Agenda HtmlService integrado
 
-Frontend autónomo servido desde un **segundo proyecto Apps Script**. El backend canónico sigue siendo `../Code.gs`, el Apps Script vinculado a la planilla. El proyecto AIO no lo duplica.
+La interfaz HtmlService vive en el mismo proyecto Apps Script vinculado al Sheet que el backend:
 
-- `Agenda.html.md`: HTML autocontenido para crear el archivo HTML `Agenda` del proyecto UI.
-- `Render.gs`: renderer servidor AIO y proxy allowlist de mantenimiento. Copiarlo como `Render.gs` en el proyecto UI; no es backend y no define `doPost`.
-- `appsscript.json.md`: manifiesto mínimo del proyecto UI (`script.external_request` solamente).
-- `PUBLICAR-SOLO-APPS-SCRIPT.md`: pasos de creación y publicación del proyecto UI y límites.
-- `standalone-html.test.js`: valida bundle/assets, `Render.gs`, separación respecto del backend y sintaxis.
+- `../Code.gs`: backend único; `doGet(e)` sirve el AIO y `doPost(e)` conserva el API JSON de Pages.
+- `../Agenda.html`: interfaz AIO servida por `HtmlService` desde el menú del Sheet.
+- `../appsscript.json`: único manifiesto del proyecto, con scopes de Calendar, Sheets y `script.container.ui`.
 
-El backend único y canónico vive en `agenda/apps-script/Code.gs`; sus scopes/API/permisos se administran ahí. Pages y AIO llaman al backend común. Publicar archivos no despliega Apps Script ni cambia la planilla. El proyecto AIO, el backend vinculado y Pages se despliegan independientemente.
+El AIO llama `runAgendaApi` y `runAgendaMaintenance` mediante `google.script.run`; no hay segundo renderer, URL proxy ni deployment independiente. GitHub Pages sigue llamando al `POST /exec` del mismo backend. El menú ofrece primero «Abrir Agenda» y luego verificar esquema, actualizar vistas y RESET.
 
-El renderer AIO no accede directamente a Sheets ni Calendar. Reenvía las acciones de mantenimiento autorizadas al backend; la autorización efectiva permanece en el backend. No copiar los scopes de Calendar/Sheets al manifiesto AIO.
-
-
-El backend versionado espera el esquema normalizado `Config`/`Registros`/`Usuarios`. Su acción de reparación falla cerrado al encontrar pestañas operativas antiguas; el RESET crea el esquema nuevo, pero lo ejecuta el propietario en la planilla solo después del despliegue manual correspondiente.
-
-
-El RESET normalizado deja las hojas operativas `Config`, `Registros`, `Usuarios` y las vistas legibles derivadas.
+La publicación del repo no despliega Apps Script ni modifica la planilla. Claudio despliega manualmente este proyecto vinculado y decide cuándo ejecutar el RESET, siempre tras backup y doble confirmación. Ver `PUBLICAR-SOLO-APPS-SCRIPT.md`.

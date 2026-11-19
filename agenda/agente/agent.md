@@ -7,9 +7,9 @@ Esta guía permite continuar Agenda sin depender del historial de chat. No autor
 - Repo fuente: `https://github.com/claudiomaza/apps`; `main` alimenta Pages.
 - Frontend Pages: `agenda/`; ruta pública `https://claudiomaza.github.io/apps/agenda/`.
 - Base operativa: Google Sheet Calendario existente. No renombrar su ID ni modificarla durante desarrollo/QA sin permiso específico.
-- Backend canónico: `agenda/apps-script/Code.gs`, script vinculado al Sheet, API común para Pages y el frontend AIO. Conserva `doGet()` de estado y `doPost(e)` de API.
-- Interfaz AIO: proyecto Apps Script independiente descrito por `agenda/apps-script/aio/`; su archivo de entrada servidor es `Render.gs`, renderer solamente, no backend ni fuente de permisos.
-- Apps Script y Pages se publican por separado. Claudio despliega Apps Script manualmente; Zapia puede preparar y publicar solo el repo cuando el usuario lo pide y los gates pasan.
+- Proyecto Apps Script único vinculado al Sheet: `agenda/apps-script/Code.gs` (backend/API), `agenda/apps-script/Agenda.html` (AIO integrado) y un solo `agenda/apps-script/appsscript.json`. `GET /exec` sirve AIO, `POST /exec` es la API que usa Pages; HtmlService entra al mismo dispatcher mediante `google.script.run`.
+- El menú muestra primero «Abrir Agenda» y luego verificar esquema, actualizar vistas y RESET. La UI se abre sin disparar mantenimiento.
+- GitHub Pages y Apps Script se publican por separado. Pages usa `agenda/config.js`; Claudio despliega manualmente el proyecto vinculado y ejecuta RESET personalmente tras backup/confirmación.
 - `mgd/agente/agent.md` es referencia de forma y profundidad, no de modelo de datos ni reglas de Agenda.
 
 ## 2. Reglas de trabajo
@@ -27,19 +27,15 @@ Esta guía permite continuar Agenda sin depender del historial de chat. No autor
 
 ## 3. Estructura y límites entre artefactos
 
-- `agenda/apps-script/Code.gs`: único backend canónico en repo. Autenticación, sesiones, roles, validación, API, acceso a Sheets/Calendar, mantenimiento del Sheet y menú/launcher del Sheet.
-- `agenda/apps-script/appsscript.json`: manifiesto del backend vinculado; puede incluir scopes Calendar/Sheets y `script.container.ui` según el backend. No copiar al proyecto renderer.
-- `agenda/apps-script/aio/Render.gs`: pequeño archivo servidor del proyecto UI aislado. `doGet()` sirve `Agenda` y el proxy estrecho de mantenimiento reenvía al backend; no define `doPost`, no accede directamente a Sheet/Calendar y no decide permisos.
-- `aio/Agenda.html.md`: fuente copiabile del HTML autónomo (UI, CSS, JS, IndexedDB y bundle Excel). No es `Code.gs` backend. No duplicar su contenido en Pages ni mantener una segunda copia del backend.
-- `aio/appsscript.json.md`: manifiesto mínimo del proyecto AIO, solo `script.external_request` para su proxy. No sumar scopes del backend.
-- `aio/PUBLICAR-SOLO-APPS-SCRIPT.md`: guía de creación/publicación del proyecto AIO y límites de despliegue.
-- `aio/README.md`: índice breve de los artefactos.
-- `aio/standalone-html.test.js`: contrato del bundle autónomo, sincronía de assets/sources, ausencia del backend en AIO y sintaxis.
-- `agenda/apps-script/*test.js`: tests de contrato/backend con doubles Node; `agenda/*test.js`: UI/frontend.
-- `agenda/agente/agent.md`: esta guía.
-- `../SPEC-PERFORMANCE.md`, `../SETUP.md`, `../README.md`: arquitectura/decisiones compartidas.
+- `agenda/apps-script/Code.gs`: backend/API único vinculado al Sheet. Autenticación, sesiones, roles, API `doPost`, mantenimiento, y `doGet` que sirve el HTML integrado. `runAgendaApi` y `runAgendaMaintenance` son RPC para `google.script.run`; validan la misma sesión/rol y delegan a las funciones existentes.
+- `agenda/apps-script/Agenda.html`: AIO HtmlService integrado, servido por menú y por `GET /exec`; todas las operaciones van por `google.script.run`, no llama un renderer externo.
+- `agenda/apps-script/appsscript.json`: único manifiesto, con scopes existentes de Sheets/Calendar y `script.container.ui`. No usar el manifiesto runtime mínimo histórico de `aio/appsscript.json.md` ni requerir un deployment/proxy AIO.
+- `agenda/`: GitHub Pages mantiene `config.js` apuntando a `POST /exec`; no necesita copiar el backend ni cambiar URL mientras se conserve el deployment Apps Script.
+- `agenda/apps-script/aio/`: README, guía y tests de contrato para la arquitectura integrada; los archivos antiguos de renderer son material histórico y no se copian/despliegan.
+- `agenda/apps-script/sheet-launcher.test.js`, `unified-appsscript.test.js`, `agenda-database-maintenance.test.js` y `aio/standalone-html.test.js`: cubren menú, routing, `google.script.run`, manifiesto, HTML, RESET y esquema tipado.
+- `agenda/agente/agent.md`: guía de reconstrucción/operación. `../SPEC-PERFORMANCE.md` es el spec común.
 
-El nombre `Render.gs` distingue explícitamente el renderer AIO del backend canónico. En el proyecto Apps Script AIO se copia ese archivo como `Render.gs` y el HTML markdown como archivo HTML `Agenda`. El archivo servidor AIO no sustituye ni se copia encima de `agenda/apps-script/Code.gs`.
+El menú ofrece primero «Abrir Agenda», luego verificar esquema y actualizar vistas, y al final RESET. Abrir solo muestra la UI; RESET conserva las confirmaciones y nunca borra objetos externos de Calendar. Apps Script se modifica/despliega manualmente; publicar GitHub/Pages no altera el proyecto vinculado ni la planilla.
 
 ## 4. Modelo de datos y decisión de transición
 
@@ -65,9 +61,9 @@ Contrato vigente confirmado por Claudio: Agenda opera sobre el esquema normaliza
 - Sincronización de eventos es explícita; borradores locales se guardan en IndexedDB y no se publican sin acción del usuario.
 - `sessionStorage.calendarSession` y namespace IndexedDB `calendario` son compatibilidad estable. AIO/Page tienen orígenes separados y no comparten automáticamente sesión ni borradores.
 - Google Calendar ACL/invitaciones son efectos externos: solo acciones explícitas autorizadas; no enviar notificaciones reales en tests. Mantener compensaciones/estados parciales e idempotencia.
-- El proxy `runAgendaMaintenance` del `Render.gs` debe mantener allowlist cerrada, exigir token de sesión y reenviar al backend; el backend valida usuario, owner, confirmaciones y realiza operaciones. No confiar el permiso al proxy AIO.
+- El wrapper `runAgendaMaintenance` exige token de sesión y allowlist; el backend valida usuario, owner y confirmaciones. `runAgendaApi` pasa requests por el mismo `doPost` que usa Pages. No crear un proxy externo ni otra fuente de permisos.
 - RESET: antes backup; segundo aviso; no manipular calendarios de Google; clave temporal solo una exhibición hasta recarga explícita.
-- Pages usa API del backend canónico. No apuntar fetch normal a la URL del AIO ni duplicar el API dentro de AIO.
+- Pages usa `POST /exec` del backend único. El AIO se sirve con `GET /exec` en el mismo deployment y usa `google.script.run`; no hay endpoint renderer separado.
 
 ## 6. Pruebas y verificación
 
@@ -75,11 +71,11 @@ Usar Node.js disponible en runner confiable (en caso de no estar disponible en s
 
 Pruebas mínimas relevantes:
 
-- `node agenda/apps-script/aio/standalone-html.test.js`: extracción/sintaxis del HTML y `Render.gs`, bytes Excel embebidos coinciden con `agenda/vendor/xlsx.full.min.js`, no hay referencias a `Code.gs.md`, no aparece backend duplicado/`doPost`/acceso directo Sheets/Calendar, y el manifiesto sigue mínimo.
+- `node agenda/apps-script/unified-appsscript.test.js` y `node agenda/apps-script/aio/standalone-html.test.js`: HTML/script syntax, byte parity de XLSX, RPC integrado, doPost Pages, routing GET, manifiesto único con scopes backend, ausencia de URL/proxy/deployment AIO.
 - `node agenda/apps-script/sheet-launcher.test.js`: menú vinculado y URL AIO.
 - `node agenda/apps-script/agenda-database-maintenance.test.js`: RESET/reparación y vistas con fixtures; cuando la transición normalizada se implemente, actualizar a contrato nuevo.
 - Suites multi-calendar, invitaciones, admin tabs y frontend que alcancen las rutas tocadas.
-- Sintaxis Node para JavaScript embebido y `Render.gs`; `git diff --check`.
+- Sintaxis Node para JavaScript embebido, `Code.gs` y `git diff --check`.
 - Para cambio visual, QA visual en móvil y desktop; para API, QA autenticado solo en entorno sintético/autorizado. Apps Script real no forma parte de test local.
 
 Evidencia parcial se etiqueta como parcial. No publicar hasta pruebas pertinentes PASS; las limitaciones de browser/backend real deben quedar explícitas.
@@ -88,6 +84,6 @@ Evidencia parcial se etiqueta como parcial. No publicar hasta pruebas pertinente
 
 - Claudio autorizó la conversión completa y que realizará el RESET al recibir backend listo. Zapia puede publicar el repo tras pasar pruebas y revisar el diff; Claudio despliega Apps Script y ejecuta RESET. Eso no autoriza a Zapia a tocar Sheet/deployment.
 - GitHub `main` publica Pages; revisar cada diff y el efecto. Publicar el backend y los documentos en `main` solo después de las suites y revisión; Pages, Apps Script y RESET son estados separados.
-- Apps Script se copia/reautoriza/despliega manualmente en el proyecto correcto: backend vinculado y proyecto renderer AIO son dos proyectos separados. Dejar claro qué archivos corresponden a cada uno.
+- Apps Script se copia/reautoriza/despliega manualmente en un único proyecto vinculado: `Code.gs`, `Agenda.html`, un manifiesto. Mantener el mismo `/exec` que consume Pages; no desplegar un renderer AIO separado.
 - Nunca decir que AIO o backend está desplegado por solo renombrar/versionar archivos.
 - En el reporte final indicar archivos/rutas, pruebas exactas, si hubo commit/push, estado real de Pages/Apps Script y gates restantes.

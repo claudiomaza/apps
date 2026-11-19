@@ -1,6 +1,6 @@
 /**
- * Backend Calendario para Apps Script vinculado al Sheet.
- * Backend Agenda sobre Config / Registros tipados / Usuarios normalizados.
+ * Backend y HtmlService AIO de Agenda en un único proyecto vinculado al Sheet.
+ * Pages conserva el API doPost; HtmlService entra por google.script.run.
  * El formato de credenciales sigue el contrato histórico de esta app.
  */
 const CONFIG = Object.freeze({
@@ -39,9 +39,8 @@ const AGENDA_READABLE_VIEW_SCHEMA_ = Object.freeze([
 ]);
 
 function onOpen() {
-  SpreadsheetApp.getUi()
-    .createMenu('Agenda')
-    .addItem('Iniciar app', 'openAgendaAio')
+  SpreadsheetApp.getUi().createMenu('Agenda')
+    .addItem('Abrir Agenda', 'openAgendaAio')
     .addSeparator()
     .addItem('Verificar esquema normalizado', 'setupAgendaDatabase')
     .addItem('Actualizar tablas legibles', 'refreshAgendaReadableViewsFromMenu')
@@ -50,16 +49,10 @@ function onOpen() {
     .addToUi();
 }
 function openAgendaAio() {
-  const ui = SpreadsheetApp.getUi();
-  const url = PropertiesService.getScriptProperties().getProperty('AGENDA_AIO_WEB_APP_URL') || '';
-  if (!/^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/(?:exec|dev)$/.test(url)) {
-    ui.alert('Agenda', 'La app no está configurada. Publicá el frontend AIO y guardá su URL /exec en AGENDA_AIO_WEB_APP_URL dentro de las propiedades del proyecto.', ui.ButtonSet.OK);
-    return;
-  }
-  const html = HtmlService.createHtmlOutput(
-    '<!doctype html><html><head><base target="_top"><style>body{font:14px Arial,sans-serif;text-align:center;padding:22px;color:#1d2c27}a{display:inline-block;padding:12px 20px;border-radius:8px;background:#24483c;color:white;text-decoration:none;font-weight:700}</style></head><body><a target="_blank" rel="noopener" href="' + url + '">Iniciar app</a></body></html>'
-  ).setWidth(320).setHeight(125);
-  ui.showModalDialog(html, 'Agenda');
+  SpreadsheetApp.getUi().showModalDialog(
+    HtmlService.createHtmlOutputFromFile('Agenda').setTitle('Agenda').setWidth(1200).setHeight(820),
+    'Agenda'
+  );
 }
 function agendaBook_() { return SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID); }
 function assertAgendaMaintenanceOwner_() {
@@ -165,6 +158,16 @@ function showAgendaResetDialog() {
   const html = HtmlService.createHtmlOutput(`<div style="font:14px Arial,sans-serif;padding:18px"><h2>RESET total de Agenda</h2><p><b>Acción destructiva e irreversible:</b> se eliminarán todas las hojas y filas de este libro; se recrearán Config, Registros y Usuarios, más las vistas legibles y la cuenta inicial. Primero hacé una copia de seguridad.</p><p>Esto no borra eventos, calendarios ni permisos en Google Calendar; sí borra de la planilla sus relaciones, credenciales, configuraciones e historial de operaciones.</p><label>Escribí exactamente RESET<br><input id="confirm" autocomplete="off"></label><p><button id="go">Borrar hojas y filas</button></p><p id="status" role="status" aria-live="polite"></p><script>document.getElementById('go').onclick=()=>{const b=document.getElementById('go'),s=document.getElementById('status'),confirmation=document.getElementById('confirm').value;if(confirmation!=='RESET'){s.textContent='Escribí exactamente RESET para confirmar.';return;}if(!confirm('Se eliminarán todas las hojas y filas. ¿Confirmás que ya tenés un respaldo?'))return;b.disabled=true;s.textContent='Reseteando…';google.script.run.withSuccessHandler(r=>{s.textContent='Base recreada. Usuario: '+r.username+'. Contraseña temporal (guardala ahora; no se volverá a mostrar): '+r.temporaryPassword;b.disabled=false;}).withFailureHandler(e=>{s.textContent='No se completó: '+e.message;b.disabled=false;}).resetAgendaDatabase({confirmation,backupConfirmed:true});};</script></div>`).setWidth(540).setHeight(390);
   SpreadsheetApp.getUi().showModalDialog(html, 'RESET total de Agenda');
 }
+function runAgendaApi(request) {
+  const output=doPost({postData:{contents:JSON.stringify(request||{})}});
+  return JSON.parse(output.getContent());
+}
+function runAgendaMaintenance(action,payload) {
+  if(!['repairSchema','refreshReadableViews','resetDatabase'].includes(action))throw new Error('INVALID_ACTION');
+  const request=payload||{},session=requireSession_(request.sessionToken),user=String(session.sub||'').toLowerCase();
+  if(action==='resetDatabase'&&(request.confirmation!=='RESET'||request.backupConfirmed!==true))throw new Error('RESET_CONFIRMATION_REQUIRED');
+  return agendaDatabaseAction_(action,request,user);
+}
 function agendaDatabaseAction_(action, body, username) {
   const user = String(username || '').toLowerCase();
   if (user !== CONFIG.INITIAL_OWNER_USERNAME.toLowerCase() && user !== CONFIG.INITIAL_OWNER_EMAIL.toLowerCase()) throw new Error('DATABASE_OWNER_REQUIRED');
@@ -205,8 +208,9 @@ function resetAgendaDatabaseCore_(request){
   }finally{lock.releaseLock();}
 }
 
-function doGet() {
-  return json_({ok:true,service:'apps-calendar',schemaVersion:3});
+function doGet(e) {
+  if(e&&e.parameter&&e.parameter.status==='1')return json_({ok:true,service:'apps-calendar',schemaVersion:3});
+  return HtmlService.createHtmlOutputFromFile('Agenda').setTitle('Agenda');
 }
 
 const CALENDAR_ACTIONS_={read:['list','getEvent','getOperation','listGroups','exportEvents','listCalendarMembers'],edit:['create','update','delete','createBatch','saveGroup','deleteGroup'],owner:['manageMembers','renameCalendar','listAppUsers','createAppUser','inviteCalendarEmail','removeCalendarInvite']};

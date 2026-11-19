@@ -9,6 +9,6 @@ Los assets Excel se reutilizan desde `../vendor`, sin duplicar el fichero grande
 
 ## Apps Script y guía de mantenimiento
 
-El backend único y canónico está en [`apps-script/Code.gs`](./apps-script/Code.gs). El UI HtmlService independiente está documentado bajo [`apps-script/aio/`](./apps-script/aio/README.md), cuyo renderer se llama `Render.gs` para no confundirlo con el backend. La guía maestra de reconstrucción, contratos y límites es [`agente/agent.md`](./agente/agent.md).
+El proyecto Apps Script único y vinculado contiene [`apps-script/Code.gs`](./apps-script/Code.gs), el AIO HtmlService [`apps-script/Agenda.html`](./apps-script/Agenda.html) y un solo manifiesto. GET sirve la UI, POST conserva el API de Pages y `google.script.run` conecta ambos con el mismo backend. Ver [`apps-script/aio/README.md`](./apps-script/aio/README.md) y la guía [`agente/agent.md`](./agente/agent.md).
 
 El backend en preparación usa el esquema normalizado `Config`/`Registros`/`Usuarios`; RESET crea la base nueva vacía y la reparación falla cerrado si detecta hojas legacy. No migra datos ni borra objetos externos de Google Calendar. El despliegue de Apps Script y el RESET son pasos separados que realiza Claudio.
