@@ -17,7 +17,7 @@ Esta carpeta es la guía operativa para publicar **los dos frontends de Agenda c
 
 - `Code.gs`: autenticación, autorización, API `doPost`, `doGet`, RPC para HtmlService y mantenimiento.
 - `Agenda.html`: interfaz HtmlService completa. Debe llamarse exactamente `Agenda` en Apps Script (sin escribir la extensión `.html` al crear el archivo desde el editor).
-- `appsscript.json`: único manifiesto; incluye los scopes de Sheets, Calendar y `script.container.ui` requeridos por backend y UI.
+- `appsscript.json`: único manifiesto; incluye los scopes de Sheets, Calendar, `script.container.ui` y `userinfo.email` (requerido por `Session.getActiveUser().getEmail()` al proteger el RESET).
 
 No copiar `Code.gs` a Pages; no crear un segundo proyecto o manifiesto; no agregar URL proxy AIO ni `script.external_request` para el frontend integrado.
 
@@ -25,7 +25,7 @@ No copiar `Code.gs` a Pages; no crear un segundo proyecto o manifiesto; no agreg
 
 1. Abrí el **proyecto Apps Script vinculado a la planilla existente de Agenda**. No crees un proyecto standalone ni una planilla nueva.
 2. En ese mismo proyecto reemplazá el fuente `Code.gs` por este `Code.gs`, creá o reemplazá el archivo HTML llamado `Agenda` con `Agenda.html` y reemplazá el manifiesto por `appsscript.json`.
-3. Guardá el proyecto. Revisá las solicitudes de autorización y concedé únicamente los scopes declarados por el manifiesto. No cambies el ID de la planilla ni la identidad/permisos del deployment como parte de esta actualización.
+3. Guardá el proyecto. Revisá las solicitudes de autorización y concedé únicamente los scopes declarados por el manifiesto, incluido el acceso al correo del usuario activo. Es necesario volver a autorizar para incorporar el nuevo scope. No cambies el ID de la planilla ni la identidad/permisos del deployment como parte de esta actualización.
 4. En **Implementar → Administrar implementaciones**, editá la Web App existente y seleccioná una nueva versión del código. Conservá URL `/exec`, usuario de ejecución y configuración de acceso actuales; Pages ya depende de esa URL. No crees un segundo deployment de AIO. Si el editor exige una configuración distinta o cambia el URL, frená y resolvé esa decisión antes de publicar; `../config.js` y sus clientes deben seguir apuntando al URL vigente.
 5. Recargá la planilla. Verificá que el menú **Agenda** muestre en este orden: **Abrir Agenda**, **Verificar esquema normalizado**, **Actualizar tablas legibles**, **RESET total…**. Abrir Agenda solo muestra la interfaz; no ejecuta mantenimiento.
 6. Probá el AIO desde **Agenda → Abrir Agenda** y desde la URL `/exec` del mismo deployment. `?status=1` es solo una comprobación de estado y no prueba login ni autorización. Hacé un smoke test autenticado con una cuenta autorizada; no confirmes operaciones de escritura contra datos reales durante una verificación técnica.

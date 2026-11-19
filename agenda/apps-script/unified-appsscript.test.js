@@ -12,6 +12,7 @@ assert.doesNotMatch(html,/AGENDA_BACKEND_URL|script\.google\.com\/macros\/s\//);
 assert.ok(manifest.oauthScopes.includes('https://www.googleapis.com/auth/spreadsheets'));
 assert.ok(manifest.oauthScopes.includes('https://www.googleapis.com/auth/calendar.acls.readonly'));
 assert.ok(manifest.oauthScopes.includes('https://www.googleapis.com/auth/script.container.ui'));
+assert.ok(manifest.oauthScopes.includes('https://www.googleapis.com/auth/userinfo.email'),'Session.getActiveUser().getEmail requires explicit email scope');
 assert.ok(!manifest.oauthScopes.includes('https://www.googleapis.com/auth/script.external_request'));
 const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'agenda-unified-'));
 try{const scripts=[...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(x=>x[1]);assert.ok(scripts.length>=4);scripts.forEach((script,i)=>{const f=path.join(tmp,i+'.js');fs.writeFileSync(f,script);execFileSync(process.execPath,['--check',f],{stdio:'pipe'});});}finally{fs.rmSync(tmp,{recursive:true,force:true});}
