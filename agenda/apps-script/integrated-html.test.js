@@ -1,6 +1,6 @@
 'use strict';
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),os=require('node:os'),{execFileSync}=require('node:child_process');
-const dir=__dirname,htmlPath=path.join(dir,'..','Agenda.html'),html=fs.readFileSync(htmlPath,'utf8'),code=fs.readFileSync(path.join(dir,'..','Code.gs'),'utf8'),manifest=JSON.parse(fs.readFileSync(path.join(dir,'..','appsscript.json'),'utf8'));
+const dir=__dirname,htmlPath=path.join(dir,'Agenda.html'),html=fs.readFileSync(htmlPath,'utf8'),code=fs.readFileSync(path.join(dir,'Code.gs'),'utf8'),manifest=JSON.parse(fs.readFileSync(path.join(dir,'appsscript.json'),'utf8'));
 assert.match(code,/function doGet\(e\)[\s\S]*?createHtmlOutputFromFile\('Agenda'\)/);
 assert.match(code,/function doPost\(e\)/);
 assert.match(code,/function runAgendaApi\(request\)/);
@@ -15,7 +15,7 @@ assert.ok(manifest.oauthScopes.includes('https://www.googleapis.com/auth/calenda
 assert.ok(manifest.oauthScopes.includes('https://www.googleapis.com/auth/script.container.ui'));
 assert.ok(!manifest.oauthScopes.includes('https://www.googleapis.com/auth/script.external_request'));
 const embedded=html.match(/atob\('([A-Za-z0-9+/=]+)'\)/);assert.ok(embedded,'embedded workbook library exists');
-assert.deepEqual(Buffer.from(embedded[1],'base64'),fs.readFileSync(path.join(dir,'..','..','vendor','xlsx.full.min.js')));
+assert.deepEqual(Buffer.from(embedded[1],'base64'),fs.readFileSync(path.join(dir,'..','vendor','xlsx.full.min.js')));
 const scripts=[...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(x=>x[1]),tmp=fs.mkdtempSync(path.join(os.tmpdir(),'agenda-unified-html-'));
 try{scripts.forEach((script,i)=>{const f=path.join(tmp,i+'.js');fs.writeFileSync(f,script);execFileSync(process.execPath,['--check',f],{stdio:'pipe'});});}finally{fs.rmSync(tmp,{recursive:true,force:true});}
 console.log('Agenda integrated HtmlService, shared backend RPC, Pages POST and single manifest PASS');

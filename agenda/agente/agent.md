@@ -29,10 +29,10 @@ Esta guía permite continuar Agenda sin depender del historial de chat. No autor
 
 - `agenda/apps-script/Code.gs`: backend/API único vinculado al Sheet. Autenticación, sesiones, roles, API `doPost`, mantenimiento, y `doGet` que sirve el HTML integrado. `runAgendaApi` y `runAgendaMaintenance` son RPC para `google.script.run`; validan la misma sesión/rol y delegan a las funciones existentes.
 - `agenda/apps-script/Agenda.html`: AIO HtmlService integrado, servido por menú y por `GET /exec`; todas las operaciones van por `google.script.run`, no llama un renderer externo.
-- `agenda/apps-script/appsscript.json`: único manifiesto, con scopes existentes de Sheets/Calendar y `script.container.ui`. No usar el manifiesto runtime mínimo histórico de `aio/appsscript.json.md` ni requerir un deployment/proxy AIO.
+- `agenda/apps-script/appsscript.json`: único manifiesto, con scopes existentes de Sheets/Calendar y `script.container.ui`. No usar un manifiesto runtime mínimo separado ni requerir un deployment/proxy AIO.
 - `agenda/`: GitHub Pages mantiene `config.js` apuntando a `POST /exec`; no necesita copiar el backend ni cambiar URL mientras se conserve el deployment Apps Script.
-- `agenda/apps-script/aio/`: README, guía y tests de contrato para la arquitectura integrada; los archivos antiguos de renderer son material histórico y no se copian/despliegan.
-- `agenda/apps-script/sheet-launcher.test.js`, `unified-appsscript.test.js`, `agenda-database-maintenance.test.js` y `aio/standalone-html.test.js`: cubren menú, routing, `google.script.run`, manifiesto, HTML, RESET y esquema tipado.
+- `agenda/apps-script/README.md`: instrucciones canónicas para desplegar el backend Apps Script y los dos frontends (Pages y HtmlService). No hay carpeta ni proyecto `aio/` separado.
+- `agenda/apps-script/sheet-launcher.test.js`, `unified-appsscript.test.js`, `integrated-html.test.js` y `agenda-database-maintenance.test.js`: cubren menú, routing, `google.script.run`, manifiesto, HTML, RESET y esquema tipado.
 - `agenda/agente/agent.md`: guía de reconstrucción/operación. `../SPEC-PERFORMANCE.md` es el spec común.
 
 El menú ofrece primero «Abrir Agenda», luego verificar esquema y actualizar vistas, y al final RESET. Abrir solo muestra la UI; RESET conserva las confirmaciones y nunca borra objetos externos de Calendar. Apps Script se modifica/despliega manualmente; publicar GitHub/Pages no altera el proyecto vinculado ni la planilla.
@@ -71,7 +71,7 @@ Usar Node.js disponible en runner confiable (en caso de no estar disponible en s
 
 Pruebas mínimas relevantes:
 
-- `node agenda/apps-script/unified-appsscript.test.js` y `node agenda/apps-script/aio/standalone-html.test.js`: HTML/script syntax, byte parity de XLSX, RPC integrado, doPost Pages, routing GET, manifiesto único con scopes backend, ausencia de URL/proxy/deployment AIO.
+- `node agenda/apps-script/unified-appsscript.test.js` y `node agenda/apps-script/integrated-html.test.js`: HTML/script syntax, byte parity de XLSX, RPC integrado, doPost Pages, routing GET, manifiesto único con scopes backend, ausencia de URL/proxy/deployment AIO.
 - `node agenda/apps-script/sheet-launcher.test.js`: menú vinculado y URL AIO.
 - `node agenda/apps-script/agenda-database-maintenance.test.js`: RESET/reparación y vistas con fixtures; cuando la transición normalizada se implemente, actualizar a contrato nuevo.
 - Suites multi-calendar, invitaciones, admin tabs y frontend que alcancen las rutas tocadas.

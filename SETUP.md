@@ -21,7 +21,7 @@ Los datos y la configuración operativa (`Config`, usuarios, calendario de desti
 Cada Sheet tiene un Apps Script vinculado propio. El código fuente de backend y el manifiesto se versionan junto a la app:
 
 - [MGD: instalación de Apps Script](./mgd/apps-script/README.md), [`Code.gs`](./mgd/apps-script/Code.gs), [`appsscript.json`](./mgd/apps-script/appsscript.json). La carpeta `mgd/` contiene la app MGD.
-- [Agenda: instalación](./agenda/apps-script/README.md), [`Code.gs`](./agenda/apps-script/Code.gs) y [`appsscript.json`](./agenda/apps-script/appsscript.json). El proyecto UI AIO separado usa [`Render.gs`](./agenda/apps-script/aio/Render.gs); guía de operación: [`agenda/agente/agent.md`](./agenda/agente/agent.md).
+- [Agenda: instalación](./agenda/apps-script/README.md), [`Code.gs`](./agenda/apps-script/Code.gs) y [`appsscript.json`](./agenda/apps-script/appsscript.json). El proyecto Apps Script único vinculado contiene backend y AIO HtmlService; las instrucciones para desplegarlo junto con Pages están en [`agenda/apps-script/README.md`](./agenda/apps-script/README.md), y la guía de operación en [`agenda/agente/agent.md`](./agenda/agente/agent.md).
 
 Para cambiar el backend, comparar/copiar el archivo de GitHub al proyecto Apps Script vinculado, revisar scopes, autorizar lo que solicite Google, crear una nueva implementación y probarla. Pages requiere su propia publicación para cambios frontend/config. Un merge, una publicación de Pages y un deployment de Apps Script son estados separados; no declarar E2E hasta probar el backend y el frontend juntos.
 

@@ -18,6 +18,6 @@ assert.ok(manifest.oauthScopes.includes('https://www.googleapis.com/auth/spreads
 assert.equal(manifest.oauthScopes.includes('https://www.googleapis.com/auth/script.external_request'),false);
 assert.match(html,/google\.script\.run[\s\S]*?runAgendaApi\(request\)/);
 assert.doesNotMatch(code,/AGENDA_AIO_WEB_APP_URL|UrlFetchApp\.fetch/);
-assert.equal(fs.existsSync(path.join(dir,'aio','Render.gs')),false,'no separate renderer source is deployed');
-assert.equal(fs.existsSync(path.join(dir,'aio','appsscript.json.md')),false,'no second manifest is published');
+assert.equal(fs.existsSync(path.join(dir,'aio')),false,'obsolete AIO folder is removed');
+assert.match(fs.readFileSync(path.join(dir,'README.md'),'utf8'),/Pages[\s\S]*google\.script\.run[\s\S]*RESET/,'deployment guide covers both frontends and reset gate');
 console.log('Agenda single-project menu, HtmlService GET, Pages POST and AIO RPC contract PASS');
