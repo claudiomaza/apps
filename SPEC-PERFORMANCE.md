@@ -220,11 +220,17 @@ Claudio indicó como referencia visual `https://zapia-notas-nav-claudio-20261113
 - Un único manifiesto en `agenda/apps-script/appsscript.json` reúne los scopes de Sheets, Calendar, ACL y `script.container.ui`. No mantener el manifiesto mínimo histórico de renderer ni pedir `script.external_request` si ya no hay proxy HTTP desde AIO.
 
 
-### Agenda — organización del backend y paquete AIO (2026-11-18)
+### Agenda — organización del backend y los dos frontends (2026-11-18)
 
-- Existe un solo proyecto Apps Script vinculado que contiene el backend `agenda/apps-script/Code.gs`, el HTML AIO `agenda/apps-script/Agenda.html` y un único manifiesto. `doGet` sirve HtmlService, `doPost` sigue siendo API Pages y `google.script.run` llama al backend común. La carpeta `aio/` conserva documentación/pruebas de la arquitectura integrada, no otro deployment ni otro manifiesto runtime.
-- `agenda/agente/agent.md` es la guía maestra de reconstrucción/operación de Agenda, siguiendo el patrón `mgd/agente/agent.md`, adaptado a las reglas, modelos, verificaciones y límites propios de Agenda.
+- Existe un solo proyecto Apps Script vinculado que contiene el backend `agenda/apps-script/Code.gs`, el HTML AIO `agenda/apps-script/Agenda.html` y un único manifiesto. `doGet` sirve HtmlService, `doPost` sigue siendo API Pages y `google.script.run` llama al backend común. No hay carpeta ni proyecto `aio/` separado.
+- `agenda/agente/agent.md` es la guía maestra de reconstrucción/operación de Agenda, siguiendo el patrón `mgd/agente/agent.md`, adaptado a las reglas, modelos, verificaciones y límites propios de Agenda. Las instrucciones desplegables de ambos frontends están en `agenda/apps-script/README.md`.
 - La arquitectura de carpetas no demuestra despliegue. Pages y el proyecto Apps Script único se publican de forma independiente; GET HtmlService y POST API son entradas del mismo deployment. Claudio despliega Apps Script manualmente.
+
+### Nombres canónicos de proyectos y planillas (2026-11-18)
+
+- Los proyectos y sus planillas vinculadas se identifican con el mismo nombre: **MGD** y **AGENDA**. En README/SETUP no llamar a las planillas «notas» ni «Calendario».
+- Las rutas canónicas son `/apps/mgd/` y `/apps/agenda/`. La antigua carpeta/redirect público `notas/` y la ruta `/apps/notas/` se retiran; quien necesite MGD debe usar `/apps/mgd/`.
+- «Notas» y «Calendario» pueden aparecer en el historial del spec como nombres o términos de decisiones anteriores; no son nombres actuales de proyectos/planillas ni habilitan recrear alias o carpetas retirados.
 
 ### Agenda — transición al esquema normalizado
 
