@@ -238,6 +238,6 @@ Claudio indicó como referencia visual `https://zapia-notas-nav-claudio-20261113
 - Implementación verificada en rama aislada: adaptadores mantienen contrato HTTP; persistencia de eventos/agendas/miembros/grupos/operaciones es tipada en `Registros`, sin pestañas legacy. Reparación verifica esquema y admin y falla cerrado ante DB previa; RESET crea tres hojas operativas vacías, vistas derivadas, siembra admin y rota `AGENDA_DATABASE_EPOCH`, sin borrar Calendar externo ni migrar datos. Suite Agenda 26/26 en VM1, `node --check`, `git diff --check` PASS. La revisión independiente no estuvo disponible por cuota; esta limitación queda registrada, no equivale a aprobación. Apps Script deploy y RESET son gates separados de Claudio.
 
 
-### RESET Agenda — usuario inicial (2026-11-18)
+### RESET Agenda — usuario inicial y flujo MGD (2026-11-18)
 
-- La cuenta creada por RESET inicia sesión con usuario literal `admin`, correo `cmaza@mendoza.edu.ar`, nombre Claudio Maza y rol `admin`; se genera una contraseña temporal aleatoria y se muestra una sola vez. No confundir el nombre de usuario con el rol.
+- Como en MGD, el RESET de Agenda pide el correo para el perfil, crea la cuenta con usuario literal `admin`, nombre `Administrador`, rol `admin` y alcances vacíos, y muestra una contraseña temporal aleatoria una sola vez. El correo puede ser el que Claudio indique en el formulario. El gate de mantenimiento del Sheet sigue limitado a la cuenta Google autorizada `cmaza@mendoza.edu.ar`; ese control no se reemplaza por el mail del perfil.
