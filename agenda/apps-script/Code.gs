@@ -347,6 +347,7 @@ function doPostApi_(e) {
     const body=JSON.parse(e&&e.postData&&e.postData.contents||'{}');
     if(body.action==='auth')return json_(authenticate_(String(body.user!==undefined?body.user:(body.mail||'')),String(body.pass||'')));
     const session=requireSession_(body.sessionToken),user=session.sub,action=String(body.action||'');
+    if(action==='changePassword')return json_(changeOwnPassword_(body,user));
     if(['repairSchema','refreshReadableViews','resetDatabase'].includes(action))return json_(agendaDatabaseAction_(action,body,user));
     if(action==='listCalendars'){ensureLegacyCalendar_(user);return json_({ok:true,calendars:listCalendars_(user)});}
     if(action==='bootstrap')return json_(bootstrapCalendar_(body,user));
@@ -383,6 +384,18 @@ function authenticate_(username,password) {
   const payload={iat:now,exp:now+CONFIG.SESSION_SECONDS*1000,nonce:Utilities.getUuid(),sub:user.username,credentialTag:credentialTag_(user),databaseEpoch:PropertiesService.getScriptProperties().getProperty('AGENDA_DATABASE_EPOCH')||''};
   const encoded=base64Url_(Utilities.newBlob(JSON.stringify(payload)).getBytes());
   return {ok:true,sessionToken:encoded+'.'+sign_(encoded),expiresAt:new Date(payload.exp).toISOString(),username:user.username};
+}
+function changeOwnPassword_(body,username){
+  const current=String(body.currentPassword||''),next=String(body.newPassword||'');
+  if(!current||next.length<5||next.length>200||next===current)throw new Error('WEAK_PASSWORD');
+  const lock=LockService.getScriptLock();if(!lock.tryLock(5000))throw new Error('BUSY_RETRY');
+  try{
+    limpiarCacheUsuarios();const account=loadUsers_().find(user=>user.username.toLowerCase()===String(username||'').toLowerCase());
+    if(!account||!constantTimeEqual_(current,account.pass))throw new Error('INVALID_CREDENTIALS');
+    const sheet=agendaBook_().getSheetByName(CONFIG.USERS_SHEET),last=sheet.getLastRow(),rows=last?sheet.getRange(1,1,last,7).getDisplayValues():[],row=rows.findIndex((value,index)=>index>0&&String(value[0]||'').trim().toLowerCase()===account.username.toLowerCase());
+    if(row<1)throw new Error('USERS_SHEET_INVALID');
+    sheet.getRange(row+1,2).setNumberFormat('@').setValue(next);SpreadsheetApp.flush();limpiarCacheUsuarios();return authenticate_(account.username,next);
+  }finally{lock.releaseLock();}
 }
 function requireSession_(token) {
   if (!token || typeof token !== 'string') throw new Error('UNAUTHORIZED');
@@ -724,7 +737,7 @@ function parseRecurrence_(value){if(!value)return {frequency:'none'};if(typeof v
 function rowObject_(r) { const o={}; CONFIG.HEADERS.forEach((h,i)=>o[h]=r[i] instanceof Date?r[i].toISOString():r[i]);if(CONFIG.HEADERS.includes('recurrence'))o.recurrence=parseRecurrence_(o.recurrence);o.groupId=String(o.groupId||'');return o; }
 function json_(value) { return ContentService.createTextOutput(JSON.stringify(value)).setMimeType(ContentService.MimeType.JSON); }
 function publicError_(err) {
-  const allowed=['CALENDAR_REQUIRED','CALENDAR_NOT_FOUND','CALENDAR_ACCESS_DENIED','CALENDAR_READ_ONLY','CALENDAR_ADMIN_REQUIRED','CALENDAR_BOOTSTRAP_OWNER_REQUIRED','CALENDAR_SHEET_INVALID','CALENDAR_MEMBERS_SHEET_INVALID','CALENDAR_API_DISABLED','CALENDAR_PERMISSION_DENIED','CALENDAR_ACCESS_ALREADY_EXISTS','CALENDAR_INVITATION_LOOKUP_FAILED','INVITATION_FAILED','INVALID_CALENDAR_NAME','INVALID_CALENDAR_ROLE','INVALID_MEMBER_EMAIL','MEMBER_NOT_REGISTERED','OWNER_MEMBER_LOCKED','INVALID_APP_USER','APP_USER_EXISTS','APP_USER_ALREADY_REGISTERED','INVITATION_NOT_FOUND','INVITATION_REVOKE_FAILED','INVITATION_STATE_PARTIAL','INVALID_ACTION','SYNC_REQUIRED','INVALID_IDEMPOTENCY_KEY','IDEMPOTENCY_KEY_REUSED','OUTCOME_UNKNOWN','OPERATION_SHEET_INVALID','DATABASE_SCHEMA_MISMATCH','DATABASE_SCHEMA_MISSING','DATABASE_RESET_REQUIRED','INVALID_DATABASE_TABLE','INVALID_DATABASE_RECORD','DATABASE_RECORD_NOT_FOUND','DATABASE_RECORD_EXISTS','DATABASE_RECORD_DELETED','DATABASE_ADMIN_MISSING','DATABASE_RANGE_WRITE_UNSUPPORTED','READABLE_VIEW_SCHEMA_MISMATCH','DATABASE_OWNER_REQUIRED','RESET_CONFIRMATION_REQUIRED','RESET_BACKUP_REQUIRED','INVALID_ADMIN_EMAIL','INVALID_FROM','INVALID_CURSOR','EXPORT_CHANGED','BUSY_RETRY','INVALID_RECURRENCE','INVALID_REMINDER','INVALID_EVENT_ID','INVALID_EVENT','INVALID_GROUP','GROUP_NOT_FOUND','GROUP_IN_USE','INVALID_GROUP_NAME','INVALID_GROUP_COLOR','GROUP_NAME_TAKEN','GROUP_COLOR_PARTIAL_FAILURE','GROUP_STATE_PARTIAL_FAILURE','PARTIAL_GROUP_UPDATE','GROUP_SHEET_INVALID','INVALID_BATCH','NOT_FOUND','CONFLICT','SHEET_NOT_FOUND','CONFIG_SHEET_NOT_FOUND','CALENDAR_NOT_FOUND','USERS_SHEET_NOT_FOUND','USERS_SHEET_INVALID','INVALID_CREDENTIALS','UNAUTHORIZED','SESSION_EXPIRED'];
+  const allowed=['CALENDAR_REQUIRED','CALENDAR_NOT_FOUND','CALENDAR_ACCESS_DENIED','CALENDAR_READ_ONLY','CALENDAR_ADMIN_REQUIRED','CALENDAR_BOOTSTRAP_OWNER_REQUIRED','CALENDAR_SHEET_INVALID','CALENDAR_MEMBERS_SHEET_INVALID','CALENDAR_API_DISABLED','CALENDAR_PERMISSION_DENIED','CALENDAR_ACCESS_ALREADY_EXISTS','CALENDAR_INVITATION_LOOKUP_FAILED','INVITATION_FAILED','INVALID_CALENDAR_NAME','INVALID_CALENDAR_ROLE','INVALID_MEMBER_EMAIL','MEMBER_NOT_REGISTERED','OWNER_MEMBER_LOCKED','INVALID_APP_USER','APP_USER_EXISTS','APP_USER_ALREADY_REGISTERED','INVITATION_NOT_FOUND','INVITATION_REVOKE_FAILED','INVITATION_STATE_PARTIAL','INVALID_ACTION','SYNC_REQUIRED','INVALID_IDEMPOTENCY_KEY','IDEMPOTENCY_KEY_REUSED','OUTCOME_UNKNOWN','OPERATION_SHEET_INVALID','DATABASE_SCHEMA_MISMATCH','DATABASE_SCHEMA_MISSING','DATABASE_RESET_REQUIRED','INVALID_DATABASE_TABLE','INVALID_DATABASE_RECORD','DATABASE_RECORD_NOT_FOUND','DATABASE_RECORD_EXISTS','DATABASE_RECORD_DELETED','DATABASE_ADMIN_MISSING','DATABASE_RANGE_WRITE_UNSUPPORTED','READABLE_VIEW_SCHEMA_MISMATCH','DATABASE_OWNER_REQUIRED','RESET_CONFIRMATION_REQUIRED','RESET_BACKUP_REQUIRED','INVALID_ADMIN_EMAIL','INVALID_FROM','INVALID_CURSOR','EXPORT_CHANGED','BUSY_RETRY','INVALID_RECURRENCE','INVALID_REMINDER','INVALID_EVENT_ID','INVALID_EVENT','INVALID_GROUP','GROUP_NOT_FOUND','GROUP_IN_USE','INVALID_GROUP_NAME','INVALID_GROUP_COLOR','GROUP_NAME_TAKEN','GROUP_COLOR_PARTIAL_FAILURE','GROUP_STATE_PARTIAL_FAILURE','PARTIAL_GROUP_UPDATE','GROUP_SHEET_INVALID','INVALID_BATCH','NOT_FOUND','CONFLICT','SHEET_NOT_FOUND','CONFIG_SHEET_NOT_FOUND','CALENDAR_NOT_FOUND','USERS_SHEET_NOT_FOUND','USERS_SHEET_INVALID','INVALID_CREDENTIALS','UNAUTHORIZED','SESSION_EXPIRED','WEAK_PASSWORD'];
   return allowed.includes(err.message)?err.message:'INTERNAL_ERROR';
 }
 

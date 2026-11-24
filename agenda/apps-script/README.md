@@ -56,4 +56,6 @@ Son pruebas sintéticas/estáticas; no acreditan deployment activo, login real, 
 
 **RESET no forma parte del despliegue ni del smoke test.** Solo Claudio lo ejecuta manualmente, después de crear y verificar un backup y aceptar expresamente la pérdida del esquema/datos de Agenda. La UI exige escribir `RESET` y confirmar en un segundo diálogo. Recrea el esquema normalizado y pide el correo de perfil de la cuenta inicial; crea usuario `admin`, nombre `Administrador`, rol `admin` y alcances vacíos. Genera una contraseña temporal aleatoria y la muestra una sola vez, como en MGD. Antes de confirmar, ingresá el correo que querés guardar en el perfil del usuario admin; no tiene que ser el correo usado por el gate de mantenimiento del proyecto. No migra datos legacy ni elimina calendarios/eventos de Google Calendar. No ejecutes RESET para probar el menú, el login ni la publicación.
 
+Para cambiar la contraseña después, usá **Configurar → Cambiar contraseña** dentro de la app: valida la contraseña actual, pide repetir la nueva y renueva la sesión. No edites `Usuarios.pass` directamente en Sheets.
+
 La guía de operación y decisiones está en [`../agente/agent.md`](../agente/agent.md); el spec común es [`../../SPEC-PERFORMANCE.md`](../../SPEC-PERFORMANCE.md).
