@@ -366,7 +366,7 @@ function doPostApi_(e) {
   const previousContext=[ACTIVE_GOOGLE_CALENDAR_,ACTIVE_CALENDAR_ID_,ACTIVE_CALENDAR_NAME_];ACTIVE_GOOGLE_CALENDAR_='';ACTIVE_CALENDAR_ID_='';ACTIVE_CALENDAR_NAME_='';
   try {
     const body=JSON.parse(e&&e.postData&&e.postData.contents||'{}');
-    if(body.action==='auth')return json_(authenticate_(String(body.user!==undefined?body.user:(body.mail||'')),String(body.pass||'')));
+    if(body.action==='auth'){const result=authenticate_(String(body.user!==undefined?body.user:(body.mail||'')),String(body.pass||''));if(body.includeCalendarSnapshot===true)result.initialData=bootstrapCalendar_(body,result.username);return json_(result);}
     const session=requireSession_(body.sessionToken),user=session.sub,action=String(body.action||'');
     if(action==='changePassword')return json_(changeOwnPassword_(body,user));
     if(['repairSchema','refreshReadableViews','resetDatabase'].includes(action))return json_(agendaDatabaseAction_(action,body,user));
@@ -444,7 +444,7 @@ function loadUsers_(){
     let scopes;try{scopes=JSON.parse(row[3]||'[]');}catch(_){throw new Error('USERS_SHEET_INVALID');}if(!Array.isArray(scopes))throw new Error('USERS_SHEET_INVALID');
     seen.add(normalized);users.push({username,pass,role:String(row[2]||'user'),scopes,email:String(row[4]||''),name:String(row[5]||''),teacherId:String(row[6]||'')});
   }
-  cache.put(key,JSON.stringify(users),15);return users;
+  cache.put(key,JSON.stringify(users),CONFIG.CACHE_SECONDS);return users;
 }
 function limpiarCacheUsuarios(){const c=CacheService.getScriptCache();c.remove('auth:users:v1');c.remove('auth:users:v2');c.remove('auth:users:v3');}
 function sign_(value) {
