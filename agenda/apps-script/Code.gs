@@ -221,7 +221,9 @@ function validateMemberEmail_(email){email=String(email||'').trim().toLowerCase(
 function validateCalendarRole_(role){role=String(role||'');if(!['editor','reader'].includes(role))throw new Error('INVALID_CALENDAR_ROLE');return role;}
 function roleAllows_(role,action){if(CALENDAR_ACTIONS_.read.includes(action))return ['owner','editor','reader'].includes(role);if(CALENDAR_ACTIONS_.edit.includes(action))return ['owner','editor'].includes(role);if(CALENDAR_ACTIONS_.owner.includes(action))return role==='owner';return false;}
 function calendarMemberRecordId_(calendarId,email){const normalized=String(email||'').trim().toLowerCase();const digest=Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,normalized,Utilities.Charset.UTF_8);return String(calendarId||'')+'::'+Utilities.base64EncodeWebSafe(digest).replace(/=+$/,'');}
+let REQUEST_SCHEMA_VALID_=false,BOOTSTRAP_TYPED_ROWS_CACHE_=null;
 function requireNormalizedAgenda_(){
+  if(REQUEST_SCHEMA_VALID_)return;
   const book=agendaBook_();
   for(const name of AGENDA_LEGACY_SHEETS_)if(book.getSheetByName(name))throw new Error('DATABASE_RESET_REQUIRED');
   for(const [name,headers] of AGENDA_DATABASE_SCHEMA_){
@@ -229,10 +231,11 @@ function requireNormalizedAgenda_(){
     const width=sheet.getLastColumn(),actual=sheet.getLastRow()?sheet.getRange(1,1,1,Math.max(headers.length,width)).getDisplayValues()[0]:[];
     if(actual.length!==headers.length||width!==headers.length||headers.some((header,i)=>actual[i]!==header))throw new Error('DATABASE_SCHEMA_MISMATCH:'+name);
   }
+  REQUEST_SCHEMA_VALID_=true;
 }
 function normalizedTypedRows_(name,includeDeleted=true){
   const spec=AGENDA_TYPED_TABLES_[name];if(!spec)throw new Error('INVALID_DATABASE_TABLE');requireNormalizedAgenda_();const sheet=agendaBook_().getSheetByName('Registros');
-  const last=sheet.getLastRow(),rows=last>1?sheet.getRange(2,1,last-1,8).getValues():[],seen=new Set();
+  let last,rows;if(BOOTSTRAP_TYPED_ROWS_CACHE_){if(!BOOTSTRAP_TYPED_ROWS_CACHE_.rows){last=sheet.getLastRow();BOOTSTRAP_TYPED_ROWS_CACHE_.rows={last,values:last>1?sheet.getRange(2,1,last-1,8).getValues():[]};}last=BOOTSTRAP_TYPED_ROWS_CACHE_.rows.last;rows=BOOTSTRAP_TYPED_ROWS_CACHE_.rows.values;}else{last=sheet.getLastRow();rows=last>1?sheet.getRange(2,1,last-1,8).getValues():[];}const seen=new Set();
   return rows.map((r,i)=>({r,i})).filter(x=>x.r[1]===spec.type&&(includeDeleted||x.r[5]!=='DELETED')).map(({r,i})=>{
     let data;try{data=JSON.parse(r[3]);}catch(_){throw new Error('INVALID_STORED_RECORD');}
     const id=String(r[0]||''),entity=String(r[2]||''),version=Number(r[4]),status=String(r[5]||'');
@@ -243,7 +246,7 @@ function normalizedTypedRows_(name,includeDeleted=true){
 }
 function normalizedTypedRow_(name,item){const spec=AGENDA_TYPED_TABLES_[name];return spec.headers.map(key=>key==='calendarMemberId'?item.entityId:key==='status'?(item.status==='DELETED'?'DELETED':item.data.status||'ACTIVE'):(item.data[key]===undefined?(key===spec.id?item.entityId:''):item.data[key]));}
 function typedRowsForTable_(name){return normalizedTypedRows_(name,true);}
-function tombstoneTypedRow_(item){const sheet=agendaBook_().getSheetByName('Registros'),row=sheet.getRange(item.physicalRow,1,1,8).getValues()[0],now=new Date().toISOString();if(row[5]==='DELETED')return;row[3]=JSON.stringify(Object.assign({},JSON.parse(row[3]||'{}'),{status:'DELETED'}));row[4]=Number(row[4])+1;row[5]='DELETED';row[6]=now;sheet.getRange(item.physicalRow,1,1,8).setValues([row]);incrementDataVersion_();}
+function tombstoneTypedRow_(item){const sheet=agendaBook_().getSheetByName('Registros'),row=sheet.getRange(item.physicalRow,1,1,8).getValues()[0],now=new Date().toISOString();if(row[5]==='DELETED')return;row[3]=JSON.stringify(Object.assign({},JSON.parse(row[3]||'{}'),{status:'DELETED'}));row[4]=Number(row[4])+1;row[5]='DELETED';row[6]=now;sheet.getRange(item.physicalRow,1,1,8).setValues([row]);if(BOOTSTRAP_TYPED_ROWS_CACHE_)BOOTSTRAP_TYPED_ROWS_CACHE_.rows=null;incrementDataVersion_();}
 function persistTypedRow_(name,row){
   const spec=AGENDA_TYPED_TABLES_[name];if(!row||!row[0])throw new Error('INVALID_DATABASE_RECORD');
   const rows=normalizedTypedRows_(name,true),data={};spec.headers.forEach((field,i)=>data[field]=row[i]===undefined?'':row[i]);
@@ -256,6 +259,7 @@ function persistTypedRow_(name,row){
   const stored=[item?item.recordId:spec.type+'::'+key,spec.type,key,JSON.stringify(data),item?item.version+1:1,lifecycle,String(data.updatedAt||now),String(data.createdAt||item&&item.createdAt||now)];
   const sheet=agendaBook_().getSheetByName('Registros');
   if(item)sheet.getRange(item.physicalRow,1,1,8).setValues([stored]);else sheet.getRange(sheet.getLastRow()+1,1,1,8).setValues([stored]);
+  if(BOOTSTRAP_TYPED_ROWS_CACHE_)BOOTSTRAP_TYPED_ROWS_CACHE_.rows=null;
   incrementDataVersion_();
 }
 function normalizedTypedRange_(name,row,column,numRows,numColumns){
@@ -348,7 +352,7 @@ function inviteCalendarEmail_(body,user){const a=setCalendarContext_(body,user,'
 function removeCalendarInvite_(body,user){const a=setCalendarContext_(body,user,'removeCalendarInvite'),email=validateMemberEmail_(body.email),members=calendarMemberRows_(),member=members.find(m=>m.calendarId===a.calendar.calendarId&&m.email.toLowerCase()===email&&m.status==='ACTIVE');if(!member)throw new Error('INVITATION_NOT_FOUND');const lock=LockService.getScriptLock();if(!lock.tryLock(5000))throw new Error('BUSY_RETRY');try{if(loadUsers_().some(u=>u.username.toLowerCase()===email))throw new Error('APP_USER_ALREADY_REGISTERED');const rule=findCalendarAclRule_(a.calendar.googleCalendarId,email);if(rule&&rule.role==='owner')throw new Error('OWNER_MEMBER_LOCKED');if(rule){try{Calendar.Acl.remove(a.calendar.googleCalendarId,rule.id);}catch(err){const code=calendarAclErrorCode_(err,'remove');console.error(JSON.stringify({event:'calendar_acl_remove_failed',code,status:calendarAclHttpStatus_(err)}));throw new Error(code==='CALENDAR_PERMISSION_DENIED'?code:'INVITATION_REVOKE_FAILED');}}try{persistTypedRow_('CalendarMembers',[a.calendar.calendarId,email,member.role,'REMOVED',new Date().toISOString()]);}catch(err){if(rule)try{Calendar.Acl.insert({role:rule.role,scope:rule.scope},a.calendar.googleCalendarId);}catch(rollback){throw new Error('INVITATION_STATE_PARTIAL');}throw err;}return{ok:true,email};}finally{lock.releaseLock();}}
 function listCalendarMembers_(body,user){const a=setCalendarContext_(body,user,'listCalendarMembers'),users=loadUsers_().map(u=>u.username.toLowerCase());return{ok:true,members:calendarMemberRows_().filter(m=>m.calendarId===a.calendar.calendarId&&m.status==='ACTIVE'&&m.role!=='owner').map(m=>({username:m.email,role:m.role,kind:users.includes(m.email.toLowerCase())?'account':'invite'}))};}
 
-function bootstrapCalendar_(body,user){ensureLegacyCalendar_(user);const calendars=listCalendars_(user);if(!calendars.length)throw new Error('CALENDAR_ACCESS_DENIED');const selected=String(body.calendarId||''),calendar=calendars.find(c=>c.calendarId===selected)||calendars[0];setCalendarContext_({calendarId:calendar.calendarId},user,'list');const result=listEvents_(body);return{ok:true,calendars,calendarId:calendar.calendarId,calendarName:calendarDisplayName_(),records:result.records||[],groups:listGroups_()};}
+function bootstrapCalendar_(body,user){const previousCache=BOOTSTRAP_TYPED_ROWS_CACHE_;BOOTSTRAP_TYPED_ROWS_CACHE_={};try{ensureLegacyCalendar_(user);const calendars=listCalendars_(user);if(!calendars.length)throw new Error('CALENDAR_ACCESS_DENIED');const selected=String(body.calendarId||''),calendar=calendars.find(c=>c.calendarId===selected)||calendars[0];setCalendarContext_({calendarId:calendar.calendarId},user,'list');const result=listEvents_(body);return{ok:true,calendars,calendarId:calendar.calendarId,calendarName:calendarDisplayName_(),records:result.records||[],groups:listGroups_()};}finally{BOOTSTRAP_TYPED_ROWS_CACHE_=previousCache;}}
 function doPost(e) {
   const output = doPostApi_(e);
   try {
@@ -363,6 +367,7 @@ function doPost(e) {
   return output;
 }
 function doPostApi_(e) {
+  REQUEST_SCHEMA_VALID_=false;BOOTSTRAP_TYPED_ROWS_CACHE_=null;
   const previousContext=[ACTIVE_GOOGLE_CALENDAR_,ACTIVE_CALENDAR_ID_,ACTIVE_CALENDAR_NAME_];ACTIVE_GOOGLE_CALENDAR_='';ACTIVE_CALENDAR_ID_='';ACTIVE_CALENDAR_NAME_='';
   try {
     const body=JSON.parse(e&&e.postData&&e.postData.contents||'{}');
@@ -393,7 +398,7 @@ function doPostApi_(e) {
     if(action==='createBatch')throw new Error('SYNC_REQUIRED');
     if(!['create','update','delete'].includes(action))throw new Error('INVALID_ACTION');
     return json_(mutateEvent_(action,body));
-  }catch(err){return json_({ok:false,error:publicError_(err)});}finally{ACTIVE_GOOGLE_CALENDAR_=previousContext[0];ACTIVE_CALENDAR_ID_=previousContext[1];ACTIVE_CALENDAR_NAME_=previousContext[2];}
+  }catch(err){return json_({ok:false,error:publicError_(err)});}finally{ACTIVE_GOOGLE_CALENDAR_=previousContext[0];ACTIVE_CALENDAR_ID_=previousContext[1];ACTIVE_CALENDAR_NAME_=previousContext[2];REQUEST_SCHEMA_VALID_=false;BOOTSTRAP_TYPED_ROWS_CACHE_=null;}
 }
 
 function authenticate_(username,password) {
