@@ -306,7 +306,28 @@ function calendarsSheet_(){return legacyAgendaSheet_('Agendas');}
 function membersSheet_(){return legacyAgendaSheet_('CalendarMembers');}
 function calendarRows_(){const s=calendarsSheet_(),n=s.getLastRow();return n<2?[]:s.getRange(2,1,n-1,7).getDisplayValues().filter(r=>r[0]&&r[4]==='ACTIVE').map(r=>({calendarId:r[0],name:r[1],googleCalendarId:r[2],ownerEmail:r[3],status:r[4],createdAt:r[5],updatedAt:r[6]}));}
 function calendarMemberRows_(){const s=membersSheet_(),n=s.getLastRow();return n<2?[]:s.getRange(2,1,n-1,5).getDisplayValues().filter(r=>r[0]&&r[3]!=='DELETED').map(r=>({calendarId:r[0],email:r[1],role:r[2],status:r[3],updatedAt:r[4]}));}
-function ensureLegacyCalendar_(username){const owner=String(username||'').toLowerCase();if(owner!==CONFIG.INITIAL_OWNER_USERNAME&&owner!==CONFIG.INITIAL_OWNER_EMAIL.toLowerCase())throw new Error('CALENDAR_BOOTSTRAP_OWNER_REQUIRED');const lock=LockService.getScriptLock();if(!lock.tryLock(5000))throw new Error('BUSY_RETRY');try{const googleId=configValue_('calendarId'),google=googleId?CalendarApp.getCalendarById(googleId):CalendarApp.getDefaultCalendar();if(!google)throw new Error('CALENDAR_NOT_FOUND');let item=calendarRows_().find(r=>r.googleCalendarId===google.getId());if(!item){const now=new Date().toISOString(),name=configValue_('calendarName')||google.getName(),calendarId='legacy';item={calendarId,name,googleCalendarId:google.getId(),ownerEmail:CONFIG.INITIAL_OWNER_EMAIL,status:'ACTIVE',createdAt:now,updatedAt:now};persistTypedRow_('Agendas',[item.calendarId,item.name,item.googleCalendarId,item.ownerEmail,item.status,item.createdAt,item.updatedAt]);}for(const identity of [CONFIG.INITIAL_OWNER_USERNAME,CONFIG.INITIAL_OWNER_EMAIL])if(!calendarMemberRows_().some(m=>m.calendarId===item.calendarId&&m.email.toLowerCase()===identity.toLowerCase()&&m.status==='ACTIVE'))persistTypedRow_('CalendarMembers',[item.calendarId,identity,'owner','ACTIVE',new Date().toISOString()]);return item;}finally{lock.releaseLock();}}
+function ensureLegacyCalendar_(username){
+  const owner=String(username||'').toLowerCase();
+  if(owner!==CONFIG.INITIAL_OWNER_USERNAME&&owner!==CONFIG.INITIAL_OWNER_EMAIL.toLowerCase())throw new Error('CALENDAR_BOOTSTRAP_OWNER_REQUIRED');
+  const identities=[CONFIG.INITIAL_OWNER_USERNAME,CONFIG.INITIAL_OWNER_EMAIL];
+  const readState=()=>{
+    const googleId=configValue_('calendarId'),google=googleId?CalendarApp.getCalendarById(googleId):CalendarApp.getDefaultCalendar();
+    if(!google)throw new Error('CALENDAR_NOT_FOUND');
+    const item=calendarRows_().find(row=>row.googleCalendarId===google.getId())||null,members=calendarMemberRows_();
+    return{google,item,members};
+  };
+  const complete=state=>state.item&&identities.every(identity=>state.members.some(member=>member.calendarId===state.item.calendarId&&member.email.toLowerCase()===identity.toLowerCase()&&member.status==='ACTIVE'));
+  let state=readState();
+  if(complete(state))return state.item;
+  const lock=LockService.getScriptLock();if(!lock.tryLock(5000))throw new Error('BUSY_RETRY');
+  try{
+    state=readState();if(complete(state))return state.item;
+    let item=state.item;
+    if(!item){const now=new Date().toISOString();item={calendarId:'legacy',name:configValue_('calendarName')||state.google.getName(),googleCalendarId:state.google.getId(),ownerEmail:CONFIG.INITIAL_OWNER_EMAIL,status:'ACTIVE',createdAt:now,updatedAt:now};persistTypedRow_('Agendas',[item.calendarId,item.name,item.googleCalendarId,item.ownerEmail,item.status,item.createdAt,item.updatedAt]);}
+    for(const identity of identities)if(!state.members.some(member=>member.calendarId===item.calendarId&&member.email.toLowerCase()===identity.toLowerCase()&&member.status==='ACTIVE')){persistTypedRow_('CalendarMembers',[item.calendarId,identity,'owner','ACTIVE',new Date().toISOString()]);state.members.push({calendarId:item.calendarId,email:identity,status:'ACTIVE'});}
+    return item;
+  }finally{lock.releaseLock();}
+}
 function listCalendars_(username){const ms=calendarMemberRows_().filter(m=>m.status==='ACTIVE'&&m.email.toLowerCase()===String(username).toLowerCase());return calendarRows_().filter(c=>c.status==='ACTIVE'&&ms.some(m=>m.calendarId===c.calendarId)).map(c=>({calendarId:c.calendarId,name:c.name,role:ms.find(m=>m.calendarId===c.calendarId).role}));}
 let ACTIVE_GOOGLE_CALENDAR_='',ACTIVE_CALENDAR_ID_='',ACTIVE_CALENDAR_NAME_='';
 function withCalendarContext_(body,user,action){return setCalendarContext_(body,user,action);}
