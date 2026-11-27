@@ -6,7 +6,7 @@ La aplicación se mantiene dentro de `registro-unico/` en el repo canónico `cla
 
 ## Objetivo y usuarios
 
-CRUD web para incorporar y mantener registros de personas en una planilla centralizada. Los registros se almacenan en filas y sus atributos en columnas. Usuarios Google autorizados; admin inicial se configura privadamente por Claudio en la Script Property `REGISTRO_UNICO_INITIAL_ADMIN_EMAIL`; el repo público no incluye su correo.
+CRUD web para incorporar y mantener registros de personas en una planilla centralizada. Los registros se almacenan en filas y sus atributos en columnas. Usuarios Google autorizados; en primera vinculación el dueño autenticado de la planilla queda como admin inicial (guardado en Script Properties privada, nunca en el repo público). Drive compartido sin dueño individual permite bootstrap manual privado.
 
 ## Arquitectura y decisión de identidad
 
@@ -53,7 +53,7 @@ Pestaña `Registros`, encabezados exactos:
 
 Las primeras cuatro columnas de negocio son requisitos del producto; las restantes soportan identidad estable y auditoría mínima. ID UUID inmutable. Timestamps como fecha de Sheets. DNI string para preservar ceros iniciales; sin validación geográfica hasta definir regla. Las celdas de texto se guardan en formato texto y se escapan prefijos de fórmula. No se registran valores DNI en logs.
 
-ACL de usuarios en Script Properties: clave/versionado JSON con email normalizado, rol, estado activo y timestamp. `REGISTRO_UNICO_INITIAL_ADMIN_EMAIL` se configura por fuera del repo; si falta o no es una dirección válida, bootstrap falla con un mensaje que identifica la propiedad. No almacenar roles en la misma hoja que editores puedan alterar.
+ACL de usuarios en Script Properties: clave/versionado JSON con email normalizado, rol, estado activo y timestamp. En una configuración nueva, el dueño de la planilla que confirma el botón de vinculación queda como admin inicial; el correo se guarda solo en Script Properties, nunca en el repo. Drive compartido sin dueño individual requiere bootstrap privado manual. No almacenar roles en la misma hoja que editores puedan alterar.
 
 ## Contratos
 

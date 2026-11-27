@@ -30,9 +30,9 @@ function registroUnicoOpenPanel() {
   var adminUrl = url + '?page=admin';
   var html = HtmlService.createHtmlOutput(
     '<div style="font:14px system-ui,sans-serif;padding:16px;color:#172027">' +
-      '<p>Abrí la app o administración desde esta planilla.</p>' +
-      '<a href="' + htmlAttribute_(url) + '" target="_blank" rel="noopener" style="display:block;padding:11px 14px;margin:10px 0;border-radius:8px;background:#087e69;color:white;text-decoration:none;text-align:center;font-weight:700">Abrir Registro Único</a>' +
-      '<a href="' + htmlAttribute_(adminUrl) + '" target="_blank" rel="noopener" style="display:block;padding:11px 14px;margin:10px 0;border-radius:8px;background:#e9f1f1;color:#173b37;text-decoration:none;text-align:center;font-weight:700">Administración</a>' +
+      '<p>Primero vinculá la hoja. Si la configuración es nueva, su dueño queda como administrador.</p>' +
+      '<a href="' + htmlAttribute_(url) + '" target="_top" style="display:block;padding:11px 14px;margin:10px 0;border-radius:8px;background:#087e69;color:white;text-decoration:none;text-align:center;font-weight:700">Abrir Registro Único</a>' +
+      '<a href="' + htmlAttribute_(adminUrl) + '" target="_top" style="display:block;padding:11px 14px;margin:10px 0;border-radius:8px;background:#e9f1f1;color:#173b37;text-decoration:none;text-align:center;font-weight:700">Administración</a>' +
       '<button id="bind" style="width:100%;padding:11px 14px;margin-top:10px;border:0;border-radius:8px;background:#e9f1f1;color:#173b37;font:inherit;font-weight:700;cursor:pointer">Vincular esta planilla</button>' +
       '<div id="status" role="status" style="margin-top:12px;color:#52616a"></div>' +
       '<script>document.getElementById("bind").addEventListener("click",function(){var b=this;b.disabled=true;document.getElementById("status").textContent="Verificando y preparando la planilla…";google.script.run.withSuccessHandler(function(r){document.getElementById("status").textContent=r.message;b.disabled=false;}).withFailureHandler(function(e){document.getElementById("status").textContent=e&&e.message?e.message:"No se pudo vincular la planilla.";b.disabled=false;}).registroUnicoBindActiveSpreadsheet();});</script>' +
@@ -42,14 +42,23 @@ function registroUnicoOpenPanel() {
 }
 
 function registroUnicoBindActiveSpreadsheet() {
-  requireAdmin_();
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
     var active = SpreadsheetApp.getActiveSpreadsheet();
     if (!active) throw new Error('Abrí Registro Único desde la planilla que querés vincular.');
-    var activeId = active.getId();
     var props = PropertiesService.getScriptProperties();
+    if (!props.getProperty(APP_.initialAdminKey)) {
+      if (props.getProperty(APP_.usersKey)) throw new Error('Falta la configuración del administrador inicial. No se cambió nada.');
+      var owner = active.getOwner();
+      var ownerEmail = normalizeEmail_(owner && owner.getEmail());
+      if (!ownerEmail || ownerEmail !== currentEmail_()) {
+        throw new Error('La primera configuración debe hacerla el dueño de esta planilla con su cuenta Google.');
+      }
+      props.setProperty(APP_.initialAdminKey, ownerEmail);
+    }
+    requireAdmin_();
+    var activeId = active.getId();
     var configuredId = props.getProperty(APP_.spreadsheetKey);
     if (configuredId) {
       if (configuredId !== activeId) throw new Error('Registro Único ya está vinculado a otra planilla. No se cambió la configuración.');
@@ -263,7 +272,7 @@ function users_() {
   if (!raw) {
     var initialAdminValue = normalizeEmail_(props.getProperty(APP_.initialAdminKey));
     if (!initialAdminValue) {
-      throw new Error('Falta configurar la propiedad de script REGISTRO_UNICO_INITIAL_ADMIN_EMAIL con el correo de la cuenta administradora.');
+      throw new Error('Para iniciar, abrí la planilla y usá Vincular esta planilla con la cuenta dueña.');
     }
     var initialAdmin;
     try {

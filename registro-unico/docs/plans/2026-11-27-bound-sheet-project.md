@@ -23,7 +23,7 @@
 **Files:** `registro-unico/appscript/Code.gs`, `registro-unico/appscript/appsscript.json`
 
 - Add menu and sidebar helper in the main `Code.gs`.
-- Add a server function available from the bound menu/sidebar that derives the active spreadsheet ID, requires the configured bootstrap admin, initializes only the `Registros` tab/header, saves the ID, refuses to silently relink a different configured Sheet, and never creates an `Acceso` tab.
+- Add a server function available from the bound menu/sidebar that derives the active spreadsheet ID, bootstraps the active sheet owner as admin only on pristine Script Properties, initializes only the `Registros` tab/header, saves the ID, refuses to silently relink a different configured Sheet, and never creates an `Acceso` tab.
 - Make the spreadsheet linker server-side only and derive its ID from the bound spreadsheet; refuse retargeting.
 - Add only `script.container.ui` to existing scopes.
 
@@ -31,7 +31,7 @@
 
 **Files:** `registro-unico/README.md`, `AGENT.md`, `SPEC.md`, `SETUP.md`, `SPEC-PERFORMANCE.md`, tests.
 
-- Explain opening **Extensiones → Apps Script** from the intended Sheet, copying the four primary files into that bound project, configuring the bootstrap email, saving, deploying web app as accessing user / Google-account users, and reopening Sheet for menu.
+- Explain opening **Extensiones → Apps Script** from the intended Sheet, copying the four primary files into that bound project, saving, deploying web app as accessing user / Google-account users, reopening Sheet, and bootstrapping its owner through the explicit bind button.
 - Keep the own landing `index.html`; note current Pages link remains unchanged until Claudio provides the `/exec` for this bound deployment.
 - Remove the companion-project procedure and keep the current Sheets safer than any accidental relink.
 

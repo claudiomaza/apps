@@ -34,7 +34,7 @@ class ContractTests(unittest.TestCase):
 
     def test_initial_admin_is_exact_and_roles_are_allowlisted(self):
         self.assertIn("initialAdminKey: 'REGISTRO_UNICO_INITIAL_ADMIN_EMAIL'", self.code)
-        self.assertIn('Falta configurar la propiedad de script REGISTRO_UNICO_INITIAL_ADMIN_EMAIL', self.code)
+        self.assertIn('Para iniciar, abrí la planilla y usá Vincular esta planilla', self.code)
         self.assertIn('El valor de REGISTRO_UNICO_INITIAL_ADMIN_EMAIL no es un correo válido.', self.code)
         self.assertRegex(self.code, r"\['admin',\s*'user1',\s*'user2'\]")
 
@@ -100,6 +100,25 @@ class ContractTests(unittest.TestCase):
         self.assertNotIn('sheetId', self.admin)
         self.assertIn("var adminUrl = url + '?page=admin';", self.code)
         self.assertIn('htmlAttribute_(adminUrl)', self.code)
+
+    def test_first_sheet_owner_is_bootstrapped_as_admin_without_public_email(self):
+        body = re.search(r'function\s+registroUnicoBindActiveSpreadsheet\([^)]*\)\s*\{([\s\S]*?)\n\}', self.code)
+        self.assertIsNotNone(body)
+        code = body.group(1)
+        self.assertIn('getOwner()', code)
+        self.assertIn('currentEmail_()', code)
+        self.assertIn('setProperty(APP_.initialAdminKey, ownerEmail)', code)
+        self.assertIn('requireAdmin_()', code)
+        self.assertLess(code.index('setProperty(APP_.initialAdminKey, ownerEmail)'), code.index('requireAdmin_()'))
+        self.assertIn('props.getProperty(APP_.usersKey)', code)
+        self.assertIn('!ownerEmail || ownerEmail !== currentEmail_()', code)
+        self.assertIn('Falta la configuración del administrador inicial.', code)
+        self.assertIsNone(re.search(r"['\"][^'\"\\s]+@[^'\"\\s]+\\.[^'\"\\s]+['\"]", self.code))
+
+    def test_sheet_action_links_navigate_top_level(self):
+        self.assertIn('target="_top"', self.code)
+        self.assertIn('Abrir Registro Único</a>', self.code)
+        self.assertIn('Administración</a>', self.code)
 
     def test_sheet_binding_cannot_silently_retarget_configured_database(self):
         body = re.search(r'function\s+registroUnicoBindActiveSpreadsheet\([^)]*\)\s*\{([\s\S]*?)\n\}', self.code)
