@@ -45,6 +45,6 @@ RPC principal del cliente: `runRegistroUnicoApi({action,payload})`, con acciones
 ## Configuración/rollback manual
 
 - Deployment activo: verificar en Apps Script editor que ejecuta como quien accede y que el acceso requiere cuenta Google. El manifest no prueba estado activo.
-- La carpeta conserva su propio `index.html` en `/apps/registro-unico/`. Mantener su URL `/exec` actual hasta que Claudio entregue el endpoint del proyecto vinculado; actualizar entonces landing y volver a publicar Pages. El menú usa dinámicamente `ScriptApp.getService().getUrl()`.
+- La carpeta conserva su propio `index.html` en `/apps/registro-unico/`, enlazado al deployment vinculado que informó Claudio el 2026-11-27: `https://script.google.com/macros/s/AKfycbx4nw7eK72BhHiTyTs0HP_uX5D-nVqXudQXcURRum6CQjKbKTlLnToWUq7QxGZodV5F/exec`. Pages se despliega aparte de Apps Script; el menú usa `ScriptApp.getService().getUrl()`.
 - Spreadsheet ID vive en Script Properties. Reconfiguración/cambio de hoja se hace con procedimiento manual y respaldo/confirmación; no resetear ni migrar datos.
 - Rollback de HtmlService: restaurar fuentes previas y publicar nueva versión manualmente. Rollback Pages: restaurar el SHA anterior del repo `claudiomaza/apps`.

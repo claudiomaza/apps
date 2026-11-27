@@ -83,6 +83,6 @@ El navegador no puede establecer identidad ni rol enviando campos. AppScript obt
 
 ## Despliegue y aceptación
 
-GitHub Pages publica desde la raíz de `claudiomaza/apps`; la ruta de la app es `/apps/registro-unico/`. El proyecto Apps Script vinculado se despliega/configura manualmente por Claudio, no se usa clasp por agente. No publicar datos reales, IDs de hojas ni secretos; landing y menú enlazan al deployment `/exec` que Claudio proporcionó. Compatibilidad depende de URL `/exec` y contrato v1.
+GitHub Pages publica desde la raíz de `claudiomaza/apps`; la ruta de la app es `/apps/registro-unico/`. El proyecto Apps Script vinculado se despliega/configura manualmente por Claudio, no se usa clasp por agente. La landing apunta al deployment `/exec` que Claudio informó el 2026-11-27: `https://script.google.com/macros/s/AKfycbx4nw7eK72BhHiTyTs0HP_uX5D-nVqXudQXcURRum6CQjKbKTlLnToWUq7QxGZodV5F/exec`. No publicar datos reales, IDs de hojas ni secretos. Compatibilidad depende de URL `/exec` y contrato v1.
 
 PASS completo requiere fuente sincronizada, tests, aprobación de scopes, prueba con sheet sintética y cuentas reales de prueba, navegador móvil/escritorio, verificación de revocación y SHA publicado. Hasta despliegue/prueba manual, runtime Apps Script, OAuth, CORS/redirecciones, ACL Google y QA visual son `BLOCKED/NO VERIFICADO`. Sin datos reales ni despliegues como parte del desarrollo inicial.

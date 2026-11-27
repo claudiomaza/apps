@@ -20,7 +20,7 @@ CRUD web para mantener registros de personas en una planilla central de Google S
 3. Guardá el proyecto y publicalo manualmente como Web app: ejecución como usuario que accede y acceso para usuarios con cuenta Google (no anónimo). Verificá esos ajustes en el diálogo del deployment; el manifest no demuestra cómo quedó la implementación activa.
 4. Recargá la planilla. El menú **Registro Único** abre el mismo HtmlService integrado que `GET /exec`: **Abrir Registro Único** muestra el CRUD en un diálogo y **Administración** abre la vista de administración en otro diálogo. Las opciones administrativas pueden aparecer a otros usuarios por una limitación de identidad de `onOpen`, pero el servidor las bloquea. En una configuración nueva, solo el dueño puede completar **Vincular esta planilla**; se lo registra como admin y se crean `Registros` y sus encabezados si faltan. `Hoja 1` se conserva. Una hoja incompatible o una ya vinculada distinta no se modifica.
 5. Para crear un perfil, el dueño/admin abre Administración, indica el correo Google y elige el rol (`user` o `admin`; `user` es el predeterminado). La app guarda la invitación pendiente y otorga Editor a ese correo. Compartile a la persona el enlace de la landing; debe abrirlo con el mismo Google, revisar el correo y rol mostrados y pulsar **Confirmar acceso y entrar**. La app no manda un correo propio con el enlace. La confirmación habilita el CRUD de la app, pero no es una barrera para la planilla: al crear el perfil se concede Editor, así que la persona también puede abrir y modificar los datos directamente antes de confirmar. Invitá solo al correo correcto. El admin puede cambiar el rol sin activar el perfil, reiniciar una invitación o revocar acceso. La revocación desactiva la app y quita el permiso individual; permisos heredados por grupo/dominio pueden permanecer.
-6. La carpeta mantiene su propio `index.html` para GitHub Pages en `/apps/registro-unico/`. El enlace al `/exec` se actualiza cuando Claudio entrega el URL del nuevo deployment vinculado.
+6. La carpeta mantiene su propio `index.html` para GitHub Pages en `/apps/registro-unico/`. La landing enlaza al deployment vinculado informado por Claudio: `https://script.google.com/macros/s/AKfycbx4nw7eK72BhHiTyTs0HP_uX5D-nVqXudQXcURRum6CQjKbKTlLnToWUq7QxGZodV5F/exec`.
 
 ## Desarrollo y pruebas
 
@@ -34,7 +34,7 @@ No se conectan a Google, no usan credenciales ni escriben en una planilla. Para 
 
 ## Pages
 
-En el repo canónico `claudiomaza/apps`, Pages publica la landing en `/apps/registro-unico/`; el Apps Script se copia desde GitHub al proyecto vinculado y se despliega manualmente. La landing conserva el `/exec` actual hasta que Claudio proporcione el URL del nuevo deployment vinculado; no contiene login propio ni datos personales. Pages y Apps Script son despliegues separados.
+En el repo canónico `claudiomaza/apps`, Pages publica la landing en `/apps/registro-unico/`; el Apps Script se copia desde GitHub al proyecto vinculado y se despliega manualmente. La landing apunta al `/exec` actual informado por Claudio; no contiene login propio ni datos personales. Pages y Apps Script son despliegues separados.
 
 ## Versiones, permisos y rollback
 

@@ -12,7 +12,7 @@ class CatalogTests(unittest.TestCase):
     def test_public_landing_exists_at_the_catalog_route(self):
         page = (ROOT / 'index.html').read_text()
         self.assertIn('Abrir aplicación', page)
-        self.assertIn('https://script.google.com/macros/s/AKfycbxZPFNTRGQWvhE69szf600kxXWQYKtfp1K3C9-jT7PhW70yp9_oEXUNlsGVcd6f7RR3jQ/exec', page)
+        self.assertIn('https://script.google.com/macros/s/AKfycbx4nw7eK72BhHiTyTs0HP_uX5D-nVqXudQXcURRum6CQjKbKTlLnToWUq7QxGZodV5F/exec', page)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

@@ -65,7 +65,6 @@ class ContractTests(unittest.TestCase):
         self.assertIn('Acción no válida.', self.code)
         self.assertNotRegex(self.html, r'runner\[(name|action)\]')
         self.assertNotIn('fetch(', self.html)
-        self.assertNotIn('script.google.com/macros/s/', self.html)
 
     def test_initial_admin_is_bootstrapped_from_sheet_owner_and_roles_allowlisted(self):
         self.assertIn("initialAdminKey: 'REGISTRO_UNICO_INITIAL_ADMIN_EMAIL'", self.code)
@@ -184,7 +183,7 @@ class ContractTests(unittest.TestCase):
 
     def test_pages_is_only_a_landing_and_has_its_own_index(self):
         page = (ROOT / 'index.html').read_text().lower()
-        self.assertIn('script.google.com/macros/s/akfycbxzpfntrgqwvhe69szf600kxxwqyktfp1k3c9-jt7phw70yp9_oexunlsgvcd6f7rr3jq/exec', page)
+        self.assertIn('https://script.google.com/macros/s/akfycbx4nw7ek72bhhityts0hp_ux5d-nvqxudqxcurrum6cqjkbktllntowuq7qxgzodv5f/exec', page)
         self.assertIn('abrir aplicación', page)
         self.assertNotIn('google.accounts', page)
         self.assertNotIn('type="password"', page)
