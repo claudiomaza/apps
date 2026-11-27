@@ -6,7 +6,7 @@ La aplicación se mantiene dentro de `registro-unico/` en el repo canónico `cla
 
 ## Objetivo y usuarios
 
-CRUD web para incorporar y mantener registros de personas en una planilla centralizada. Los registros se almacenan en filas y sus atributos en columnas. Usuarios Google autorizados; en primera vinculación el dueño autenticado de la planilla queda como admin inicial (guardado en Script Properties privada, nunca en el repo público). Drive compartido sin dueño individual permite bootstrap manual privado.
+CRUD web para incorporar y mantener registros de personas en una planilla centralizada. Los registros se almacenan en filas y sus atributos en columnas. Usuarios Google con perfiles precreados por el administrador; en primera vinculación el dueño autenticado de la planilla queda como admin inicial (Script Properties privada). Roles `user` y `admin`; los perfiles legacy `user1`/`user2` se leen como `user`. El dueño/admin asigna un rol al perfil invitado; la persona confirma desde su misma sesión Google antes de usar el CRUD. La administración siempre requiere ser dueño de Sheets y tener rol `admin`. Drive compartido sin dueño individual permite bootstrap manual privado.
 
 ## Arquitectura y decisión de identidad
 
@@ -37,12 +37,14 @@ Título Registro Único, breve explicación y botón al deployment de HtmlServic
 
 ### Panel Admin (`/exec?page=admin`)
 
-- Mismo bootstrap Google; el panel y sus endpoints requieren tanto rol `admin` como ser el dueño de la planilla. La UI oculta los botones a no-dueños; servidor valida de nuevo en cada endpoint.
+- Mismo bootstrap Google; el panel y sus endpoints requieren rol `admin` y ser el dueño de la planilla. El servidor valida de nuevo en cada endpoint.
+- El dueño/admin crea perfiles indicando email Google y asigna rol `user` o `admin` (por defecto `user`). El backend registra invitación pending/inactive y concede permiso Editor directo en Sheets; si Google rechaza el permiso, revierte el perfil. Un rol `admin` no habilita administración fuera de quien sea dueño de la hoja.
+- Al abrir con la cuenta invitada, `bootstrap` muestra confirmación y el email/rol asignados. Solo esa misma identidad Google puede confirmar. `confirmAccess` no acepta email ni rol del cliente; bajo lock consume el pending y activa el rol ya asignado. El CRUD de la app permanece bloqueado antes de aceptar. Pero la invitación ya concede Editor en Google Sheets; la persona puede leer/modificar la planilla directamente aun antes de aceptar. La pantalla confirma pertenencia a la app, no es un control de acceso a la hoja. Usuario no invitado, invitación revocada o email distinto recibe denegación del CRUD.
+- Editar rol (user/admin) preserva estado (active/pending); reenviar reabre invitación; revocar o cancelar invitación desactiva perfil y quita permiso individual. La app no envía su propio correo: el admin comparte el enlace al web app.
+- La pantalla enseña correo y rol que Google identificó. Confirmación compara el rol mostrado con el actual en servidor; si el admin cambió el rol con la pantalla abierta, se rechaza esa confirmación y se pide recargar para revisar el nuevo rol.
 - Vincular la hoja desde la que se abre el script, sin pedir su ID, resetear ni sobrescribir. Si no existe `Registros`, crear pestaña y encabezados; si existe vacía, agregar encabezados; si difieren, abortar sin modificar. No crear pestaña auxiliar `Acceso`. El menú de Sheets abre directamente el mismo HtmlService integrado en un diálogo; **Abrir Registro Único** y **Administración** son items separados. El menú de Sheets muestra ambas opciones porque `onOpen` puede no recibir el correo; solo el dueño/admin puede ejecutarlas, validado server-side.
-- Alta de correo + rol `admin`, `user1` o `user2`; para habilitar se concede permiso de editor en la planilla y se activa en ACL privada de Script Properties.
-- Cambio de rol actualiza lista. `user1`/`user2` comparten todos los permisos CRUD; admin agrega administración de usuarios/permisos.
-- Baja primero desactiva usuario en backend y luego intenta retirar permiso directo de editor. Informar que se quitó solo el permiso individual y que accesos heredados por grupo/dominio pueden subsistir; si Google deniega la revocación, informar el permiso individual pendiente. El usuario queda bloqueado en la app.
-- Prohibido desactivar/demotear el último admin y el admin de bootstrap; un administrador no se puede desactivar a sí mismo.
+- Impedir desactivar/demotear el último admin y el admin inicial; un administrador no puede desactivarse a sí mismo.
+- La revocación desactiva primero el perfil en backend y luego intenta quitar permiso Editor individual. Informar que accesos heredados por grupo/dominio pueden subsistir; si Google deniega revocación, informar el permiso individual pendiente.
 
 ## Datos
 
@@ -52,12 +54,13 @@ Pestaña `Registros`, encabezados exactos:
 
 Las primeras cuatro columnas de negocio son requisitos del producto; las restantes soportan identidad estable y auditoría mínima. ID UUID inmutable. Timestamps como fecha de Sheets. DNI string para preservar ceros iniciales; sin validación geográfica hasta definir regla. Las celdas de texto se guardan en formato texto y se escapan prefijos de fórmula. No se registran valores DNI en logs.
 
-ACL de usuarios en Script Properties: clave/versionado JSON con email normalizado, rol, estado activo y timestamp. En una configuración nueva, el dueño de la planilla que confirma el botón de vinculación queda como admin inicial; el correo se guarda solo en Script Properties, nunca en el repo. Drive compartido sin dueño individual requiere bootstrap privado manual. No almacenar roles en la misma hoja que editores puedan alterar.
+ACL de perfiles en Script Properties: JSON por email normalizado con rol, estado `active`/`pending` y timestamps de invitación/confirmación. El cliente no puede escribir la ACL directamente. En una configuración nueva, el dueño de la planilla que confirma el botón de vinculación queda como admin inicial; el correo se guarda solo en Script Properties, nunca en el repo. Drive compartido sin dueño individual requiere bootstrap privado manual. No almacenar roles en la misma hoja que editores puedan alterar.
 
 ## Contratos
 
-- `runRegistroUnicoApi({action,payload})` solo admite `bootstrap`, `listRecords`, `saveRecord`, `deleteRecord`, `listUsers` y `saveUser`; rechaza cualquier acción no allowlisted.
-- `bootstrap -> {ok,email,role,isAdmin,canAdmin,spreadsheetConfigured}` o mensaje seguro de denegación; acciones de datos requieren usuario activo; acciones de usuarios requieren dueño + admin.
+- `runRegistroUnicoApi({action,payload})` solo admite `bootstrap`, `listRecords`, `saveRecord`, `deleteRecord`, `listUsers`, `saveUser` y `confirmAccess`; rechaza cualquier acción no allowlisted.
+- `bootstrap -> {ok,email,role,isAdmin,canAdmin,spreadsheetConfigured,confirmationRequired}` o mensaje seguro de denegación. Un perfil pendiente obtiene solo el rol previamente asignado y la pantalla de confirmación; no tiene acceso CRUD.
+- `confirmAccess({expectedRole})` obtiene el correo solo de `Session.getActiveUser()`; el `expectedRole` es una comparación contra lo que se mostró, no una fuente para asignar permisos. Bajo lock valida la invitación de ese correo y activa el perfil conservando el rol almacenado. Si el rol cambió mientras estaba abierta la pantalla, rechaza y pide recargar.
 - `saveRecord({id?,nombre,apellido,dni,escolaridad}) -> {ok,id}` (create/update; valida, unicidad DNI y autorización); `deleteRecord({id}) -> {ok}`.
 - `registroUnicoBindActiveSpreadsheet()` solo toma la hoja activa del script vinculado, valida dueño y no admite IDs arbitrarios ni cambia una vinculación distinta. El menú muestra opciones administrativas porque `onOpen` puede carecer de identidad; el servidor las bloquea a no-dueños.
 

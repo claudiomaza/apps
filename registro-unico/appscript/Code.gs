@@ -5,7 +5,7 @@ var APP_ = {
   spreadsheetKey: 'REGISTRO_UNICO_SPREADSHEET_ID',
   sheetName: 'Registros',
   headers: ['ID', 'Nombre', 'Apellido', 'DNI', 'Escolaridad', 'CreadoEn', 'ActualizadoEn', 'CreadoPor', 'ActualizadoPor'],
-  roles: ['admin', 'user1', 'user2']
+  roles: ['admin', 'user']
 };
 
 function doGet(e) {
@@ -54,6 +54,7 @@ function runRegistroUnicoApi(request) {
     case 'deleteRecord': return apiDeleteRecord_(payload.id);
     case 'listUsers': return apiAdminListUsers_();
     case 'saveUser': return apiAdminSaveUser_(payload);
+    case 'confirmAccess': return apiConfirmAccess_(payload);
     default: throw new Error('Acción no válida.');
   }
 }
@@ -113,14 +114,19 @@ function apiBootstrap_() {
       };
     }
     var user = users_()[identity];
-    if (!user || !user.active) return { ok: false, message: 'Tu correo no tiene acceso activo a Registro Único. Pedile al administrador que te habilite.' };
+    if (!user) return { ok: false, message: 'Tu correo no tiene un perfil habilitado en Registro Único. Pedile al administrador que lo cree.' };
+    if (user.pending === true && !user.active) {
+      return { ok: true, email: identity, role: normalizeRole_(user.role), canAdmin: false, spreadsheetConfigured: true, confirmationRequired: true };
+    }
+    if (!user.active) return { ok: false, message: 'Tu acceso a Registro Único está desactivado. Pedile al administrador que lo habilite.' };
+    var role = normalizeRole_(user.role);
     var isOwner = isSpreadsheetOwner_(SpreadsheetApp.openById(configuredId), identity);
     return {
       ok: true,
       email: identity,
-      role: user.role,
-      isAdmin: user.role === 'admin',
-      canAdmin: user.role === 'admin' && isOwner,
+      role: role,
+      isAdmin: role === 'admin',
+      canAdmin: role === 'admin' && isOwner,
       isOwner: isOwner,
       spreadsheetConfigured: true
     };
@@ -203,8 +209,29 @@ function apiAdminListUsers_() {
   requireOwnerAdmin_();
   var users = users_();
   return Object.keys(users).sort().map(function (email) {
-    return { email: email, role: users[email].role, active: Boolean(users[email].active), updatedAt: users[email].updatedAt || '' };
+    var user = users[email];
+    return { email: email, role: normalizeRole_(user.role), active: Boolean(user.active), pending: Boolean(user.pending), updatedAt: user.updatedAt || '' };
   });
+}
+
+function apiConfirmAccess_(input) {
+  var email = currentEmail_();
+  if (!email) throw new Error('No se pudo verificar tu cuenta de Google.');
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var users = users_();
+    var user = users[email];
+    if (!user || user.active || user.pending !== true) throw new Error('Esta cuenta no tiene una invitación pendiente para confirmar.');
+    var role = normalizeRole_(user.role);
+    if (!input || normalizeRole_(input.expectedRole) !== role) throw new Error('El rol asignado cambió. Recargá la app para revisarlo antes de confirmar.');
+    var acceptedAt = new Date().toISOString();
+    users[email] = Object.assign({}, user, { role: role, active: true, pending: false, acceptedAt: acceptedAt, updatedAt: acceptedAt });
+    PropertiesService.getScriptProperties().setProperty(APP_.usersKey, JSON.stringify(users));
+    return { ok: true, email: email, role: role };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function configureSpreadsheet_(id) {
@@ -235,47 +262,58 @@ function ensureDataSheet_(ss) {
 
 function apiAdminSaveUser_(input) {
   var actor = requireOwnerAdmin_();
-  var email = validateEmail_(input && input.email);
-  var role = validateRole_(input && input.role);
-  if (!input || typeof input.active !== 'boolean') throw new Error('Estado de usuario inválido.');
-  var active = input.active;
+  if (!input || typeof input.invite !== 'undefined' && typeof input.invite !== 'boolean' || typeof input.active !== 'undefined' && typeof input.active !== 'boolean') {
+    throw new Error('Operación de usuario inválida.');
+  }
+  var email = validateEmail_(input.email);
+  var role = validateRole_(input.role);
+  var inviting = input.invite === true;
+  var deactivating = input.active === false;
+  if (input.active === true || inviting && typeof input.active !== 'undefined') {
+    throw new Error('Operación de usuario inválida.');
+  }
   var initialAdmin = normalizeEmail_(PropertiesService.getScriptProperties().getProperty(APP_.initialAdminKey));
-  if (email === initialAdmin && (!active || role !== 'admin')) throw new Error('No se puede quitar el rol admin de la cuenta inicial.');
-  if (email === actor.email && (!active || role !== 'admin')) throw new Error('No podés quitarte el rol admin ni desactivarte desde tu propia sesión.');
+  if (email === initialAdmin && (deactivating || role !== 'admin')) throw new Error('No se puede quitar el rol admin de la cuenta inicial.');
+  if (email === actor.email && (deactivating || role !== 'admin')) throw new Error('No podés quitarte el rol admin ni desactivarte desde tu propia sesión.');
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
     var users = users_();
     var old = users[email];
+    if (inviting && old && old.active) throw new Error('Ese perfil ya está activo; guardá solo el cambio de rol.');
+    if (!inviting && !old) throw new Error('Primero creá el perfil con una invitación.');
     var adminCount = Object.keys(users).filter(function (key) { return users[key].active && users[key].role === 'admin'; }).length;
-    if (old && old.role === 'admin' && old.active && (!active || role !== 'admin') && adminCount <= 1) {
+    if (old && old.role === 'admin' && old.active && (deactivating || role !== 'admin') && adminCount <= 1) {
       throw new Error('No se puede quitar o cambiar el último administrador activo.');
     }
-    var ss = configuredSpreadsheet_();
-    if (active) {
-      // Save the app ACL first, then grant the Google permission; roll back ACL if Google rejects sharing.
+    var props = PropertiesService.getScriptProperties();
+    if (inviting) {
       var previous = old ? JSON.stringify(old) : null;
-      users[email] = { role: role, active: true, updatedAt: new Date().toISOString() };
-      var props = PropertiesService.getScriptProperties();
+      var now = new Date().toISOString();
+      users[email] = { role: role, active: false, pending: true, invitedAt: old && old.invitedAt || now, updatedAt: now };
       props.setProperty(APP_.usersKey, JSON.stringify(users));
       try {
-        ss.addEditor(email);
+        configuredSpreadsheet_().addEditor(email);
       } catch (error) {
         if (previous) users[email] = JSON.parse(previous); else delete users[email];
         props.setProperty(APP_.usersKey, JSON.stringify(users));
         throw error;
       }
-      return { ok: true, permission: 'editor' };
+      return { ok: true, permission: 'editor', pending: true };
     }
-    if (!old) throw new Error('Ese correo no figura en la lista.');
-    users[email] = { role: old.role, active: false, updatedAt: new Date().toISOString() };
-    PropertiesService.getScriptProperties().setProperty(APP_.usersKey, JSON.stringify(users));
-    try {
-      ss.removeEditor(email);
-      return { ok: true, permission: 'direct-revoked', warning: 'Se quitó el permiso individual y la app quedó desactivada. Revisá si la cuenta conserva acceso por grupo o dominio.' };
-    } catch (error) {
-      return { ok: true, permission: 'app-disabled-share-remains', warning: 'El acceso a la app quedó desactivado, pero Google no permitió quitar el permiso directo de la planilla. Revisá permisos heredados, grupos o configuración de uso compartido.' };
+    if (deactivating) {
+      users[email] = Object.assign({}, old, { role: role, active: false, pending: false, updatedAt: new Date().toISOString() });
+      props.setProperty(APP_.usersKey, JSON.stringify(users));
+      try {
+        configuredSpreadsheet_().removeEditor(email);
+        return { ok: true, permission: 'direct-revoked', warning: 'Se quitó el permiso individual y la app quedó desactivada. Revisá si la cuenta conserva acceso por grupo o dominio.' };
+      } catch (error) {
+        return { ok: true, permission: 'app-disabled-share-remains', warning: 'El acceso a la app quedó desactivado, pero Google no permitió quitar el permiso directo de la planilla. Revisá permisos heredados, grupos o configuración de uso compartido.' };
+      }
     }
+    users[email] = Object.assign({}, old, { role: role, updatedAt: new Date().toISOString() });
+    props.setProperty(APP_.usersKey, JSON.stringify(users));
+    return { ok: true, permission: old.active ? 'editor' : 'inactive-profile', pending: Boolean(old.pending) };
   } finally {
     lock.releaseLock();
   }
@@ -286,7 +324,7 @@ function requireUser_() {
   if (!email) throw new Error('No se pudo verificar tu correo de Google.');
   var user = users_()[email];
   if (!user || !user.active) throw new Error('Acceso denegado: correo no habilitado en Registro Único.');
-  return { email: email, role: user.role };
+  return { email: email, role: normalizeRole_(user.role) };
 }
 
 function requireAdmin_() {
@@ -377,12 +415,15 @@ function validateEmail_(value) {
   return email;
 }
 
-function validateRole_(value) {
+function normalizeRole_(value) {
   var role = String(value || '').trim();
-  if (['admin', 'user1', 'user2'].indexOf(role) < 0) {
-    throw new Error('El rol no es válido.');
-  }
-  return role;
+  if (role === 'admin') return 'admin';
+  if (['user', 'user1', 'user2'].indexOf(role) >= 0) return 'user';
+  throw new Error('El rol no es válido.');
+}
+
+function validateRole_(value) {
+  return normalizeRole_(value);
 }
 
 function validateRecord_(input) {

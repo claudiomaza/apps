@@ -71,8 +71,64 @@ class ContractTests(unittest.TestCase):
         self.assertIn("initialAdminKey: 'REGISTRO_UNICO_INITIAL_ADMIN_EMAIL'", self.code)
         self.assertIn('setProperty(APP_.initialAdminKey, ownerEmail)', self.code)
         self.assertIn('El valor de REGISTRO_UNICO_INITIAL_ADMIN_EMAIL no es un correo válido.', self.code)
-        self.assertRegex(self.code, r"\['admin',\s*'user1',\s*'user2'\]")
+        self.assertIn("roles: ['admin', 'user']", self.code)
+        self.assertIn("['user', 'user1', 'user2'].indexOf(role) >= 0", self.code)
+        self.assertIn('function normalizeRole_', self.code)
+        self.assertIn("case 'confirmAccess'", self.code)
+        self.assertIn('confirmationRequired', self.code)
+        self.assertIn('user.pending', self.code)
+        self.assertIn("active: false, pending: true", self.code)
+        self.assertIn("pending: false, acceptedAt", self.code)
+        self.assertIn('var email = currentEmail_();', self.code[self.code.index('function apiConfirmAccess_'):])
+        confirm = self.code[self.code.index('function apiConfirmAccess_'):self.code.index('function configureSpreadsheet_')]
+        self.assertIn('currentEmail_()', confirm)
+        self.assertIn('input.expectedRole', confirm)
+        self.assertIn('normalizeRole_(input.expectedRole) !== role', confirm)
+        self.assertNotIn('input.email', confirm)
+        self.assertNotIn('input.role', confirm)
+        self.assertIn('id="pendingView"', self.html)
+        self.assertIn('id="confirmAccess"', self.html)
+        self.assertIn('confirmAccess', self.html)
+        self.assertIn('id="pendingRole"', self.html)
+        self.assertIn('El permiso de Editor en la planilla ya fue otorgado', self.html)
+        self.assertIn('también es dueña de la planilla', self.html)
+        self.assertIn('Pendiente de confirmación', self.html)
+        self.assertIn('Reiniciar invitación', self.html)
+        self.assertIn('Cancelar invitación', self.html)
+        self.assertIn('Crear perfil', self.html)
+        self.assertIn('<select id="role"><option value="user">user</option><option value="admin">admin</option></select>', self.html)
+        self.assertIn("var role = validateRole_(input.role);", self.code)
+        self.assertIn("role:select.value", self.html)
+        self.assertIn("role !== 'admin'", self.code)
+        self.assertIn('permiso de Sheets otorgado', self.html)
+        self.assertNotIn('value="user1"', self.html)
+        self.assertNotIn('value="user2"', self.html)
         self.assertIsNone(re.search(r"['\"][^'\"\\s]+@[^'\"\\s]+\\.[^'\"\\s]+['\"]", self.code))
+
+    def test_invite_confirmation_is_bound_to_google_identity_and_role_snapshot(self):
+        invite = self.code[self.code.index('function apiAdminSaveUser_'):self.code.index('function requireUser_')]
+        confirm = self.code[self.code.index('function apiConfirmAccess_'):self.code.index('function configureSpreadsheet_')]
+        bootstrap = self.code[self.code.index('function apiBootstrap_'):self.code.index('function apiListRecords_')]
+        self.assertIn("users[email] = { role: role, active: false, pending: true", invite)
+        self.assertIn('configuredSpreadsheet_().addEditor(email)', invite)
+        self.assertIn('if (previous) users[email] = JSON.parse(previous); else delete users[email];', invite)
+        self.assertIn('var email = currentEmail_();', confirm)
+        self.assertIn('var user = users[email];', confirm)
+        self.assertIn("user.pending !== true", confirm)
+        self.assertIn('normalizeRole_(input.expectedRole) !== role', confirm)
+        self.assertIn('role: role, active: true, pending: false', confirm)
+        self.assertIn('role: normalizeRole_(user.role)', bootstrap)
+        self.assertIn('confirmationRequired: true', bootstrap)
+        self.assertIn('expectedRole:pendingRole', self.html)
+
+    def test_admin_can_assign_or_change_role_without_implicitly_activating_profile(self):
+        self.assertIn('<select id="role"><option value="user">user</option><option value="admin">admin</option></select>', self.html)
+        self.assertIn("['user','admin']", self.html)
+        self.assertIn("role:select.value", self.html)
+        self.assertIn("Object.assign({}, old, { role: role, updatedAt:", self.code)
+        self.assertIn('role:select.value},function(){show(\'Rol actualizado sin cambiar el estado del perfil.\')', self.html)
+        self.assertIn('active: false, pending: true', self.code)
+        self.assertIn("case 'confirmAccess': return apiConfirmAccess_(payload)", self.code)
 
     def test_every_data_operation_checks_active_app_user(self):
         for fn in ('apiListRecords_', 'apiSaveRecord_', 'apiDeleteRecord_'):
@@ -85,8 +141,13 @@ class ContractTests(unittest.TestCase):
             body = re.search(r'function\s+' + fn + r'\([^)]*\)\s*\{([\s\S]*?)\n\}', self.code)
             self.assertIsNotNone(body, fn)
             self.assertIn('requireOwnerAdmin_()', body.group(1), fn)
-        self.assertIn('ss.addEditor(email)', self.code)
-        self.assertIn('ss.removeEditor(email)', self.code)
+        self.assertIn('configuredSpreadsheet_().addEditor(email)', self.code)
+        self.assertIn('configuredSpreadsheet_().removeEditor(email)', self.code)
+        self.assertIn("active: false, pending: true", self.code)
+        self.assertIn("case 'confirmAccess': return apiConfirmAccess_(payload)", self.code)
+        self.assertIn("user.pending === true && !user.active", self.code)
+        self.assertIn("user.active || user.pending !== true", self.code)
+        self.assertIn('acceptedAt: acceptedAt', self.code)
         self.assertIn('Solo el dueño de la planilla', self.code)
 
     def test_admin_menu_handler_revalidates_owner_before_open(self):
@@ -95,8 +156,9 @@ class ContractTests(unittest.TestCase):
         self.assertIn('requireOwnerAdmin_()', body.group(1))
 
     def test_bootstrap_admin_cannot_be_demoted(self):
-        self.assertIn("email === initialAdmin && (!active || role !== 'admin')", self.code)
-        self.assertIn("typeof input.active !== 'boolean'", self.code)
+        self.assertIn("email === initialAdmin && (deactivating || role !== 'admin')", self.code)
+        self.assertIn("typeof input.active !== 'undefined' && typeof input.active !== 'boolean'", self.code)
+        self.assertIn("email === actor.email && (deactivating || role !== 'admin')", self.code)
 
     def test_acl_is_not_kept_in_user_editable_sheet(self):
         self.assertIn('PropertiesService.getScriptProperties()', self.code)
