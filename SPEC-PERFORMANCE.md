@@ -241,3 +241,12 @@ Claudio indicó como referencia visual `https://zapia-notas-nav-claudio-20261113
 ### RESET Agenda — usuario inicial y flujo MGD (2026-11-18)
 
 - Como en MGD, el RESET de Agenda pide el correo para el perfil, crea la cuenta con usuario literal `admin`, nombre `Administrador`, rol `admin` y alcances vacíos, y muestra una contraseña temporal aleatoria una sola vez. El correo puede ser el que Claudio indique en el formulario. El gate de mantenimiento del Sheet sigue limitado a la cuenta Google autorizada `cmaza@mendoza.edu.ar`; ese control no se reemplaza por el mail del perfil.
+
+
+## Registro Único — ruta y acceso a Administración desde Sheets (2026-11-27)
+
+- Registro Único vive en `registro-unico/` y su landing se publica en `/apps/registro-unico/`. La tarjeta correspondiente forma parte del índice raíz de Pages.
+- El web app independiente de Apps Script sigue siendo responsable de identidad, ACL, validaciones CRUD y permisos de planilla; ejecuta como el usuario que accede. Pages no captura credenciales ni ejecuta operaciones.
+- La vinculación de una planilla crea únicamente `Registros` y encabezados si faltan; no se crea una pestaña auxiliar `Acceso`. Una pestaña vieja se conserva, no se elimina automáticamente.
+- Google limita los menús y sidebars de Sheets a scripts vinculados a la planilla. `registro-unico/sheet-menu/` contiene el proyecto companion mínimo: menú `Registro Único > Abrir administración` y sidebar con botón que abre el panel web. Solo almacena el URL público del deployment, no autoriza acciones ni contiene secretos. Scopes: `spreadsheets.currentonly` y `script.container.ui`.
+- El backend standalone y el script vinculado requieren instalación/despliegue manual separado; no afirmar integración E2E hasta comprobar la UI/OAuth y permisos con una planilla sintética o autorizada.
