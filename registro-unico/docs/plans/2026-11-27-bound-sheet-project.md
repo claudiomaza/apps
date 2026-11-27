@@ -4,7 +4,7 @@
 
 **Goal:** Make Registro Único installable as one Apps Script project opened from its target spreadsheet, with menu/sidebar actions that link that spreadsheet and open the app/Admin.
 
-**Architecture:** The primary Apps Script project becomes container-bound to the Sheet and retains the web-app `doGet`/server ACL. Its `onOpen` adds a menu; the menu and sidebar open CRUD/Admin and safely initialize only the currently bound spreadsheet without asking for a spreadsheet ID. The app keeps its own Pages `index.html`; do not change the Apps Script deployment URL until Claudio supplies the new `/exec`.
+**Architecture:** The primary Apps Script project is container-bound to the Sheet and retains the web-app `doGet`/server ACL. Its `onOpen` adds separate menu items for app and admin; owner-only binding acts on the current sheet without asking for an ID. Menu items show a trusted user-click link dialog for opening the Apps Script deployment. The app keeps its own Pages `index.html`.
 
 **Tech Stack:** Google Apps Script V8, Sheets custom menu/sidebar, HtmlService, Python contract tests, GitHub Pages.
 
@@ -14,7 +14,7 @@
 
 **Files:** `registro-unico/tests/test_contract.py`, `registro-unico/tests/test_catalog.py`
 
-- Require `onOpen`, CRUD/Admin menu links, a bound-sheet setup function, no standalone companion `sheet-menu/`, and the `script.container.ui` scope in the primary manifest.
+- Require `onOpen`, separate CRUD/Admin menu items, a bound-sheet setup function, no sidebar or standalone companion `sheet-menu/`, and the `script.container.ui` scope in the primary manifest.
 - Require the app's own `registro-unico/index.html` and preserve its current deployment URL until supplied anew.
 - Run tests first; confirm expected RED.
 
@@ -22,8 +22,8 @@
 
 **Files:** `registro-unico/appscript/Code.gs`, `registro-unico/appscript/appsscript.json`
 
-- Add menu and sidebar helper in the main `Code.gs`.
-- Add a server function available from the bound menu/sidebar that derives the active spreadsheet ID, bootstraps the active sheet owner as admin only on pristine Script Properties, initializes only the `Registros` tab/header, saves the ID, refuses to silently relink a different configured Sheet, and never creates an `Acceso` tab.
+- Add separate menu handlers for CRUD and owner/admin-only Administration; open via user-click link dialog.
+- Add a bound menu function that derives the active spreadsheet ID, bootstraps its owner as admin only on pristine Script Properties, initializes only `Registros`, refuses to retarget another configured Sheet, and never creates `Acceso`.
 - Make the spreadsheet linker server-side only and derive its ID from the bound spreadsheet; refuse retargeting.
 - Add only `script.container.ui` to existing scopes.
 

@@ -16,40 +16,45 @@ function doGet(e) {
 }
 
 function onOpen() {
-  SpreadsheetApp.getUi().createMenu(APP_.name)
-    .addItem('Abrir Registro Único', 'registroUnicoOpenPanel')
-    .addToUi();
-}
-
-function registroUnicoOpenPanel() {
-  var configuredId = PropertiesService.getScriptProperties().getProperty(APP_.spreadsheetKey);
-  var active = configuredId ? SpreadsheetApp.openById(configuredId) : SpreadsheetApp.getActiveSpreadsheet();
+  var ui = SpreadsheetApp.getUi();
+  var menu = ui.createMenu(APP_.name).addItem('Abrir Registro Único', 'registroUnicoOpenApp');
+  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   var email = currentEmail_();
-  var canManage = isSpreadsheetOwner_(active, email);
+  var isOwner = isSpreadsheetOwner_(spreadsheet, email);
   var canAdmin = false;
-  if (canManage) {
+  if (isOwner) {
     try {
       var user = users_()[email];
       canAdmin = Boolean(user && user.active && user.role === 'admin');
     } catch (error) {}
   }
+  if (canAdmin) menu.addItem('Administración', 'registroUnicoOpenAdmin');
+  if (isOwner) menu.addSeparator().addItem('Vincular esta planilla', 'registroUnicoBindActiveSpreadsheet');
+  menu.addToUi();
+}
+
+function registroUnicoOpenApp() {
+  openAppLink_(ScriptApp.getService().getUrl(), 'Abrir Registro Único');
+}
+
+function registroUnicoOpenAdmin() {
+  requireOwnerAdmin_();
   var url = ScriptApp.getService().getUrl();
+  openAppLink_(url && url + '?page=admin', 'Abrir Administración');
+}
+
+function openAppLink_(url, title) {
   if (!url) {
     SpreadsheetApp.getUi().alert('Publicá primero el proyecto como aplicación web para habilitar Registro Único.');
     return;
   }
-  var adminUrl = url + '?page=admin';
   var html = HtmlService.createHtmlOutput(
-    '<div style="font:14px system-ui,sans-serif;padding:16px;color:#172027">' +
-      '<p>Primero vinculá la hoja. Si la configuración es nueva, su dueño queda como administrador.</p>' +
-      '<a href="' + htmlAttribute_(url) + '" target="_top" style="display:block;padding:11px 14px;margin:10px 0;border-radius:8px;background:#087e69;color:white;text-decoration:none;text-align:center;font-weight:700">Abrir Registro Único</a>' +
-      (canAdmin ? '<a href="' + htmlAttribute_(adminUrl) + '" target="_top" style="display:block;padding:11px 14px;margin:10px 0;border-radius:8px;background:#e9f1f1;color:#173b37;text-decoration:none;text-align:center;font-weight:700">Administración</a>' : '') +
-      (canManage ? '<button id="bind" style="width:100%;padding:11px 14px;margin-top:10px;border:0;border-radius:8px;background:#e9f1f1;color:#173b37;font:inherit;font-weight:700;cursor:pointer">Vincular esta planilla</button>' : '') +
-      '<div id="status" role="status" style="margin-top:12px;color:#52616a"></div>' +
-      (canManage ? '<script>document.getElementById("bind").addEventListener("click",function(){var b=this;b.disabled=true;document.getElementById("status").textContent="Verificando y preparando la planilla…";google.script.run.withSuccessHandler(function(r){document.getElementById("status").textContent=r.message;b.disabled=false;}).withFailureHandler(function(e){document.getElementById("status").textContent=e&&e.message?e.message:"No se pudo vincular la planilla.";b.disabled=false;}).registroUnicoBindActiveSpreadsheet();});</script>' : '') +
+    '<div style="font:14px system-ui,sans-serif;padding:18px;color:#172027">' +
+      '<p>Seleccioná el botón para abrir la aplicación en una pestaña nueva.</p>' +
+      '<a href="' + htmlAttribute_(url) + '" target="_blank" style="display:block;padding:12px 14px;border-radius:8px;background:#087e69;color:white;text-decoration:none;text-align:center;font-weight:700">' + title + '</a>' +
     '</div>'
-  ).setTitle(APP_.name).setWidth(330);
-  SpreadsheetApp.getUi().showSidebar(html);
+  ).setWidth(320).setHeight(140);
+  SpreadsheetApp.getUi().showModalDialog(html, title);
 }
 
 function registroUnicoBindActiveSpreadsheet() {
@@ -75,10 +80,14 @@ function registroUnicoBindActiveSpreadsheet() {
       if (configuredId !== activeId) throw new Error('Registro Único ya está vinculado a otra planilla. No se cambió la configuración.');
       var existing = configuredSpreadsheet_();
       ensureDataSheet_(existing);
+      onOpen();
+      SpreadsheetApp.getUi().alert('Esta planilla ya estaba vinculada.');
       return { ok: true, name: existing.getName(), message: 'Esta planilla ya estaba vinculada.' };
     }
     var result = configureSpreadsheet_(activeId);
-    return { ok: true, name: result.name, message: 'Planilla vinculada. La pestaña Registros está lista.' };
+    onOpen();
+    SpreadsheetApp.getUi().alert('Planilla vinculada: ' + result.name + '. La pestaña Registros está lista.');
+    return { ok: true, name: result.name };
   } finally {
     lock.releaseLock();
   }

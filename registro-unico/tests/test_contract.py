@@ -82,24 +82,27 @@ class ContractTests(unittest.TestCase):
         self.assertNotIn('accessLinksButton', self.admin)
         self.assertNotIn('Agregar accesos en la hoja', self.admin)
 
-    def test_bound_sheet_project_has_menu_sidebar_and_container_ui_scope(self):
+    def test_bound_sheet_menu_has_separate_owner_gated_actions(self):
         self.assertIn('function onOpen()', self.code)
         self.assertIn('createMenu(APP_.name)', self.code)
-        self.assertIn("addItem('Abrir Registro Único', 'registroUnicoOpenPanel')", self.code)
-        self.assertIn('function registroUnicoOpenPanel()', self.code)
-        self.assertIn('ScriptApp.getService().getUrl()', self.code)
-        self.assertIn('Administración', self.code)
-        self.assertIn('Vincular esta planilla', self.code)
-        self.assertIn('showSidebar(', self.code)
+        self.assertIn("addItem('Abrir Registro Único', 'registroUnicoOpenApp')", self.code)
+        self.assertIn("addItem('Administración', 'registroUnicoOpenAdmin')", self.code)
+        self.assertIn("addItem('Vincular esta planilla', 'registroUnicoBindActiveSpreadsheet')", self.code)
+        self.assertIn('isSpreadsheetOwner_', self.code)
+        self.assertIn('showModalDialog(', self.code)
+        self.assertNotIn('showSidebar(', self.code)
+        self.assertIn('target="_blank"', self.code)
         self.assertTrue((ROOT / 'index.html').is_file())
         self.assertFalse((ROOT / 'sheet-menu').exists())
         self.assertIn('https://www.googleapis.com/auth/script.container.ui', self.manifest['oauthScopes'])
-        self.assertIn('Volvé a Sheets y usá el menú Registro Único para vincularla.', (ROOT / 'appscript' / 'Index.html').read_text())
-        self.assertIn('Vincular esta planilla', self.admin)
+        self.assertTrue((ROOT / 'appscript' / 'Index.html').is_file())
         self.assertNotIn('setupForm', self.admin)
         self.assertNotIn('sheetId', self.admin)
-        self.assertIn("var adminUrl = url + '?page=admin';", self.code)
-        self.assertIn('htmlAttribute_(adminUrl)', self.code)
+        self.assertIn("url && url + '?page=admin'", self.code)
+        self.assertIn('function registroUnicoOpenAdmin()', self.code)
+        self.assertIn('function registroUnicoOpenApp()', self.code)
+        self.assertNotIn('function registroUnicoOpenPanel()', self.code)
+        self.assertNotIn('document.getElementById("bind").addEventListener', self.code)
 
     def test_first_sheet_owner_is_bootstrapped_as_admin_without_public_email(self):
         body = re.search(r'function\s+registroUnicoBindActiveSpreadsheet\([^)]*\)\s*\{([\s\S]*?)\n\}', self.code)
@@ -115,18 +118,21 @@ class ContractTests(unittest.TestCase):
         self.assertIn('Falta la configuración del administrador inicial.', code)
         self.assertIsNone(re.search(r"['\"][^'\"\\s]+@[^'\"\\s]+\\.[^'\"\\s]+['\"]", self.code))
 
-    def test_sheet_action_links_navigate_top_level(self):
-        self.assertIn('target="_top"', self.code)
-        self.assertIn('Abrir Registro Único</a>', self.code)
-        self.assertIn('Administración</a>', self.code)
+    def test_menu_action_dialogs_open_links_in_new_tab(self):
+        self.assertIn('target="_blank"', self.code)
+        self.assertIn('showModalDialog(', self.code)
+        self.assertIn('function registroUnicoOpenApp()', self.code)
+        self.assertIn('function registroUnicoOpenAdmin()', self.code)
+        self.assertIn('requireOwnerAdmin_()', self.code[self.code.index('function registroUnicoOpenAdmin'):self.code.index('function openAppLink_')])
+        self.assertIn('htmlAttribute_(url)', self.code)
 
     def test_only_sheet_owner_sees_bind_and_admin_controls(self):
-        sidebar = re.search(r'function\s+registroUnicoOpenPanel\([^)]*\)\s*\{([\s\S]*?)\n\}', self.code)
-        self.assertIsNotNone(sidebar)
-        self.assertIn('isSpreadsheetOwner_', sidebar.group(1))
-        self.assertIn('Vincular esta planilla', sidebar.group(1))
-        self.assertIn('canManage', sidebar.group(1))
-        self.assertIn('(canManage ? \'<script>document.getElementById("bind")', sidebar.group(1))
+        menu = re.search(r'function\s+onOpen\([^)]*\)\s*\{([\s\S]*?)\n\}', self.code)
+        self.assertIsNotNone(menu)
+        self.assertIn('isSpreadsheetOwner_', menu.group(1))
+        self.assertIn("addItem('Vincular esta planilla'", menu.group(1))
+        self.assertIn("addItem('Administración'", menu.group(1))
+        self.assertIn('if (canAdmin)', menu.group(1))
         self.assertIn('function requireOwnerAdmin_', self.code)
         for fn in ('apiAdminListUsers', 'apiAdminSaveUser', 'registroUnicoBindActiveSpreadsheet'):
             body = re.search(r'function\s+' + fn + r'\([^)]*\)\s*\{([\s\S]*?)\n\}', self.code)
@@ -158,6 +164,7 @@ class ContractTests(unittest.TestCase):
         self.assertIn('configuredSpreadsheet_', body.group(1))
         self.assertIn('configureSpreadsheet_', body.group(1))
         self.assertIn('ensureDataSheet_', self.code)
+        self.assertIn('onOpen();', body.group(1))
         self.assertNotIn('function apiAdminConfigureSpreadsheet(', self.code)
 
     def test_record_columns_and_reversible_changes_are_accounted_for(self):

@@ -2,7 +2,7 @@
 
 **Objetivo:** incorporar Registro Único a `claudiomaza/apps` y dar acceso a su panel desde la interfaz de la planilla sin crear una pestaña auxiliar.
 
-**Diseño:** mantener el web app independiente como fuente de autenticación, autorización y CRUD. Google reserva menús/sidebars de Sheets para scripts vinculados; el mismo proyecto web app debe abrirse desde la planilla y añade su propio menú y barra lateral. Pages publica la landing bajo `/apps/registro-unico/`.
+**Diseño vigente:** el mismo proyecto Apps Script vinculado a la hoja aloja web app/backend y expone acciones separadas desde el menú de Sheets. La administración queda restringida al dueño/admin; no se usa sidebar complementaria. Pages publica la landing bajo `/apps/registro-unico/`.
 
 **Stack:** Apps Script/HtmlService, Google Sheets UI, GitHub Pages, pruebas offline de contrato Python.
 
