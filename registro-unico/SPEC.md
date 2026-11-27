@@ -2,7 +2,7 @@
 
 ## Estructura canónica del repositorio
 
-La aplicación se mantiene dentro de `registro-unico/` en el repo canónico `claudiomaza/apps`: `appscript/` contiene exactamente `appsscript.json`, un único `Code.gs`, `Admin.html` y `Index.html`; toda la lógica de backend/validación está en Code.gs y los estilos son internos a cada HTML, sin `include()` ni archivos locales auxiliares. `index.html` contiene la landing en `/apps/registro-unico/`; `README.md`, `AGENT.md` y `SPEC.md` al nivel de la carpeta de la app. No mover archivos del proyecto a la raíz del repositorio.
+La aplicación se mantiene dentro de `registro-unico/` en el repo canónico `claudiomaza/apps`: `appscript/` contiene exactamente `appsscript.json`, un `Code.gs` y una interfaz integrada `Registro.html`. `doGet` y el menú de Sheets usan el mismo HtmlService; el HTML se comunica con el backend por `google.script.run` a través de un dispatcher allowlisted. `index.html` separado contiene la landing Pages. No mover fuentes del proyecto a la raíz del repositorio.
 
 ## Objetivo y usuarios
 
@@ -10,13 +10,12 @@ CRUD web para incorporar y mantener registros de personas en una planilla centra
 
 ## Arquitectura y decisión de identidad
 
-Tres superficies/despliegues separados:
+Dos superficies/despliegues separados:
 
-1. Backend Apps Script: única capa de la aplicación que accede a Sheets. Reglas y validación en servidor.
-2. HtmlService: superficie autenticada del CRUD (`Index.html`) y panel admin independiente (`Admin.html`).
-3. GitHub Pages: página estática de entrada que enlaza a la URL `/exec`; no autentica, no accede a Sheets, no contiene datos/secretos ni funciona como frontend CRUD.
+1. Proyecto Apps Script vinculado: backend y vista integrada HtmlService (`Registro.html`), servida tanto por `GET /exec` como por el menú. El frontend usa `google.script.run`; el único RPC del cliente es `runRegistroUnicoApi({action,payload})`, con acciones permitidas explícitamente. Toda lectura/escritura y autorización ocurre en servidor.
+2. GitHub Pages: landing estática que enlaza a `/exec`; no autentica, no accede a Sheets, no contiene datos/secretos ni funciona como frontend CRUD.
 
-Decisión explícita: Apps Script se ejecuta como el usuario que accede (`USER_DEPLOYING`). Se accede con cuenta Google; al primer uso Google pide autorizar scopes de Sheets e identidad. No se usa OAuth Client ID propio en Pages. La experiencia de Google está integrada en HtmlService, no en el sitio estático.
+Decisión explícita: Apps Script se ejecuta como el usuario que accede (`USER_ACCESSING`), no como quien lo desplegó. Así `Session.getActiveUser()`, Sheets y la ACL reflejan la cuenta que está usando la aplicación. Se requiere cuenta Google; al primer uso se autorizan scopes de Sheets e identidad. No se usa OAuth Client ID propio en Pages; la experiencia de Google está integrada en HtmlService.
 
 Cada usuario activo necesita permiso de edición en la planilla porque el web app corre con su identidad. El admin panel concede/revoca permiso individual de editor mediante Spreadsheet service si quien opera tiene autoridad para compartir. ACL heredadas de grupos/dominio pueden impedir revocación completa. Los usuarios pueden editar la hoja directamente; la app no controla validaciones en cambios directos. No ocultar este límite.
 
@@ -29,7 +28,7 @@ Título Registro Único, breve explicación y botón al deployment de HtmlServic
 ### CRUD HtmlService (`/exec`)
 
 - Google autentica al abrir e impone autorización de Apps Script.
-- `apiBootstrap` devuelve contexto únicamente de la sesión real. Sin email disponible, sin rol activo o fallo de verificación: negar acceso.
+- La acción RPC `bootstrap` devuelve contexto solo para la sesión real. Sin email o sin usuario activo, deniega acceso; si el proyecto aún no está vinculado, devuelve estado sin configuración sin exponer datos y guía a usar el menú **Vincular esta planilla**.
 - Formulario: Nombre, Apellido, DNI, Escolaridad; todos obligatorios; espacios externos recortados, texto máximo 80 caracteres para los tres primeros, 160 para escolaridad. DNI se trata como texto para preservar ceros iniciales.
 - Crear agrega fila al final. Listar muestra todos los registros autorizados. Editar actualiza por ID estable. Eliminar pide confirmación y borra la fila de forma permanente.
 - Datos se crean/modifican bajo lock de Apps Script. `DNI` debe ser único en las operaciones hechas por la aplicación.
@@ -39,7 +38,7 @@ Título Registro Único, breve explicación y botón al deployment de HtmlServic
 ### Panel Admin (`/exec?page=admin`)
 
 - Mismo bootstrap Google; el panel y sus endpoints requieren tanto rol `admin` como ser el dueño de la planilla. La UI oculta los botones a no-dueños; servidor valida de nuevo en cada endpoint.
-- Vincular la hoja desde la que se abre el script, sin pedir su ID, resetear ni sobrescribir. Si no existe `Registros`, crear pestaña y encabezados; si existe vacía, agregar encabezados; si difieren, abortar sin modificar. No crear pestaña auxiliar `Acceso`. Para acceso desde Sheets, el mismo proyecto vinculado agrega opciones separadas **Abrir Registro Único** y **Administración** al menú; cada opción muestra un link explícito que abre el endpoint del despliegue en pestaña nueva. Solo el dueño ve Administración y el item **Vincular esta planilla**.
+- Vincular la hoja desde la que se abre el script, sin pedir su ID, resetear ni sobrescribir. Si no existe `Registros`, crear pestaña y encabezados; si existe vacía, agregar encabezados; si difieren, abortar sin modificar. No crear pestaña auxiliar `Acceso`. El menú de Sheets abre directamente el mismo HtmlService integrado en un diálogo; **Abrir Registro Único** y **Administración** son items separados. El menú de Sheets muestra ambas opciones porque `onOpen` puede no recibir el correo; solo el dueño/admin puede ejecutarlas, validado server-side.
 - Alta de correo + rol `admin`, `user1` o `user2`; para habilitar se concede permiso de editor en la planilla y se activa en ACL privada de Script Properties.
 - Cambio de rol actualiza lista. `user1`/`user2` comparten todos los permisos CRUD; admin agrega administración de usuarios/permisos.
 - Baja primero desactiva usuario en backend y luego intenta retirar permiso directo de editor. Informar que se quitó solo el permiso individual y que accesos heredados por grupo/dominio pueden subsistir; si Google deniega la revocación, informar el permiso individual pendiente. El usuario queda bloqueado en la app.
@@ -57,11 +56,10 @@ ACL de usuarios en Script Properties: clave/versionado JSON con email normalizad
 
 ## Contratos
 
-- `apiBootstrap() -> {ok,email,role,isAdmin,spreadsheetConfigured}` o mensaje seguro de denegación.
-- `apiListRecords() -> Record[]` (requiere usuario activo).
-- `apiSaveRecord({id?,nombre,apellido,dni,escolaridad}) -> {ok,id}` (create/update; valida, unicidad DNI y autorización).
-- `apiDeleteRecord(id) -> {ok}` (delete permanente, usuario activo).
-- `apiAdminListUsers() -> User[]`, `apiAdminSaveUser({email,role,active})`, `registroUnicoBindActiveSpreadsheet()`; requieren admin efectivo y dueño de la planilla en servidor. El último solo toma la hoja activa del script vinculado; no admite IDs arbitrarios ni cambia una vinculación distinta. UI oculta Vincular y Administración a no-dueños.
+- `runRegistroUnicoApi({action,payload})` solo admite `bootstrap`, `listRecords`, `saveRecord`, `deleteRecord`, `listUsers` y `saveUser`; rechaza cualquier acción no allowlisted.
+- `bootstrap -> {ok,email,role,isAdmin,canAdmin,spreadsheetConfigured}` o mensaje seguro de denegación; acciones de datos requieren usuario activo; acciones de usuarios requieren dueño + admin.
+- `saveRecord({id?,nombre,apellido,dni,escolaridad}) -> {ok,id}` (create/update; valida, unicidad DNI y autorización); `deleteRecord({id}) -> {ok}`.
+- `registroUnicoBindActiveSpreadsheet()` solo toma la hoja activa del script vinculado, valida dueño y no admite IDs arbitrarios ni cambia una vinculación distinta. El menú muestra opciones administrativas porque `onOpen` puede carecer de identidad; el servidor las bloquea a no-dueños.
 
 El navegador no puede establecer identidad ni rol enviando campos. AppScript obtiene identidad de `Session.getActiveUser()` en modo ejecutar como usuario; si correo vacío, fail closed. Errores devueltos sin información interna sensible.
 

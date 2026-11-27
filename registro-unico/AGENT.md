@@ -5,19 +5,19 @@
 - Repositorio: `https://github.com/claudiomaza/apps`.
 - Carpeta canónica: `registro-unico/` dentro de `claudiomaza/apps`.
 - `main` es la rama integrada. Mantener una sola rama de desarrollo local, `dev`; no crear ramas feature adicionales ni publicar Apps Script desde el agente.
-- `appscript/` contiene solo `appsscript.json`, `Code.gs`, `Index.html` y `Admin.html`; validadores residen en Code.gs y estilos se embeben en cada HTML. Ningún include de archivo local. No crear, actualizar ni desplegar Apps Script como agente.
+- `appscript/` contiene solo `appsscript.json`, `Code.gs` y `Registro.html`, siguiendo Agenda: una interfaz HtmlService integrada sirve tanto al web app como a los diálogos del menú. No crear includes, companions ni desplegar Apps Script como agente.
 - `index.html` es fuente de la página de entrada estática en `/apps/registro-unico/`. Pages publica desde la raíz de `claudiomaza/apps`. No agregar datos reales, IDs de hojas ni credenciales. Landing enlaza al deployment de Apps Script informado por Claudio.
 - No leer ni escribir datos reales, no ejecutar migraciones y no cambiar permisos de planillas reales en desarrollo. Usar fixtures/sheets sintéticas aisladas.
 
 ## Diseño vigente
 
 - Producto: CRUD de registros en filas, atributos en columnas: Nombre, Apellido, DNI, Escolaridad. Las filas nuevas van al final; ID estable y timestamps/actor son metadatos adicionales del sistema.
-- Una única Google Sheet central. Apps Script corre como la persona que accede (`USER_DEPLOYING`); Google la autentica al abrir HtmlService y pide consentimiento OAuth de Apps Script. El mismo proyecto Apps Script debe ser vinculado a la planilla. Su menú abre CRUD y Administración como opciones separadas; **Vincular esta planilla** también es un item de menú exclusivo del dueño. No mantener sidebar ni companion separado.
+- Una única Google Sheet central. Apps Script corre como la persona que accede (`USER_ACCESSING`); Google la autentica al abrir HtmlService y pide consentimiento OAuth de Apps Script. El mismo proyecto Apps Script debe ser vinculado a la planilla. Su menú abre CRUD y Administración como opciones separadas. `onOpen` no debe depender de identidad para construir el menú: Apps Script puede ocultar el correo en disparadores simples; los handlers exigen dueño/admin antes de operar. No mantener sidebar ni companion separado.
 - `Session.getActiveUser().getEmail()` debe resolver una identidad; si está vacío, fail closed. Cada operación pública vuelve a comprobar usuario activo y rol en backend. No usar email enviado desde navegador como identidad.
 - ACL de app en `PropertiesService.getScriptProperties()`, no en una hoja editable por usuarios. En configuración virgen, el botón explícito de vínculo valida que quien lo pulse sea el dueño de la hoja y guarda su email privado como admin inicial. No publicar el correo en código ni en el repo. En caso de Drive compartido sin dueño individual, se permite configurar la propiedad privada manualmente.
 - Roles literales: `admin`, `user1`, `user2`. `user1` y `user2` comparten permisos CRUD; solo el dueño autenticado de la planilla que sea `admin` administra usuarios y ACL de Sheets. Confirmar diferencias funcionales antes de crear permisos diferenciados.
-- Panel: `appscript/Admin.html`, accesible por `?page=admin`; HTML por sí solo no autoriza nada.
-- `onOpen` agrega opciones separadas **Abrir Registro Único** y, solo para dueño/admin, **Administración** al menú de Sheets. Cada opción muestra un modal con link de un clic para abrir en pestaña nueva. Solo el dueño ve **Vincular esta planilla**; los endpoints también verifican admin y dueño server-side. La primera vinculación valida al dueño y lo registra como admin si Script Properties está virgen; luego guarda el ID de la hoja activa y crea solo `Registros` + encabezados cuando falta. No sobrescribe encabezados/datos existentes; si difieren, aborta. Nunca retargetea una hoja ya configurada ni crea pestaña `Acceso`.
+- La vista Admin y el CRUD conviven en `appscript/Registro.html`; `doGet?page=admin` y el menú seleccionan la vista, pero el servidor revalida el rol. HtmlService no sustituye autorización.
+- `onOpen` agrega opciones separadas **Abrir Registro Único** y **Administración** al menú de Sheets; ambas abren el HtmlService integrado con `showModalDialog`, y el handler de Administración exige dueño/admin. El item **Vincular esta planilla** puede mostrarse a otros usuarios por la limitación de identidad del disparador simple; su handler, el RPC y los endpoints verifican identidad y rol server-side. El HTML usa un único `runRegistroUnicoApi` allowlisted que delega en operaciones autenticadas. La primera vinculación valida al dueño y lo registra como admin si Script Properties está virgen; luego guarda el ID de la hoja activa y crea `Registros` + encabezados cuando falta. No sobrescribe encabezados/datos incompatibles, nunca retargetea una hoja ya configurada ni crea pestaña `Acceso`.
 - Crear/actualizar/borrar pasa por `LockService.getScriptLock()`. Edición de Sheets por fuera de la app no adquiere ese lock.
 - `Spreadsheet.addEditor/removeEditor` otorga/quita permiso individual bajo la identidad del admin, con scopes de Sheets. La baja desactiva la app y quita el permiso individual; avisar que accesos por grupo/dominio pueden subsistir aunque la operación individual haya sido exitosa. Si Google deniega la revocación, reportar permiso directo pendiente.
 - La elección de ejecución implica que los editores pueden modificar directamente los datos en Sheets. La validación del CRUD no controla esos cambios.
@@ -25,7 +25,7 @@
 
 ## Contrato y seguridad
 
-Funciones cliente/servidor públicas: `apiBootstrap`, `apiListRecords`, `apiSaveRecord`, `apiDeleteRecord`, `apiAdminListUsers`, `apiAdminSaveUser`, `registroUnicoBindActiveSpreadsheet`. Todas deben autorizar en servidor. Helpers internos terminan en `_` y no son invocables desde `google.script.run`.
+RPC principal del cliente: `runRegistroUnicoApi({action,payload})`, con acciones allowlisted `bootstrap`, `listRecords`, `saveRecord`, `deleteRecord`, `listUsers`, `saveUser`. Las operaciones delegadas y `registroUnicoBindActiveSpreadsheet` validan en servidor; no confiar en navegación o visibilidad del HTML como autorización.
 
 - Nunca confiar en campos `email`, `role`, `isAdmin` del navegador.
 - Validar longitudes/formato en servidor; guardar entradas como texto para conservar ceros y evitar fórmulas; construir DOM con `textContent`, no insertar datos del Sheet como HTML.

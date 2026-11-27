@@ -2,11 +2,11 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Make Registro Único installable as one Apps Script project opened from its target spreadsheet, with menu/sidebar actions that link that spreadsheet and open the app/Admin.
+**Goal:** Install Registro Único as one Apps Script project bound to its target spreadsheet, with separate menu actions for the app and admin.
 
-**Architecture:** The primary Apps Script project is container-bound to the Sheet and retains the web-app `doGet`/server ACL. Its `onOpen` adds separate menu items for app and admin; owner-only binding acts on the current sheet without asking for an ID. Menu items show a trusted user-click link dialog for opening the Apps Script deployment. The app keeps its own Pages `index.html`.
+**Architecture:** The container-bound project serves the integrated HtmlService app from `GET /exec` and from the Sheets menu, with a server-side ACL. Owner-only binding acts on the active sheet without asking for an ID. Pages retains its own static `index.html`.
 
-**Tech Stack:** Google Apps Script V8, Sheets custom menu/sidebar, HtmlService, Python contract tests, GitHub Pages.
+**Tech Stack:** Google Apps Script V8, Sheets custom menu, HtmlService, `google.script.run`, Python contract tests, GitHub Pages.
 
 ---
 
@@ -14,7 +14,7 @@
 
 **Files:** `registro-unico/tests/test_contract.py`, `registro-unico/tests/test_catalog.py`
 
-- Require `onOpen`, separate CRUD/Admin menu items, a bound-sheet setup function, no sidebar or standalone companion `sheet-menu/`, and the `script.container.ui` scope in the primary manifest.
+- Require `onOpen`, separate CRUD/Admin menu items opening the integrated HtmlService app, a bound-sheet setup function, no standalone companion `sheet-menu/`, and the `script.container.ui` scope in the primary manifest.
 - Require the app's own `registro-unico/index.html` and preserve its current deployment URL until supplied anew.
 - Run tests first; confirm expected RED.
 
@@ -22,7 +22,7 @@
 
 **Files:** `registro-unico/appscript/Code.gs`, `registro-unico/appscript/appsscript.json`
 
-- Add separate menu handlers for CRUD and owner/admin-only Administration; open via user-click link dialog.
+- Add separate menu handlers for CRUD and Administration; open the integrated HtmlService with `showModalDialog`, and enforce owner/admin in the Administration handler since simple `onOpen` cannot reliably identify the active user.
 - Add a bound menu function that derives the active spreadsheet ID, bootstraps its owner as admin only on pristine Script Properties, initializes only `Registros`, refuses to retarget another configured Sheet, and never creates `Acceso`.
 - Make the spreadsheet linker server-side only and derive its ID from the bound spreadsheet; refuse retargeting.
 - Add only `script.container.ui` to existing scopes.

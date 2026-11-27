@@ -9,52 +9,53 @@ var APP_ = {
 };
 
 function doGet(e) {
-  var page = e && e.parameter && e.parameter.page === 'admin' ? 'Admin' : 'Index';
-  return HtmlService.createTemplateFromFile(page).evaluate()
+  var page = e && e.parameter && e.parameter.page === 'admin' ? 'admin' : 'records';
+  return renderRegistroUnico_(page);
+}
+
+function renderRegistroUnico_(page) {
+  var template = HtmlService.createTemplateFromFile('Registro');
+  template.startPage = page === 'admin' ? 'admin' : 'records';
+  return template.evaluate()
     .setTitle(APP_.name)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
 
 function onOpen() {
-  var ui = SpreadsheetApp.getUi();
-  var menu = ui.createMenu(APP_.name).addItem('Abrir Registro Único', 'registroUnicoOpenApp');
-  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-  var email = currentEmail_();
-  var isOwner = isSpreadsheetOwner_(spreadsheet, email);
-  var canAdmin = false;
-  if (isOwner) {
-    try {
-      var user = users_()[email];
-      canAdmin = Boolean(user && user.active && user.role === 'admin');
-    } catch (error) {}
-  }
-  if (canAdmin) menu.addItem('Administración', 'registroUnicoOpenAdmin');
-  if (isOwner) menu.addSeparator().addItem('Vincular esta planilla', 'registroUnicoBindActiveSpreadsheet');
-  menu.addToUi();
+  SpreadsheetApp.getUi().createMenu(APP_.name)
+    .addItem('Abrir Registro Único', 'registroUnicoOpenApp')
+    .addItem('Administración', 'registroUnicoOpenAdmin')
+    .addSeparator()
+    .addItem('Vincular esta planilla', 'registroUnicoBindActiveSpreadsheet')
+    .addToUi();
 }
 
 function registroUnicoOpenApp() {
-  openAppLink_(ScriptApp.getService().getUrl(), 'Abrir Registro Único');
+  SpreadsheetApp.getUi().showModalDialog(renderRegistroUnico_('records').setWidth(1200).setHeight(820), APP_.name);
 }
 
 function registroUnicoOpenAdmin() {
-  requireOwnerAdmin_();
-  var url = ScriptApp.getService().getUrl();
-  openAppLink_(url && url + '?page=admin', 'Abrir Administración');
-}
-
-function openAppLink_(url, title) {
-  if (!url) {
-    SpreadsheetApp.getUi().alert('Publicá primero el proyecto como aplicación web para habilitar Registro Único.');
+  try {
+    requireOwnerAdmin_();
+  } catch (error) {
+    SpreadsheetApp.getUi().alert(safeMessage_(error));
     return;
   }
-  var html = HtmlService.createHtmlOutput(
-    '<div style="font:14px system-ui,sans-serif;padding:18px;color:#172027">' +
-      '<p>Seleccioná el botón para abrir la aplicación en una pestaña nueva.</p>' +
-      '<a href="' + htmlAttribute_(url) + '" target="_blank" style="display:block;padding:12px 14px;border-radius:8px;background:#087e69;color:white;text-decoration:none;text-align:center;font-weight:700">' + title + '</a>' +
-    '</div>'
-  ).setWidth(320).setHeight(140);
-  SpreadsheetApp.getUi().showModalDialog(html, title);
+  SpreadsheetApp.getUi().showModalDialog(renderRegistroUnico_('admin').setWidth(1200).setHeight(820), 'Administración · ' + APP_.name);
+}
+
+function runRegistroUnicoApi(request) {
+  request = request || {};
+  var payload = request.payload || {};
+  switch (String(request.action || '')) {
+    case 'bootstrap': return apiBootstrap_();
+    case 'listRecords': return apiListRecords_();
+    case 'saveRecord': return apiSaveRecord_(payload);
+    case 'deleteRecord': return apiDeleteRecord_(payload.id);
+    case 'listUsers': return apiAdminListUsers_();
+    case 'saveUser': return apiAdminSaveUser_(payload);
+    default: throw new Error('Acción no válida.');
+  }
 }
 
 function registroUnicoBindActiveSpreadsheet() {
@@ -88,25 +89,32 @@ function registroUnicoBindActiveSpreadsheet() {
     onOpen();
     SpreadsheetApp.getUi().alert('Planilla vinculada: ' + result.name + '. La pestaña Registros está lista.');
     return { ok: true, name: result.name };
+  } catch (error) {
+    var message = safeMessage_(error);
+    SpreadsheetApp.getUi().alert(message);
+    return { ok: false, message: message };
   } finally {
     lock.releaseLock();
   }
 }
 
-function htmlAttribute_(value) {
-  return String(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/'/g, '&#39;');
-}
-
-function apiBootstrap() {
+function apiBootstrap_() {
   try {
     var identity = currentEmail_();
     if (!identity) return { ok: false, message: 'Google no informó el correo de esta sesión. Salí y volvé a entrar con tu cuenta Google.' };
-    var users = users_();
-    var user = users[identity];
-    if (!user || !user.active) return { ok: false, message: 'Tu correo no tiene acceso activo a Registro Único. Pedile al administrador que te habilite.' };
     var configuredId = PropertiesService.getScriptProperties().getProperty(APP_.spreadsheetKey);
-    var spreadsheet = configuredId ? SpreadsheetApp.openById(configuredId) : SpreadsheetApp.getActiveSpreadsheet();
-    var isOwner = isSpreadsheetOwner_(spreadsheet, identity);
+    if (!configuredId) {
+      return {
+        ok: true,
+        email: identity,
+        canAdmin: false,
+        isOwner: isSpreadsheetOwner_(SpreadsheetApp.getActiveSpreadsheet(), identity),
+        spreadsheetConfigured: false
+      };
+    }
+    var user = users_()[identity];
+    if (!user || !user.active) return { ok: false, message: 'Tu correo no tiene acceso activo a Registro Único. Pedile al administrador que te habilite.' };
+    var isOwner = isSpreadsheetOwner_(SpreadsheetApp.openById(configuredId), identity);
     return {
       ok: true,
       email: identity,
@@ -114,14 +122,14 @@ function apiBootstrap() {
       isAdmin: user.role === 'admin',
       canAdmin: user.role === 'admin' && isOwner,
       isOwner: isOwner,
-      spreadsheetConfigured: Boolean(configuredId)
+      spreadsheetConfigured: true
     };
   } catch (error) {
     return { ok: false, message: safeMessage_(error) };
   }
 }
 
-function apiListRecords() {
+function apiListRecords_() {
   requireUser_();
   var sheet = dataSheet_();
   var last = sheet.getLastRow();
@@ -134,7 +142,7 @@ function apiListRecords() {
   });
 }
 
-function apiSaveRecord(input) {
+function apiSaveRecord_(input) {
   var actor = requireUser_();
   var record = validateRecord_(input);
   var lock = LockService.getScriptLock();
@@ -168,7 +176,7 @@ function apiSaveRecord(input) {
   }
 }
 
-function apiDeleteRecord(id) {
+function apiDeleteRecord_(id) {
   requireUser_();
   id = String(id || '').trim();
   if (!id) throw new Error('Falta el identificador del registro.');
@@ -191,7 +199,7 @@ function apiDeleteRecord(id) {
   }
 }
 
-function apiAdminListUsers() {
+function apiAdminListUsers_() {
   requireOwnerAdmin_();
   var users = users_();
   return Object.keys(users).sort().map(function (email) {
@@ -225,7 +233,7 @@ function ensureDataSheet_(ss) {
   return sheet;
 }
 
-function apiAdminSaveUser(input) {
+function apiAdminSaveUser_(input) {
   var actor = requireOwnerAdmin_();
   var email = validateEmail_(input && input.email);
   var role = validateRole_(input && input.role);
