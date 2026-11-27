@@ -38,7 +38,7 @@ Título Registro Único, breve explicación y botón al deployment de HtmlServic
 
 ### Panel Admin (`/exec?page=admin`)
 
-- Mismo bootstrap Google; solo rol `admin` puede invocar endpoints admin.
+- Mismo bootstrap Google; el panel y sus endpoints requieren tanto rol `admin` como ser el dueño de la planilla. La UI oculta los botones a no-dueños; servidor valida de nuevo en cada endpoint.
 - Vincular la hoja desde la que se abre el script, sin pedir su ID, resetear ni sobrescribir. Si no existe `Registros`, crear pestaña y encabezados; si existe vacía, agregar encabezados; si difieren, abortar sin modificar. No crear pestaña auxiliar `Acceso`. Para acceso desde Sheets, el mismo proyecto Apps Script vinculado agrega el menú **Registro Único** y una barra lateral con botones para CRUD, Administración y vincular la hoja activa; el menú usa el endpoint del propio despliegue.
 - Alta de correo + rol `admin`, `user1` o `user2`; para habilitar se concede permiso de editor en la planilla y se activa en ACL privada de Script Properties.
 - Cambio de rol actualiza lista. `user1`/`user2` comparten todos los permisos CRUD; admin agrega administración de usuarios/permisos.
@@ -61,7 +61,7 @@ ACL de usuarios en Script Properties: clave/versionado JSON con email normalizad
 - `apiListRecords() -> Record[]` (requiere usuario activo).
 - `apiSaveRecord({id?,nombre,apellido,dni,escolaridad}) -> {ok,id}` (create/update; valida, unicidad DNI y autorización).
 - `apiDeleteRecord(id) -> {ok}` (delete permanente, usuario activo).
-- `apiAdminListUsers() -> User[]`, `apiAdminSaveUser({email,role,active})`, `registroUnicoBindActiveSpreadsheet()`; requieren admin efectivo en servidor. El último solo toma la hoja activa del script vinculado; no admite IDs arbitrarios ni cambia una vinculación distinta.
+- `apiAdminListUsers() -> User[]`, `apiAdminSaveUser({email,role,active})`, `registroUnicoBindActiveSpreadsheet()`; requieren admin efectivo y dueño de la planilla en servidor. El último solo toma la hoja activa del script vinculado; no admite IDs arbitrarios ni cambia una vinculación distinta. UI oculta Vincular y Administración a no-dueños.
 
 El navegador no puede establecer identidad ni rol enviando campos. AppScript obtiene identidad de `Session.getActiveUser()` en modo ejecutar como usuario; si correo vacío, fail closed. Errores devueltos sin información interna sensible.
 

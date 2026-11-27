@@ -48,7 +48,7 @@ class ContractTests(unittest.TestCase):
         for fn in ('apiAdminListUsers', 'apiAdminSaveUser'):
             body = re.search(r'function\s+' + fn + r'\([^)]*\)\s*\{([\s\S]*?)\n\}', self.code)
             self.assertIsNotNone(body, fn)
-            self.assertIn('requireAdmin_()', body.group(1), fn)
+            self.assertIn('requireOwnerAdmin_()', body.group(1), fn)
         self.assertIn('ss.addEditor(email)', self.code)
         self.assertIn('ss.removeEditor(email)', self.code)
 
@@ -108,8 +108,8 @@ class ContractTests(unittest.TestCase):
         self.assertIn('getOwner()', code)
         self.assertIn('currentEmail_()', code)
         self.assertIn('setProperty(APP_.initialAdminKey, ownerEmail)', code)
-        self.assertIn('requireAdmin_()', code)
-        self.assertLess(code.index('setProperty(APP_.initialAdminKey, ownerEmail)'), code.index('requireAdmin_()'))
+        self.assertIn('requireOwnerAdmin_(active)', code)
+        self.assertLess(code.index('setProperty(APP_.initialAdminKey, ownerEmail)'), code.index('requireOwnerAdmin_(active)'))
         self.assertIn('props.getProperty(APP_.usersKey)', code)
         self.assertIn('!ownerEmail || ownerEmail !== currentEmail_()', code)
         self.assertIn('Falta la configuración del administrador inicial.', code)
@@ -120,10 +120,37 @@ class ContractTests(unittest.TestCase):
         self.assertIn('Abrir Registro Único</a>', self.code)
         self.assertIn('Administración</a>', self.code)
 
+    def test_only_sheet_owner_sees_bind_and_admin_controls(self):
+        sidebar = re.search(r'function\s+registroUnicoOpenPanel\([^)]*\)\s*\{([\s\S]*?)\n\}', self.code)
+        self.assertIsNotNone(sidebar)
+        self.assertIn('isSpreadsheetOwner_', sidebar.group(1))
+        self.assertIn('Vincular esta planilla', sidebar.group(1))
+        self.assertIn('canManage', sidebar.group(1))
+        self.assertIn('(canManage ? \'<script>document.getElementById("bind")', sidebar.group(1))
+        self.assertIn('function requireOwnerAdmin_', self.code)
+        for fn in ('apiAdminListUsers', 'apiAdminSaveUser', 'registroUnicoBindActiveSpreadsheet'):
+            body = re.search(r'function\s+' + fn + r'\([^)]*\)\s*\{([\s\S]*?)\n\}', self.code)
+            self.assertIsNotNone(body, fn)
+            self.assertIn('requireOwnerAdmin_', body.group(1), fn)
+        self.assertIn('ctx.canAdmin', (ROOT / 'appscript' / 'Admin.html').read_text())
+        self.assertIn('ctx.canAdmin', (ROOT / 'appscript' / 'Index.html').read_text())
+
+    def test_bootstrap_exposes_admin_capability_only_to_sheet_owner(self):
+        body = re.search(r'function\s+apiBootstrap\([^)]*\)\s*\{([\s\S]*?)\n\}', self.code)
+        self.assertIsNotNone(body)
+        self.assertIn('isSpreadsheetOwner_', body.group(1))
+        self.assertIn("canAdmin: user.role === 'admin' && isOwner", body.group(1))
+        helper = re.search(r'function\s+requireOwnerAdmin_\([^)]*\)\s*\{([\s\S]*?)\n\}', self.code)
+        self.assertIsNotNone(helper)
+        self.assertIn('requireAdmin_()', helper.group(1))
+        self.assertIn('isSpreadsheetOwner_(spreadsheet, user.email)', helper.group(1))
+        self.assertIn('Solo el dueño de la planilla', helper.group(1))
+        self.assertIn('return false;', self.code[self.code.index('function isSpreadsheetOwner_'):self.code.index('function currentEmail_')])
+
     def test_sheet_binding_cannot_silently_retarget_configured_database(self):
         body = re.search(r'function\s+registroUnicoBindActiveSpreadsheet\([^)]*\)\s*\{([\s\S]*?)\n\}', self.code)
         self.assertIsNotNone(body)
-        self.assertIn('requireAdmin_()', body.group(1))
+        self.assertIn('requireOwnerAdmin_(active)', body.group(1))
         self.assertIn('getId()', body.group(1))
         self.assertIn('configuredId !== activeId', body.group(1))
         self.assertIn('throw new Error(', body.group(1))

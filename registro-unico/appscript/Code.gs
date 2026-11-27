@@ -22,6 +22,17 @@ function onOpen() {
 }
 
 function registroUnicoOpenPanel() {
+  var configuredId = PropertiesService.getScriptProperties().getProperty(APP_.spreadsheetKey);
+  var active = configuredId ? SpreadsheetApp.openById(configuredId) : SpreadsheetApp.getActiveSpreadsheet();
+  var email = currentEmail_();
+  var canManage = isSpreadsheetOwner_(active, email);
+  var canAdmin = false;
+  if (canManage) {
+    try {
+      var user = users_()[email];
+      canAdmin = Boolean(user && user.active && user.role === 'admin');
+    } catch (error) {}
+  }
   var url = ScriptApp.getService().getUrl();
   if (!url) {
     SpreadsheetApp.getUi().alert('Publicá primero el proyecto como aplicación web para habilitar Registro Único.');
@@ -32,10 +43,10 @@ function registroUnicoOpenPanel() {
     '<div style="font:14px system-ui,sans-serif;padding:16px;color:#172027">' +
       '<p>Primero vinculá la hoja. Si la configuración es nueva, su dueño queda como administrador.</p>' +
       '<a href="' + htmlAttribute_(url) + '" target="_top" style="display:block;padding:11px 14px;margin:10px 0;border-radius:8px;background:#087e69;color:white;text-decoration:none;text-align:center;font-weight:700">Abrir Registro Único</a>' +
-      '<a href="' + htmlAttribute_(adminUrl) + '" target="_top" style="display:block;padding:11px 14px;margin:10px 0;border-radius:8px;background:#e9f1f1;color:#173b37;text-decoration:none;text-align:center;font-weight:700">Administración</a>' +
-      '<button id="bind" style="width:100%;padding:11px 14px;margin-top:10px;border:0;border-radius:8px;background:#e9f1f1;color:#173b37;font:inherit;font-weight:700;cursor:pointer">Vincular esta planilla</button>' +
+      (canAdmin ? '<a href="' + htmlAttribute_(adminUrl) + '" target="_top" style="display:block;padding:11px 14px;margin:10px 0;border-radius:8px;background:#e9f1f1;color:#173b37;text-decoration:none;text-align:center;font-weight:700">Administración</a>' : '') +
+      (canManage ? '<button id="bind" style="width:100%;padding:11px 14px;margin-top:10px;border:0;border-radius:8px;background:#e9f1f1;color:#173b37;font:inherit;font-weight:700;cursor:pointer">Vincular esta planilla</button>' : '') +
       '<div id="status" role="status" style="margin-top:12px;color:#52616a"></div>' +
-      '<script>document.getElementById("bind").addEventListener("click",function(){var b=this;b.disabled=true;document.getElementById("status").textContent="Verificando y preparando la planilla…";google.script.run.withSuccessHandler(function(r){document.getElementById("status").textContent=r.message;b.disabled=false;}).withFailureHandler(function(e){document.getElementById("status").textContent=e&&e.message?e.message:"No se pudo vincular la planilla.";b.disabled=false;}).registroUnicoBindActiveSpreadsheet();});</script>' +
+      (canManage ? '<script>document.getElementById("bind").addEventListener("click",function(){var b=this;b.disabled=true;document.getElementById("status").textContent="Verificando y preparando la planilla…";google.script.run.withSuccessHandler(function(r){document.getElementById("status").textContent=r.message;b.disabled=false;}).withFailureHandler(function(e){document.getElementById("status").textContent=e&&e.message?e.message:"No se pudo vincular la planilla.";b.disabled=false;}).registroUnicoBindActiveSpreadsheet();});</script>' : '') +
     '</div>'
   ).setTitle(APP_.name).setWidth(330);
   SpreadsheetApp.getUi().showSidebar(html);
@@ -57,7 +68,7 @@ function registroUnicoBindActiveSpreadsheet() {
       }
       props.setProperty(APP_.initialAdminKey, ownerEmail);
     }
-    requireAdmin_();
+    requireOwnerAdmin_(active);
     var activeId = active.getId();
     var configuredId = props.getProperty(APP_.spreadsheetKey);
     if (configuredId) {
@@ -84,12 +95,17 @@ function apiBootstrap() {
     var users = users_();
     var user = users[identity];
     if (!user || !user.active) return { ok: false, message: 'Tu correo no tiene acceso activo a Registro Único. Pedile al administrador que te habilite.' };
+    var configuredId = PropertiesService.getScriptProperties().getProperty(APP_.spreadsheetKey);
+    var spreadsheet = configuredId ? SpreadsheetApp.openById(configuredId) : SpreadsheetApp.getActiveSpreadsheet();
+    var isOwner = isSpreadsheetOwner_(spreadsheet, identity);
     return {
       ok: true,
       email: identity,
       role: user.role,
       isAdmin: user.role === 'admin',
-      spreadsheetConfigured: Boolean(PropertiesService.getScriptProperties().getProperty(APP_.spreadsheetKey))
+      canAdmin: user.role === 'admin' && isOwner,
+      isOwner: isOwner,
+      spreadsheetConfigured: Boolean(configuredId)
     };
   } catch (error) {
     return { ok: false, message: safeMessage_(error) };
@@ -167,7 +183,7 @@ function apiDeleteRecord(id) {
 }
 
 function apiAdminListUsers() {
-  requireAdmin_();
+  requireOwnerAdmin_();
   var users = users_();
   return Object.keys(users).sort().map(function (email) {
     return { email: email, role: users[email].role, active: Boolean(users[email].active), updatedAt: users[email].updatedAt || '' };
@@ -201,7 +217,7 @@ function ensureDataSheet_(ss) {
 }
 
 function apiAdminSaveUser(input) {
-  var actor = requireAdmin_();
+  var actor = requireOwnerAdmin_();
   var email = validateEmail_(input && input.email);
   var role = validateRole_(input && input.role);
   if (!input || typeof input.active !== 'boolean') throw new Error('Estado de usuario inválido.');
@@ -260,6 +276,23 @@ function requireAdmin_() {
   var user = requireUser_();
   if (user.role !== 'admin') throw new Error('Acceso denegado: solo un administrador puede realizar esta acción.');
   return user;
+}
+
+function requireOwnerAdmin_(spreadsheet) {
+  var user = requireAdmin_();
+  spreadsheet = spreadsheet || configuredSpreadsheet_();
+  if (!isSpreadsheetOwner_(spreadsheet, user.email)) throw new Error('Solo el dueño de la planilla puede administrar Registro Único.');
+  return user;
+}
+
+function isSpreadsheetOwner_(spreadsheet, email) {
+  if (!spreadsheet || !email) return false;
+  try {
+    var owner = spreadsheet.getOwner();
+    return Boolean(owner && normalizeEmail_(owner.getEmail()) === normalizeEmail_(email));
+  } catch (error) {
+    return false;
+  }
 }
 
 function currentEmail_() {
