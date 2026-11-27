@@ -45,7 +45,7 @@ class ContractTests(unittest.TestCase):
             self.assertIn('requireUser_()', body.group(1), fn)
 
     def test_admin_endpoints_check_admin_and_use_sheet_permissions(self):
-        for fn in ('apiAdminListUsers', 'apiAdminConfigureSpreadsheet', 'apiAdminSaveUser'):
+        for fn in ('apiAdminListUsers', 'apiAdminSaveUser'):
             body = re.search(r'function\s+' + fn + r'\([^)]*\)\s*\{([\s\S]*?)\n\}', self.code)
             self.assertIsNotNone(body, fn)
             self.assertIn('requireAdmin_()', body.group(1), fn)
@@ -82,20 +82,37 @@ class ContractTests(unittest.TestCase):
         self.assertNotIn('accessLinksButton', self.admin)
         self.assertNotIn('Agregar accesos en la hoja', self.admin)
 
-    def test_sheet_menu_is_a_bound_script_with_admin_button(self):
-        menu = (ROOT / 'sheet-menu' / 'Code.gs').read_text()
-        self.assertIn("createMenu('Registro Único')", menu)
-        self.assertIn("addItem('Abrir administración', 'registroUnicoOpenAdmin')", menu)
-        self.assertIn('showSidebar(', menu)
-        self.assertIn('Abrir administración</a>', menu)
-        self.assertIn("createHtmlOutput(", menu)
-        menu_manifest = json.loads((ROOT / 'sheet-menu' / 'appsscript.json').read_text())
-        self.assertEqual(menu_manifest['oauthScopes'], ['https://www.googleapis.com/auth/script.container.ui'])
-        self.assertIn('https://script.google.com/macros/s/AKfycbxZPFNTRGQWvhE69szf600kxXWQYKtfp1K3C9-jT7PhW70yp9_oEXUNlsGVcd6f7RR3jQ/exec?page=admin', menu)
-        self.assertNotIn('SpreadsheetApp.openById', menu)
-        self.assertNotIn('addEditor(', menu)
-        self.assertNotIn('removeEditor(', menu)
-        self.assertIn('script vinculado a la planilla', (ROOT / 'README.md').read_text())
+    def test_bound_sheet_project_has_menu_sidebar_and_container_ui_scope(self):
+        self.assertIn('function onOpen()', self.code)
+        self.assertIn('createMenu(APP_.name)', self.code)
+        self.assertIn("addItem('Abrir Registro Único', 'registroUnicoOpenPanel')", self.code)
+        self.assertIn('function registroUnicoOpenPanel()', self.code)
+        self.assertIn('ScriptApp.getService().getUrl()', self.code)
+        self.assertIn('Administración', self.code)
+        self.assertIn('Vincular esta planilla', self.code)
+        self.assertIn('showSidebar(', self.code)
+        self.assertTrue((ROOT / 'index.html').is_file())
+        self.assertFalse((ROOT / 'sheet-menu').exists())
+        self.assertIn('https://www.googleapis.com/auth/script.container.ui', self.manifest['oauthScopes'])
+        self.assertIn('Volvé a Sheets y usá el menú Registro Único para vincularla.', (ROOT / 'appscript' / 'Index.html').read_text())
+        self.assertIn('Vincular esta planilla', self.admin)
+        self.assertNotIn('setupForm', self.admin)
+        self.assertNotIn('sheetId', self.admin)
+        self.assertIn("var adminUrl = url + '?page=admin';", self.code)
+        self.assertIn('htmlAttribute_(adminUrl)', self.code)
+
+    def test_sheet_binding_cannot_silently_retarget_configured_database(self):
+        body = re.search(r'function\s+registroUnicoBindActiveSpreadsheet\([^)]*\)\s*\{([\s\S]*?)\n\}', self.code)
+        self.assertIsNotNone(body)
+        self.assertIn('requireAdmin_()', body.group(1))
+        self.assertIn('getId()', body.group(1))
+        self.assertIn('configuredId !== activeId', body.group(1))
+        self.assertIn('throw new Error(', body.group(1))
+        self.assertIn('LockService.getScriptLock()', body.group(1))
+        self.assertIn('configuredSpreadsheet_', body.group(1))
+        self.assertIn('configureSpreadsheet_', body.group(1))
+        self.assertIn('ensureDataSheet_', self.code)
+        self.assertNotIn('function apiAdminConfigureSpreadsheet(', self.code)
 
     def test_record_columns_and_reversible_changes_are_accounted_for(self):
         self.assertIn("'ID', 'Nombre', 'Apellido', 'DNI', 'Escolaridad'", self.code)

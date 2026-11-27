@@ -15,6 +15,59 @@ function doGet(e) {
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
 
+function onOpen() {
+  SpreadsheetApp.getUi().createMenu(APP_.name)
+    .addItem('Abrir Registro Único', 'registroUnicoOpenPanel')
+    .addToUi();
+}
+
+function registroUnicoOpenPanel() {
+  var url = ScriptApp.getService().getUrl();
+  if (!url) {
+    SpreadsheetApp.getUi().alert('Publicá primero el proyecto como aplicación web para habilitar Registro Único.');
+    return;
+  }
+  var adminUrl = url + '?page=admin';
+  var html = HtmlService.createHtmlOutput(
+    '<div style="font:14px system-ui,sans-serif;padding:16px;color:#172027">' +
+      '<p>Abrí la app o administración desde esta planilla.</p>' +
+      '<a href="' + htmlAttribute_(url) + '" target="_blank" rel="noopener" style="display:block;padding:11px 14px;margin:10px 0;border-radius:8px;background:#087e69;color:white;text-decoration:none;text-align:center;font-weight:700">Abrir Registro Único</a>' +
+      '<a href="' + htmlAttribute_(adminUrl) + '" target="_blank" rel="noopener" style="display:block;padding:11px 14px;margin:10px 0;border-radius:8px;background:#e9f1f1;color:#173b37;text-decoration:none;text-align:center;font-weight:700">Administración</a>' +
+      '<button id="bind" style="width:100%;padding:11px 14px;margin-top:10px;border:0;border-radius:8px;background:#e9f1f1;color:#173b37;font:inherit;font-weight:700;cursor:pointer">Vincular esta planilla</button>' +
+      '<div id="status" role="status" style="margin-top:12px;color:#52616a"></div>' +
+      '<script>document.getElementById("bind").addEventListener("click",function(){var b=this;b.disabled=true;document.getElementById("status").textContent="Verificando y preparando la planilla…";google.script.run.withSuccessHandler(function(r){document.getElementById("status").textContent=r.message;b.disabled=false;}).withFailureHandler(function(e){document.getElementById("status").textContent=e&&e.message?e.message:"No se pudo vincular la planilla.";b.disabled=false;}).registroUnicoBindActiveSpreadsheet();});</script>' +
+    '</div>'
+  ).setTitle(APP_.name).setWidth(330);
+  SpreadsheetApp.getUi().showSidebar(html);
+}
+
+function registroUnicoBindActiveSpreadsheet() {
+  requireAdmin_();
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var active = SpreadsheetApp.getActiveSpreadsheet();
+    if (!active) throw new Error('Abrí Registro Único desde la planilla que querés vincular.');
+    var activeId = active.getId();
+    var props = PropertiesService.getScriptProperties();
+    var configuredId = props.getProperty(APP_.spreadsheetKey);
+    if (configuredId) {
+      if (configuredId !== activeId) throw new Error('Registro Único ya está vinculado a otra planilla. No se cambió la configuración.');
+      var existing = configuredSpreadsheet_();
+      ensureDataSheet_(existing);
+      return { ok: true, name: existing.getName(), message: 'Esta planilla ya estaba vinculada.' };
+    }
+    var result = configureSpreadsheet_(activeId);
+    return { ok: true, name: result.name, message: 'Planilla vinculada. La pestaña Registros está lista.' };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function htmlAttribute_(value) {
+  return String(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/'/g, '&#39;');
+}
+
 function apiBootstrap() {
   try {
     var identity = currentEmail_();
@@ -112,26 +165,30 @@ function apiAdminListUsers() {
   });
 }
 
-function apiAdminConfigureSpreadsheet(id) {
-  requireAdmin_();
+function configureSpreadsheet_(id) {
   var props = PropertiesService.getScriptProperties();
   if (props.getProperty(APP_.spreadsheetKey)) throw new Error('La planilla ya está configurada. Para cambiarla, seguí el procedimiento manual de AGENT.md.');
   id = String(id || '').trim();
   if (!/^[A-Za-z0-9_-]{20,}$/.test(id)) throw new Error('Pegá el ID de una planilla de Google Sheets válido.');
   var ss = SpreadsheetApp.openById(id);
+  ensureDataSheet_(ss);
+  props.setProperty(APP_.spreadsheetKey, id);
+  return { ok: true, name: ss.getName(), url: ss.getUrl() };
+}
+
+function ensureDataSheet_(ss) {
   var sheet = ss.getSheetByName(APP_.sheetName);
   if (!sheet) sheet = ss.insertSheet(APP_.sheetName);
   if (sheet.getLastRow() === 0) {
     sheet.getRange(1, 1, 1, APP_.headers.length).setValues([APP_.headers]);
     sheet.setFrozenRows(1);
-  } else {
-    var actual = sheet.getRange(1, 1, 1, APP_.headers.length).getDisplayValues()[0];
-    if (APP_.headers.some(function (header, i) { return actual[i] !== header; })) {
-      throw new Error('La primera fila de la pestaña Registros no coincide con el esquema requerido. No se modificó la planilla.');
-    }
+    return sheet;
   }
-  props.setProperty(APP_.spreadsheetKey, id);
-  return { ok: true, name: ss.getName(), url: ss.getUrl() };
+  var actual = sheet.getRange(1, 1, 1, APP_.headers.length).getDisplayValues()[0];
+  if (APP_.headers.some(function (header, i) { return actual[i] !== header; })) {
+    throw new Error('La primera fila de la pestaña Registros no coincide con el esquema requerido. No se modificó la planilla.');
+  }
+  return sheet;
 }
 
 function apiAdminSaveUser(input) {

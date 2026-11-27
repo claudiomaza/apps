@@ -39,7 +39,7 @@ Título Registro Único, breve explicación y botón al deployment de HtmlServic
 ### Panel Admin (`/exec?page=admin`)
 
 - Mismo bootstrap Google; solo rol `admin` puede invocar endpoints admin.
-- Vincular la planilla por spreadsheet ID sin resetear ni sobrescribir. Si no existe `Registros`, crear pestaña y encabezados; si existe vacía, agregar encabezados; si difieren, abortar sin modificar. No crear pestaña auxiliar `Acceso`. Para acceso desde Sheets, el script complementario vinculado crea el menú **Registro Único > Abrir administración** y una barra lateral con botón; la web app independiente no puede crear el menú porque Google reserva esa UI para scripts vinculados.
+- Vincular la hoja desde la que se abre el script, sin pedir su ID, resetear ni sobrescribir. Si no existe `Registros`, crear pestaña y encabezados; si existe vacía, agregar encabezados; si difieren, abortar sin modificar. No crear pestaña auxiliar `Acceso`. Para acceso desde Sheets, el mismo proyecto Apps Script vinculado agrega el menú **Registro Único** y una barra lateral con botones para CRUD, Administración y vincular la hoja activa; el menú usa el endpoint del propio despliegue.
 - Alta de correo + rol `admin`, `user1` o `user2`; para habilitar se concede permiso de editor en la planilla y se activa en ACL privada de Script Properties.
 - Cambio de rol actualiza lista. `user1`/`user2` comparten todos los permisos CRUD; admin agrega administración de usuarios/permisos.
 - Baja primero desactiva usuario en backend y luego intenta retirar permiso directo de editor. Informar que se quitó solo el permiso individual y que accesos heredados por grupo/dominio pueden subsistir; si Google deniega la revocación, informar el permiso individual pendiente. El usuario queda bloqueado en la app.
@@ -61,7 +61,7 @@ ACL de usuarios en Script Properties: clave/versionado JSON con email normalizad
 - `apiListRecords() -> Record[]` (requiere usuario activo).
 - `apiSaveRecord({id?,nombre,apellido,dni,escolaridad}) -> {ok,id}` (create/update; valida, unicidad DNI y autorización).
 - `apiDeleteRecord(id) -> {ok}` (delete permanente, usuario activo).
-- `apiAdminListUsers() -> User[]`, `apiAdminConfigureSpreadsheet(id)`, `apiAdminSaveUser({email,role,active})`; requieren admin efectivo en servidor.
+- `apiAdminListUsers() -> User[]`, `apiAdminSaveUser({email,role,active})`, `registroUnicoBindActiveSpreadsheet()`; requieren admin efectivo en servidor. El último solo toma la hoja activa del script vinculado; no admite IDs arbitrarios ni cambia una vinculación distinta.
 
 El navegador no puede establecer identidad ni rol enviando campos. AppScript obtiene identidad de `Session.getActiveUser()` en modo ejecutar como usuario; si correo vacío, fail closed. Errores devueltos sin información interna sensible.
 
@@ -69,7 +69,7 @@ El navegador no puede establecer identidad ni rol enviando campos. AppScript obt
 
 - LockService serializa operaciones de aplicación; edición directa en Sheets no respeta el lock y puede tener carreras.
 - Google Sheets y Apps Script mantienen sus propias cuotas y límites por usuario/servicio; medir con pruebas, usar lecturas/escrituras agrupadas donde aplique; no prometer capacidad o performance.
-- Google consentimiento requiere scopes declarados (Sheets e identidad). Al ser un web app standalone que abre la planilla por ID, `spreadsheets` es un scope amplio sobre hojas accesibles por el usuario, no queda limitado automáticamente a la hoja configurada; explicar antes de que autorice. Cada cuenta usuaria aprueba Apps Script; revocar en Google Account no equivale a baja de rol.
+- Google consentimiento requiere scopes declarados (Sheets e identidad). Al ejecutarse desde el proyecto vinculado y abrir la planilla por ID almacenado en Script Properties, `spreadsheets` es un scope amplio sobre hojas accesibles por el usuario, no queda limitado automáticamente a la hoja configurada; explicar antes de que autorice. Cada cuenta usuaria aprueba Apps Script; revocar en Google Account no equivale a baja de rol.
 - Configuración de acceso/identidad del deployment debe verificarse manualmente; manifest no modifica deployment ya activo.
 
 ## Seguridad y privacidad
@@ -82,6 +82,6 @@ El navegador no puede establecer identidad ni rol enviando campos. AppScript obt
 
 ## Despliegue y aceptación
 
-GitHub Pages publica desde la raíz de `claudiomaza/apps`; la ruta de la app es `/apps/registro-unico/`. El web app y el script-menu vinculado se despliegan/configuran manualmente por Claudio, no se usa clasp por agente. No publicar datos reales, IDs de hojas ni secretos; landing y menú enlazan al deployment `/exec` que Claudio proporcionó. Compatibilidad depende de URL `/exec` y contrato v1.
+GitHub Pages publica desde la raíz de `claudiomaza/apps`; la ruta de la app es `/apps/registro-unico/`. El proyecto Apps Script vinculado se despliega/configura manualmente por Claudio, no se usa clasp por agente. No publicar datos reales, IDs de hojas ni secretos; landing y menú enlazan al deployment `/exec` que Claudio proporcionó. Compatibilidad depende de URL `/exec` y contrato v1.
 
 PASS completo requiere fuente sincronizada, tests, aprobación de scopes, prueba con sheet sintética y cuentas reales de prueba, navegador móvil/escritorio, verificación de revocación y SHA publicado. Hasta despliegue/prueba manual, runtime Apps Script, OAuth, CORS/redirecciones, ACL Google y QA visual son `BLOCKED/NO VERIFICADO`. Sin datos reales ni despliegues como parte del desarrollo inicial.
